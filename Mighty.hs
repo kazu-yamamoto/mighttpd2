@@ -1,5 +1,6 @@
 module Main where
 
+import Control.Monad.IO.Class (liftIO)
 import Config
 import Control.Monad
 import FileCGIApp
@@ -14,7 +15,9 @@ main :: IO ()
 main = do
     opt  <- fileName 0 >>= parseOption
     mapf <- fileName 1 >>= parseURLmap
-    let server = run (opt_port opt) $ (fileCgiApp mapf)
+    let server = run (opt_port opt) $ \req -> do
+            liftIO $ setGroupUser opt
+            fileCgiApp mapf req
     if opt_debug_mode opt
        then server
        else daemonize server
@@ -25,6 +28,15 @@ main = do
             hPutStrLn stderr "Usage: mighty config_file uri_map"
             exitFailure
         return $ args !! n
+
+----------------------------------------------------------------
+
+setGroupUser :: Option -> IO ()
+setGroupUser opt = do
+    uid <- getRealUserID
+    when (uid == 0) $ do
+        getGroupEntryForName (opt_group opt) >>= setGroupID . groupID
+        getUserEntryForName (opt_user opt) >>= setUserID . userID
 
 ----------------------------------------------------------------
 
