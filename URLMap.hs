@@ -18,23 +18,39 @@ iterURLmap :: Iteratee ByteString IO URLMap
 iterURLmap = iterParser urlmap
 
 urlmap :: Parser URLMap
-urlmap = many block
+urlmap = commentLines *> many block
 
 block :: Parser Block
-block = Block <$> domains <*> many mapper
+block = Block <$> cdomains <*> many cmapper
+  where
+    cdomains = domains <* commentLines
+    cmapper  = mapper  <* commentLines
 
 domains :: Parser [Domain]
-domains = (:) <$> domain <*> (many (sep *> domain)) <* garbage
+domains = open *> doms <* close <* trailing
   where
-    domain = pack <$> many1 (noneOf ", \t\n")
-    sep = () <$ spaces *> char ',' *> spaces
-    garbage = () <$ spaces *> endOfLine
+    open  = () <$ char '[' *> spaces
+    close = () <$ char ']' *> spaces
+    doms = (domain `sepBy1` sep) <* spaces
+    domain = pack <$> many1 (noneOf "[], \t\n")
+    sep = () <$ spaces1
 
 mapper :: Parser Mapper
-mapper = Mapper <$> (spaces1 *> src) <*> op <*> dst <* endOfLine
+mapper = Mapper <$> src <*> op <*> dst <* trailing
   where
-    path = many1 (noneOf ", \t\n") <* spaces
-    src = pack <$> path
-    dst = path
-    op = OpFile <$ string "->" <* spaces
-     <|> OpCGI  <$ string "=>" <* spaces
+    path = many1 (noneOf "[], \t\n")
+    src = pack <$> path <* spaces
+    dst = path <* spaces
+    op0 = OpFile <$ string "->" <|> OpCGI <$ string "=>"
+    op  = op0 <* spaces
+
+commentLines :: Parser ()
+commentLines = () <$ many commentLine
+  where
+    commentLine = trailing
+
+trailing :: Parser ()
+trailing = comment *> endOfLine <|> endOfLine
+
+comment :: Parser ()
+comment = () <$ char '#' <* many (notChar '\n')
