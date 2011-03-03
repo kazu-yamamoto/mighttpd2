@@ -17,7 +17,7 @@ main = do
     mapf <- fileName 1 >>= parseURLmap
     let server = run (opt_port opt) $ \req -> do
             liftIO $ setGroupUser opt
-            fileCgiApp mapf req
+            fileCgiApp opt mapf req
     if opt_debug_mode opt
        then server
        else daemonize server
@@ -25,7 +25,7 @@ main = do
     fileName n = do
         args <- getArgs
         when (length args /= 2) $ do
-            hPutStrLn stderr "Usage: mighty config_file uri_map"
+            hPutStrLn stderr "Usage: mighty config_file routing_file"
             exitFailure
         return $ args !! n
 

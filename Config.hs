@@ -9,6 +9,7 @@ import Data.ByteString.Char8 hiding (map)
 import Data.Enumerator (Iteratee, run_, ($$))
 import Data.Enumerator.Binary (enumFile)
 import Parser
+import Types
 
 ----------------------------------------------------------------
 
@@ -20,6 +21,7 @@ defaultOption = Option {
   , opt_group = "nobody"
   , opt_pid_file = "/var/run/mighty.pid"
   , opt_index_file = "index.html"
+  , opt_server_name = programName ++ programVersion
 }
 
 data Option = Option {
@@ -29,6 +31,7 @@ data Option = Option {
   , opt_group :: !String
   , opt_pid_file :: !String
   , opt_index_file :: !String
+  , opt_server_name :: !String
 } deriving Show
 
 ----------------------------------------------------------------
@@ -46,6 +49,7 @@ makeOpt def conf = Option {
   , opt_group            = get "Group" opt_group
   , opt_pid_file         = get "Pid_File" opt_pid_file
   , opt_index_file       = get "Index_File" opt_index_file
+  , opt_server_name      = get "Server_Name" opt_server_name
   }
   where
     get k func = maybe (func def) fromConf $ lookup k conf
