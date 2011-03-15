@@ -4,7 +4,7 @@
   % runghc -i.. Test.hs
 -}
 
-module Main where
+module Test where
 
 import Config.Internal
 import Route
