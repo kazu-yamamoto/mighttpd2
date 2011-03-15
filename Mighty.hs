@@ -1,23 +1,23 @@
 module Main where
 
-import Control.Monad.IO.Class (liftIO)
 import Config
 import Control.Monad
+import Control.Monad.IO.Class (liftIO)
 import FileCGIApp
 import Network.Wai.Handler.Warp (run)
+import Route
 import System.Environment
 import System.Exit
 import System.IO
 import System.Posix
-import URLMap
 
 main :: IO ()
 main = do
     opt  <- fileName 0 >>= parseOption
-    mapf <- fileName 1 >>= parseURLmap
+    route <- fileName 1 >>= parseRoute
     let server = run (opt_port opt) $ \req -> do
             liftIO $ setGroupUser opt
-            fileCgiApp opt mapf req
+            fileCgiApp opt route req
     if opt_debug_mode opt
        then server
        else daemonize server

@@ -1,6 +1,8 @@
 module Parser where
 
-import Control.Applicative hiding (many)
+import Control.Applicative hiding (many,(<|>))
+import qualified Data.ByteString.Lazy.Char8 as BL
+import System.IO
 import Text.Parsec
 import Text.Parsec.ByteString.Lazy
 
@@ -12,3 +14,23 @@ spcs1 = () <$ many1 spc
 
 spc :: Parser Char
 spc = satisfy (\c -> c == ' ' || c == '\t')
+
+commentLines :: Parser ()
+commentLines = () <$ many commentLine
+  where
+    commentLine = trailing
+
+trailing :: Parser ()
+trailing = () <$ (comment *> newline <|> newline)
+
+comment :: Parser ()
+comment = () <$ char '#' <* many (noneOf "\n")
+
+parseFile :: Parser a -> FilePath -> IO a
+parseFile p file = do
+    hdl <- openFile file ReadMode
+    hSetEncoding hdl latin1
+    bs <- BL.hGetContents hdl
+    case parse p "parseFile" bs of
+        Right x -> return x
+        Left  e -> error . show $ e
