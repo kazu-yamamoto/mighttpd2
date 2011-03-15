@@ -80,12 +80,12 @@ parseConfig = parseFile config
 ----------------------------------------------------------------
 
 config :: Parser [Conf]
-config = commentLines *> config
-     <|> (:) <$> field <*> config
-     <|> [] <$ eof
+config = commentLines *> many cfield 
+  where
+    cfield = field <* commentLines
 
 field :: Parser Conf
-field = (,) <$> key <*> (sep *> value) <* newline
+field = (,) <$> key <*> (sep *> value) <* trailing
 
 key :: Parser String
 key = many1 (oneOf $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_") <* spcs
@@ -94,14 +94,14 @@ sep :: Parser ()
 sep = () <$ char ':' *> spcs
 
 value :: Parser ConfValue
-value = choice [try cv_int, try cv_bool, cv_string]
+value = choice [try cv_int, try cv_bool, cv_string] <* spcs
 
 cv_int :: Parser ConfValue
-cv_int = CV_Int . read <$> (many1 digit <* spcs)
+cv_int = CV_Int . read <$> (many1 digit)
 
 cv_bool :: Parser ConfValue
-cv_bool = CV_Bool True  <$ (string "Yes" *> spcs) <|>
-          CV_Bool False <$ (string "No"  *> spcs)
+cv_bool = CV_Bool True  <$ (string "Yes") <|>
+          CV_Bool False <$ (string "No")
 
 cv_string :: Parser ConfValue
 cv_string = CV_String <$> many1 (noneOf " \t\n")
