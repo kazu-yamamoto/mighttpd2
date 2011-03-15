@@ -1,0 +1,14 @@
+#
+# route info for localhost
+#
+[localhost] # comment
+/~kazu/cgi-bin/      => /Users/kazu/Sites/cgi-bin/ # comment
+# comment
+/~kazu/              -> /Users/kazu/Sites/
+/runhaskell/cgi-bin/ => /Users/kazu/work/runhaskell/cgi-bin/
+/runhaskell/         -> /Users/kazu/work/runhaskell/
+/monad/              -> /Users/kazu/work/monad/html/
+# comment
+/                    -> /Users/kazu/Mew.org/
+# comment
+# comment
