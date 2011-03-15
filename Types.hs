@@ -6,9 +6,9 @@ type Src      = ByteString
 type Dst      = FilePath
 type Domain   = ByteString
 type PathInfo = ByteString
-data Block    = Block [Domain] [Mapper] deriving Show
-data Mapper   = Mapper Src Op Dst deriving Show
-data Op       = OpFile | OpCGI deriving Show
+data Block    = Block [Domain] [Mapper] deriving (Eq,Show)
+data Mapper   = Mapper Src Op Dst deriving (Eq,Show)
+data Op       = OpFile | OpCGI deriving (Eq,Show)
 type URLMap = [Block]
 
 programName :: String
