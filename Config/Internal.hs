@@ -80,7 +80,7 @@ parseConfig = parseFile config
 ----------------------------------------------------------------
 
 config :: Parser [Conf]
-config = commentLines *> many cfield 
+config = commentLines *> many cfield
   where
     cfield = field <* commentLines
 
