@@ -2,12 +2,13 @@
 
 module FileCGIApp (fileCgiApp) where
 
-import Data.ByteString.Char8 (ByteString, isPrefixOf)
+import Config
+import Data.ByteString.Char8 (ByteString, isPrefixOf, pack)
+import Data.List (isSuffixOf)
 import Network.Wai
 import Network.Wai.Application.CGI
 import Network.Wai.Application.File
 import Types
-import Config
 
 fileCgiApp :: Option -> URLMap -> Application
 fileCgiApp opt um req = case mmp of
@@ -20,8 +21,9 @@ fileCgiApp opt um req = case mmp of
   where
     mmp = getBlock (serverName req) um >>= getMapper (pathInfo req)
     spec = AppSpec {
-        softwareName = opt_server_name opt
+        softwareName = pack $ opt_server_name opt
       , indexFile = opt_index_file opt
+      , isHTML = \x -> ".html" `isSuffixOf` x || ".htm" `isSuffixOf` x
       }
 
 getBlock :: ByteString -> URLMap -> Maybe [Mapper]

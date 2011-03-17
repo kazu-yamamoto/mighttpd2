@@ -18,7 +18,7 @@ defaultOption = Option {
   , opt_group = "nobody"
   , opt_pid_file = "/var/run/mighty.pid"
   , opt_index_file = "index.html"
-  , opt_server_name = programName ++ programVersion
+  , opt_server_name = programName ++ "/" ++ programVersion
 }
 
 data Option = Option {
