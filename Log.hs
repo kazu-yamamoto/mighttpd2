@@ -42,7 +42,7 @@ open path = do
 
 fileFlusher :: MVar Handle -> FilePath -> Integer -> IO ()
 fileFlusher mvar path lim = forever $ do
-    threadDelay 1000000
+    threadDelay 10000000 -- 10 sec
     hdl <- takeMVar mvar
     hFlush hdl
     size <- hFileSize hdl
