@@ -1,0 +1,30 @@
+Name:                   mighttpd2
+Version:                0.0.0
+Author:                 Kazu Yamamoto <kazu@iij.ad.jp>
+Maintainer:             Kazu Yamamoto <kazu@iij.ad.jp>
+License:                BSD3
+License-File:           LICENSE
+Synopsis:               A classical web server on WAI/warp
+Description:            A classical web server on WAI/warp
+Homepage:               http://www.mew.org/~kazu/proj/mighttpd
+Category:               Distribution
+Cabal-Version:          >= 1.6
+Build-Type:             Simple
+Executable mighty
+  Main-Is:              Mighty.hs
+  if impl(ghc >= 6.12)
+    GHC-Options:        -Wall -fno-warn-unused-do-bind
+  else
+    GHC-Options:        -Wall
+  Build-Depends:        base >= 4.0 && < 5, parsec >= 3,
+                        unix, bytestring, warp, old-locale, time,
+                        wai-app-file-cgi, wai, transformers
+  Other-Modules:	Config
+                        FileCGIApp
+                        Mighty
+                        Parser
+                        Types
+                        Route
+Source-Repository head
+  Type:                 git
+  Location:             git://github.com/kazu-yamamoto/mighttpd2.git
