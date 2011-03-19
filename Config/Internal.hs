@@ -17,6 +17,7 @@ defaultOption = Option {
   , opt_user = "nobody"
   , opt_group = "nobody"
   , opt_pid_file = "/var/run/mighty.pid"
+  , opt_log_file = "/var/log/mighty"
   , opt_index_file = "index.html"
   , opt_server_name = programName ++ "/" ++ programVersion
 }
@@ -27,6 +28,7 @@ data Option = Option {
   , opt_user :: !String
   , opt_group :: !String
   , opt_pid_file :: !String
+  , opt_log_file :: !String
   , opt_index_file :: !String
   , opt_server_name :: !String
 } deriving (Eq,Show)
@@ -45,6 +47,7 @@ makeOpt def conf = Option {
   , opt_user             = get "User" opt_user
   , opt_group            = get "Group" opt_group
   , opt_pid_file         = get "Pid_File" opt_pid_file
+  , opt_log_file         = get "Log_File" opt_log_file
   , opt_index_file       = get "Index_File" opt_index_file
   , opt_server_name      = get "Server_Name" opt_server_name
   }

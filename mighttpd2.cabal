@@ -18,7 +18,7 @@ Executable mighty
     GHC-Options:        -Wall
   Build-Depends:        base >= 4.0 && < 5, parsec >= 3,
                         unix, bytestring, warp, old-locale, time,
-                        wai-app-file-cgi, wai, transformers
+                        wai-app-file-cgi, wai, transformers, directory
   Other-Modules:	Config
                         FileCGIApp
                         Mighty
