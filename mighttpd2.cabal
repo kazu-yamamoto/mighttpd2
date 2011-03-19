@@ -18,13 +18,21 @@ Executable mighty
     GHC-Options:        -Wall
   Build-Depends:        base >= 4.0 && < 5, parsec >= 3,
                         unix, bytestring, warp, old-locale, time,
-                        wai-app-file-cgi, wai, transformers, directory
+                        wai-app-file-cgi, wai, transformers, directory,
+                        haskell98
   Other-Modules:	Config
                         FileCGIApp
                         Mighty
                         Parser
                         Types
                         Route
+Executable mkindex
+  Main-Is:              mkindex.hs
+  if impl(ghc >= 6.12)
+    GHC-Options:        -Wall -fno-warn-unused-do-bind
+  else
+    GHC-Options:        -Wall
+  Build-Depends:        base >= 4 && < 5
 Source-Repository head
   Type:                 git
   Location:             git://github.com/kazu-yamamoto/mighttpd2.git
