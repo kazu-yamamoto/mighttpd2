@@ -13,7 +13,7 @@ parseRoute :: FilePath -> IO URLMap
 parseRoute = parseFile urlmap
 
 urlmap :: Parser URLMap
-urlmap = commentLines *> many block
+urlmap = commentLines *> many1 block
 
 block :: Parser Block
 block = Block <$> cdomains <*> many cmapper
