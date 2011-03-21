@@ -35,7 +35,7 @@ locate path = mapM_ move srcdsts
 
 open :: FilePath -> IO Handle
 open path = do
-    hdl <- openFile path WriteMode
+    hdl <- openFile path AppendMode
     hSetEncoding hdl latin1
     hSetBuffering hdl $ BlockBuffering (Just 16384)
     return hdl
