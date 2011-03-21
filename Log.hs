@@ -74,8 +74,8 @@ stdoutSerializer chan = forever $ readChan chan >>= BL.putStr
 
 ----------------------------------------------------------------
 
-mightyLogger :: Chan ByteString -> Request -> RspSpec -> IO ()
-mightyLogger chan req rsp = do
+mightyLogger :: Chan ByteString -> Request -> Status -> IO ()
+mightyLogger chan req st = do
     zt <- getZonedTime
     addr <- getPeerAddr (remoteHost req)
     writeChan chan $ BL.fromChunks (logmsg addr zt)
@@ -89,7 +89,7 @@ mightyLogger chan req rsp = do
       , " "
       , pathInfo req
       , "\" "
-      , BS.pack (show . statusCode . rspStatus $ rsp)
+      , BS.pack (show . statusCode $ st)
       , " - \"" -- size
       , lookupRequestField' fkReferer req
       , "\" \""
