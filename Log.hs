@@ -19,7 +19,7 @@ fileInit path = do
     hdl <- open path
     mvar <- newMVar hdl
     chan <- newChan
-    forkIO $ fileFlusher mvar path 128
+    forkIO $ fileFlusher mvar path 16777216
     forkIO $ fileSerializer chan mvar
     return chan
 
