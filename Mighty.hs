@@ -1,54 +1,78 @@
 module Main where
 
 import Config
+import Control.Exception (catch, SomeException)
 import Control.Monad
-import Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Char8 as BS
 import Data.List (isSuffixOf)
 import FileCGIApp
 import Log
+import Network
 import Network.Wai.Application.Classic
-import Network.Wai.Handler.Warp (run)
+import Network.Wai.Handler.Warp
+import Prelude hiding (catch)
 import Route
 import System.Environment
 import System.Exit
 import System.IO
 import System.Posix
+import Types
 
 main :: IO ()
 main = do
     opt  <- fileName 0 >>= parseOption
     route <- fileName 1 >>= parseRoute
     if opt_debug_mode opt
-       then do
-           chan <- setoutInit
-           server chan opt route
-       else daemonize $ do
-           writePidFile opt
-           chan <- fileInit (opt_log_file opt)
-           server chan opt route
+       then server opt route
+       else daemonize $ server opt route
   where
-    server chan opt route = do
-        installHandler sigCHLD Ignore Nothing
-        run (opt_port opt) $ \req -> do
-            liftIO $ setGroupUser opt
-            fileCgiApp spec route req
-      where
-        spec = AppSpec {
-            softwareName = BS.pack $ opt_server_name opt
-          , indexFile = opt_index_file opt
-          , isHTML = \x -> ".html" `isSuffixOf` x || ".htm" `isSuffixOf` x
-          , logger = mightyLogger chan
-          }
     fileName n = do
         args <- getArgs
         when (length args /= 2) $ do
             hPutStrLn stderr "Usage: mighty config_file routing_file"
             exitFailure
         return $ args !! n
-    writePidFile opt = do
+
+server :: Option -> URLMap -> IO ()
+server opt route = flip catch handle $ do
+    s <- sOpen
+    installHandler sigCHLD Ignore Nothing
+    setGroupUser opt
+    chan <- if debug then setoutInit else fileInit logspec
+    unless debug writePidFile
+    serveConnections ignore port (fileCgiApp (spec chan) route) s
+  where
+    debug = opt_debug_mode opt
+    port = opt_port opt
+    ignore = const $ return ()
+    sOpen = listenOn (PortNumber . fromIntegral $ port)
+    spec chan = AppSpec {
+        softwareName = BS.pack $ opt_server_name opt
+      , indexFile = opt_index_file opt
+      , isHTML = \x -> ".html" `isSuffixOf` x || ".htm" `isSuffixOf` x
+      , logger = mightyLogger chan
+      }
+    logspec = FileLogSpec {
+        log_file          = opt_log_file opt
+      , log_file_size     = fromIntegral $ opt_log_file_size opt
+      , log_backup_number = opt_log_backup_number opt
+      , log_buffer_size   = opt_log_buffer_size opt
+      , log_flush_period  = opt_log_flush_period opt * 1000000
+      }
+{-
+    warpspec = defaultSettings {
+        settingsPort = opt_port opt
+      , settingsOnException = ignore
+      , settingsTimeout = 30
+      }
+-}
+    writePidFile = do
         pid <- getProcessID
         writeFile (opt_pid_file opt) $ show pid ++ "\n"
+    handle :: SomeException -> IO ()
+    handle e
+      | debug = hPutStrLn stderr $ show e
+      | otherwise = writeFile "/tmp/mighty_error" (show e)
 
 ----------------------------------------------------------------
 

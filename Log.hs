@@ -11,46 +11,52 @@ import Data.Time
 import Network.Wai
 import Network.Wai.Application.Classic
 import System.Directory
+import System.Exit
+import System.FilePath
 import System.IO
 import System.Locale
 
-fileInit :: FilePath -> IO (Chan ByteString)
-fileInit path = do
-    hdl <- open path
+data FileLogSpec = FileLogSpec {
+    log_file :: String
+  , log_file_size :: Integer
+  , log_backup_number :: Int
+  , log_buffer_size :: Int
+  , log_flush_period :: Int
+  }
+
+fileCheck :: FileLogSpec -> IO ()
+fileCheck spec = do
+    dirperm <- getPermissions dir
+    unless (writable dirperm) $ exit $ dir ++ " is not writable"
+    fileexist <- doesFileExist file
+    when fileexist $ do
+        fileperm <- getPermissions file
+        unless (writable fileperm) $ exit $ file ++ " is not writable"
+  where
+    file = log_file spec
+    dir = takeDirectory file
+    exit msg = hPutStrLn stderr msg >> exitFailure
+
+fileInit :: FileLogSpec -> IO (Chan ByteString)
+fileInit spec = do
+    hdl <- open spec
     mvar <- newMVar hdl
     chan <- newChan
-    forkIO $ fileFlusher mvar path 16777216
+    forkIO $ fileFlusher mvar spec
     forkIO $ fileSerializer chan mvar
     return chan
 
-locate :: FilePath -> IO ()
-locate path = mapM_ move srcdsts
-  where
-    dsts = map (path++) [".3",".2",".1",".0",""]
-    srcs = tail dsts
-    srcdsts = zip srcs dsts
-    move (src,dst) = do
-        exist <- doesFileExist src
-        when exist $ renameFile src dst
-
-open :: FilePath -> IO Handle
-open path = do
-    hdl <- openFile path AppendMode
-    hSetEncoding hdl latin1
-    hSetBuffering hdl $ BlockBuffering (Just 16384)
-    return hdl
-
-fileFlusher :: MVar Handle -> FilePath -> Integer -> IO ()
-fileFlusher mvar path lim = forever $ do
-    threadDelay 10000000 -- 10 sec
+fileFlusher :: MVar Handle -> FileLogSpec -> IO ()
+fileFlusher mvar spec = forever $ do
+    threadDelay $ log_flush_period spec
     hdl <- takeMVar mvar
     hFlush hdl
     size <- hFileSize hdl
-    if size > lim
+    if size > log_file_size spec
        then do
         hClose hdl
-        locate path
-        newhdl <- open path
+        locate spec
+        newhdl <- open spec
         putMVar mvar newhdl
        else putMVar mvar hdl
 
@@ -60,6 +66,26 @@ fileSerializer chan mvar = forever $ do
     hdl <- takeMVar mvar
     BL.hPut hdl xs
     putMVar mvar hdl
+
+open :: FileLogSpec -> IO Handle
+open spec = do
+    hdl <- openFile (log_file spec) AppendMode
+    hSetEncoding hdl latin1
+    hSetBuffering hdl $ BlockBuffering (Just $ log_buffer_size spec)
+    return hdl
+
+locate :: FileLogSpec -> IO ()
+locate spec = mapM_ move srcdsts
+  where
+    path = log_file spec
+    n = log_backup_number spec
+    dsts' = reverse . ("":) . map ('.':) . map show $ [0..n-1]
+    dsts = map (path++) dsts'
+    srcs = tail dsts
+    srcdsts = zip srcs dsts
+    move (src,dst) = do
+        exist <- doesFileExist src
+        when exist $ renameFile src dst
 
 ----------------------------------------------------------------
 

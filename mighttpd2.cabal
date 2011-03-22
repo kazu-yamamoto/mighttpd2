@@ -17,8 +17,10 @@ Executable mighty
   else
     GHC-Options:        -Wall
   Build-Depends:        base >= 4.0 && < 5, parsec >= 3,
+                        network >=2.2 && <2.3,
                         unix, bytestring, warp, old-locale, time,
-                        wai-app-file-cgi, wai, transformers, directory,
+                        wai-app-file-cgi, wai, transformers,
+                        directory, filepath,
                         haskell98
   Other-Modules:	Config
                         FileCGIApp
