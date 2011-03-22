@@ -37,9 +37,9 @@ server :: Option -> URLMap -> IO ()
 server opt route = flip catch handle $ do
     s <- sOpen
     installHandler sigCHLD Ignore Nothing
+    unless debug writePidFile
     setGroupUser opt
     chan <- if debug then setoutInit else fileInit logspec
-    unless debug writePidFile
     serveConnections ignore port (fileCgiApp (spec chan) route) s
   where
     debug = opt_debug_mode opt
@@ -66,9 +66,11 @@ server opt route = flip catch handle $ do
       , settingsTimeout = 30
       }
 -}
+    pidfile = opt_pid_file opt
     writePidFile = do
         pid <- getProcessID
-        writeFile (opt_pid_file opt) $ show pid ++ "\n"
+        writeFile pidfile $ show pid ++ "\n"
+        setFileMode pidfile 0o644
     handle :: SomeException -> IO ()
     handle e
       | debug = hPutStrLn stderr $ show e
