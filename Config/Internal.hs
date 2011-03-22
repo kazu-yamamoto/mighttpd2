@@ -18,6 +18,10 @@ defaultOption = Option {
   , opt_group = "nobody"
   , opt_pid_file = "/var/run/mighty.pid"
   , opt_log_file = "/var/log/mighty"
+  , opt_log_file_size = 16777216
+  , opt_log_backup_number = 10
+  , opt_log_buffer_size = 16384
+  , opt_log_flush_period = 10
   , opt_index_file = "index.html"
   , opt_server_name = programName ++ "/" ++ programVersion
 }
@@ -29,6 +33,10 @@ data Option = Option {
   , opt_group :: !String
   , opt_pid_file :: !String
   , opt_log_file :: !String
+  , opt_log_file_size :: !Int
+  , opt_log_backup_number :: !Int
+  , opt_log_buffer_size :: !Int
+  , opt_log_flush_period :: !Int
   , opt_index_file :: !String
   , opt_server_name :: !String
 } deriving (Eq,Show)
@@ -42,14 +50,18 @@ parseOption file = makeOpt defaultOption <$> parseConfig file
 
 makeOpt :: Option -> [Conf] -> Option
 makeOpt def conf = Option {
-    opt_port = get "Port" opt_port
-  , opt_debug_mode       = get "Debug_Mode" opt_debug_mode
-  , opt_user             = get "User" opt_user
-  , opt_group            = get "Group" opt_group
-  , opt_pid_file         = get "Pid_File" opt_pid_file
-  , opt_log_file         = get "Log_File" opt_log_file
-  , opt_index_file       = get "Index_File" opt_index_file
-  , opt_server_name      = get "Server_Name" opt_server_name
+    opt_port              = get "Port" opt_port
+  , opt_debug_mode        = get "Debug_Mode" opt_debug_mode
+  , opt_user              = get "User" opt_user
+  , opt_group             = get "Group" opt_group
+  , opt_pid_file          = get "Pid_File" opt_pid_file
+  , opt_log_file          = get "Log_File" opt_log_file
+  , opt_log_file_size     = get "Log_File_Size" opt_log_file_size
+  , opt_log_backup_number = get "Log_Backup_Number" opt_log_backup_number
+  , opt_log_buffer_size   = get "Log_Buffer_Size" opt_log_buffer_size
+  , opt_log_flush_period  = get "Log_Flush_Period" opt_log_flush_period
+  , opt_index_file        = get "Index_File" opt_index_file
+  , opt_server_name       = get "Server_Name" opt_server_name
   }
   where
     get k func = maybe (func def) fromConf $ lookup k conf
@@ -83,7 +95,7 @@ parseConfig = parseFile config
 ----------------------------------------------------------------
 
 config :: Parser [Conf]
-config = commentLines *> many cfield
+config = commentLines *> many cfield <* eof
   where
     cfield = field <* commentLines
 
