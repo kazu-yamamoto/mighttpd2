@@ -15,6 +15,7 @@ import System.Exit
 import System.FilePath
 import System.IO
 import System.Locale
+import System.Posix
 
 data FileLogSpec = FileLogSpec {
     log_file :: String
@@ -69,10 +70,13 @@ fileSerializer chan mvar = forever $ do
 
 open :: FileLogSpec -> IO Handle
 open spec = do
-    hdl <- openFile (log_file spec) AppendMode
+    hdl <- openFile file AppendMode
+    setFileMode file 0o644
     hSetEncoding hdl latin1
     hSetBuffering hdl $ BlockBuffering (Just $ log_buffer_size spec)
     return hdl
+  where
+    file = log_file spec
 
 locate :: FileLogSpec -> IO ()
 locate spec = mapM_ move srcdsts
