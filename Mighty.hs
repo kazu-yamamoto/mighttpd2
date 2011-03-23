@@ -40,7 +40,7 @@ server opt route = flip catch handle $ do
     unless debug writePidFile
     setGroupUser opt
     chan <- if debug then setoutInit else fileInit logspec
-    serveConnections ignore port (fileCgiApp (spec chan) route) s
+    serveConnections' setting (fileCgiApp (spec chan) route) s
   where
     debug = opt_debug_mode opt
     port = opt_port opt
@@ -59,13 +59,11 @@ server opt route = flip catch handle $ do
       , log_buffer_size   = opt_log_buffer_size opt
       , log_flush_period  = opt_log_flush_period opt * 1000000
       }
-{-
-    warpspec = defaultSettings {
-        settingsPort = opt_port opt
+    setting = defaultSettings {
+        settingsPort        = opt_port opt
       , settingsOnException = ignore
-      , settingsTimeout = 30
+      , settingsTimeout     = opt_connection_timeout opt
       }
--}
     pidfile = opt_pid_file opt
     writePidFile = do
         pid <- getProcessID
