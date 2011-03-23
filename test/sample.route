@@ -9,7 +9,7 @@
 # A path to CGI scripts should be specified with "=>"
 /~alice/cgi-bin/ => /home/alice/public_html/cgi-bin/
 
-# A path to static files should be specified with "->" 
+# A path to static files should be specified with "->"
 /~alice/         -> /home/alice/public_html/
 
 /cgi-bin/        => /export/cgi-bin/
