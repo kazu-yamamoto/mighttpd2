@@ -8,7 +8,7 @@ Synopsis:               A classical web server on WAI/warp
 Description:            A classical web server on WAI/warp.
                         Static files and CGI can be handled.
 Homepage:               http://www.mew.org/~kazu/proj/mighttpd/
-Category:               Distribution
+Category:               Web
 Cabal-Version:          >= 1.6
 Build-Type:             Simple
 Executable mighty
