@@ -33,7 +33,7 @@ main = do
             exitFailure
         return $ args !! n
 
-server :: Option -> URLMap -> IO ()
+server :: Option -> RouteDB -> IO ()
 server opt route = flip catch handle $ do
     s <- sOpen
     installHandler sigCHLD Ignore Nothing

@@ -9,17 +9,17 @@ import Text.Parsec
 import Text.Parsec.ByteString.Lazy
 import Types
 
-parseRoute :: FilePath -> IO URLMap
-parseRoute = parseFile urlmap
+parseRoute :: FilePath -> IO RouteDB
+parseRoute = parseFile routeDB
 
-urlmap :: Parser URLMap
-urlmap = commentLines *> many1 block <* eof
+routeDB :: Parser RouteDB
+routeDB = commentLines *> many1 block <* eof
 
 block :: Parser Block
-block = Block <$> cdomains <*> many cmapper
+block = Block <$> cdomains <*> many croute
   where
     cdomains = domains <* commentLines
-    cmapper  = mapper  <* commentLines
+    croute   = route   <* commentLines
 
 domains :: Parser [Domain]
 domains = open *> doms <* close <* trailing
@@ -30,8 +30,8 @@ domains = open *> doms <* close <* trailing
     domain = BS.pack <$> many1 (noneOf "[], \t\n")
     sep = () <$ spcs1
 
-mapper :: Parser Mapper
-mapper = Mapper <$> src <*> op <*> dst <* trailing
+route :: Parser Route
+route = Route <$> src <*> op <*> dst <* trailing
   where
     path = many1 (noneOf "[], \t\n")
     src = BS.pack <$> path <* spcs

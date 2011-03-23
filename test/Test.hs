@@ -45,10 +45,10 @@ test_route = do
     res @?= ans
  where
     ans = [Block ["localhost","www.example.com"]
-           [Mapper "/~alice/cgi-bin/" OpCGI "/home/alice/public_html/cgi-bin/"
-           ,Mapper "/~alice/" OpFile "/home/alice/public_html/"
-           ,Mapper "/cgi-bin/" OpCGI "/export/cgi-bin/"
-           ,Mapper "/" OpFile "/export/www/"]]
+           [Route "/~alice/cgi-bin/" OpCGI "/home/alice/public_html/cgi-bin/"
+           ,Route "/~alice/" OpFile "/home/alice/public_html/"
+           ,Route "/cgi-bin/" OpCGI "/export/cgi-bin/"
+           ,Route "/" OpFile "/export/www/"]]
 
 ----------------------------------------------------------------
 
