@@ -24,11 +24,13 @@ Executable mighty
                         directory, filepath,
                         haskell98
   Other-Modules:	Config
+                        Config.Internal
                         FileCGIApp
+                        Log
                         Mighty
                         Parser
-                        Types
                         Route
+                        Types
 Executable mkindex
   Main-Is:              mkindex.hs
   if impl(ghc >= 6.12)
