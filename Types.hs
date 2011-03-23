@@ -15,4 +15,4 @@ programName :: String
 programName = "Mighttpd"
 
 programVersion :: String
-programVersion = "2.0.0"
+programVersion = "2.0.1"
