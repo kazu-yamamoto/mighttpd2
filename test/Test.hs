@@ -27,14 +27,28 @@ test_config = do
     res <- parseConfig "sample.conf"
     res @?= ans
  where
-    ans = [("Port",CV_Int 8080),("Debug_Mode",CV_Bool True),("User",CV_String "nobody"),("Group",CV_String "nobody"),("Pid_File",CV_String "/var/run/mighty.pid"),("Index_File",CV_String "index.html")]
+    ans = [("Port",CV_Int 80)
+          ,("Debug_Mode",CV_Bool True)
+          ,("User",CV_String "root")
+          ,("Group",CV_String "wheel")
+          ,("Pid_File",CV_String "/var/run/mighty.pid")
+          ,("Log_File",CV_String "/var/log/mighty")
+          ,("Log_File_Size",CV_Int 16777216)
+          ,("Log_Backup_Number",CV_Int 10)
+          ,("Log_Buffer_Size",CV_Int 16384)
+          ,("Log_Flush_Period",CV_Int 10)
+          ,("Index_File",CV_String "index.html")]
 
 test_route :: Assertion
 test_route = do
     res <- parseRoute "sample.route"
     res @?= ans
  where
-    ans = [Block ["localhost"] [Mapper "/~kazu/cgi-bin/" OpCGI "/Users/kazu/Sites/cgi-bin/",Mapper "/~kazu/" OpFile "/Users/kazu/Sites/",Mapper "/runhaskell/cgi-bin/" OpCGI "/Users/kazu/work/runhaskell/cgi-bin/",Mapper "/runhaskell/" OpFile "/Users/kazu/work/runhaskell/",Mapper "/monad/" OpFile "/Users/kazu/work/monad/html/",Mapper "/" OpFile "/Users/kazu/Mew.org/"]]
+    ans = [Block ["localhost","www.example.com"]
+           [Mapper "/~alice/cgi-bin/" OpCGI "/home/alice/public_html/cgi-bin/"
+           ,Mapper "/~alice/" OpFile "/home/alice/public_html/"
+           ,Mapper "/cgi-bin/" OpCGI "/export/cgi-bin/"
+           ,Mapper "/" OpFile "/export/www/"]]
 
 ----------------------------------------------------------------
 
