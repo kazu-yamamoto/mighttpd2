@@ -1,12 +1,13 @@
 Name:                   mighttpd2
-Version:                0.0.0
+Version:                2.0.0
 Author:                 Kazu Yamamoto <kazu@iij.ad.jp>
 Maintainer:             Kazu Yamamoto <kazu@iij.ad.jp>
 License:                BSD3
 License-File:           LICENSE
 Synopsis:               A classical web server on WAI/warp
-Description:            A classical web server on WAI/warp
-Homepage:               http://www.mew.org/~kazu/proj/mighttpd
+Description:            A classical web server on WAI/warp.
+                        Static files and CGI can be handled.
+Homepage:               http://www.mew.org/~kazu/proj/mighttpd/
 Category:               Distribution
 Cabal-Version:          >= 1.6
 Build-Type:             Simple
