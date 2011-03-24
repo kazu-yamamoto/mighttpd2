@@ -93,8 +93,8 @@ locate spec = mapM_ move srcdsts
 
 ----------------------------------------------------------------
 
-setoutInit :: IO (Chan ByteString)
-setoutInit = do
+stdoutInit :: IO (Chan ByteString)
+stdoutInit = do
     chan <- newChan
     forkIO $ stdoutSerializer chan
     return chan

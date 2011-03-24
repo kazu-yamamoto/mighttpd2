@@ -39,7 +39,7 @@ server opt route = flip catch handle $ do
     installHandler sigCHLD Ignore Nothing
     unless debug writePidFile
     setGroupUser opt
-    chan <- if debug then setoutInit else fileInit logspec
+    chan <- if debug then stdoutInit else fileInit logspec
     serveConnections' setting (fileCgiApp (spec chan) route) s
   where
     debug = opt_debug_mode opt
