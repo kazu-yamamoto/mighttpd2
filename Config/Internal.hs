@@ -17,6 +17,7 @@ defaultOption = Option {
   , opt_user = "nobody"
   , opt_group = "nobody"
   , opt_pid_file = "/var/run/mighty.pid"
+  , opt_logging = True
   , opt_log_file = "/var/log/mighty"
   , opt_log_file_size = 16777216
   , opt_log_backup_number = 10
@@ -33,6 +34,7 @@ data Option = Option {
   , opt_user :: !String
   , opt_group :: !String
   , opt_pid_file :: !String
+  , opt_logging :: !Bool
   , opt_log_file :: !String
   , opt_log_file_size :: !Int
   , opt_log_backup_number :: !Int
@@ -57,6 +59,7 @@ makeOpt def conf = Option {
   , opt_user               = get "User" opt_user
   , opt_group              = get "Group" opt_group
   , opt_pid_file           = get "Pid_File" opt_pid_file
+  , opt_logging            = get "Logging" opt_logging
   , opt_log_file           = get "Log_File" opt_log_file
   , opt_log_file_size      = get "Log_File_Size" opt_log_file_size
   , opt_log_backup_number  = get "Log_Backup_Number" opt_log_backup_number

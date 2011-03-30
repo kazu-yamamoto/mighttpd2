@@ -39,18 +39,22 @@ server opt route = flip catch handle $ do
     installHandler sigCHLD Ignore Nothing
     unless debug writePidFile
     setGroupUser opt
-    chan <- if debug then stdoutInit else fileInit logspec
-    serveConnections' setting (fileCgiApp (spec chan) route) s
+    lgr <- if opt_logging opt
+              then do
+               chan <- if debug then stdoutInit else fileInit logspec
+               return $ mightyLogger chan
+              else return (\_ _ -> return ())
+    serveConnections' setting (fileCgiApp (spec lgr) route) s
   where
     debug = opt_debug_mode opt
     port = opt_port opt
     ignore = const $ return ()
     sOpen = listenOn (PortNumber . fromIntegral $ port)
-    spec chan = AppSpec {
+    spec lgr = AppSpec {
         softwareName = BS.pack $ opt_server_name opt
       , indexFile = opt_index_file opt
       , isHTML = \x -> ".html" `isSuffixOf` x || ".htm" `isSuffixOf` x
-      , logger = mightyLogger chan
+      , logger = lgr
       }
     logspec = FileLogSpec {
         log_file          = opt_log_file opt
