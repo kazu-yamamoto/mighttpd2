@@ -45,7 +45,17 @@ fileInit spec = do
     chan <- newChan
     forkIO $ fileFlusher mvar spec
     forkIO $ fileSerializer chan mvar
+    let handler = fileFlushHandler mvar
+    installHandler sigTERM handler Nothing
+    installHandler sigKILL handler Nothing
     return chan
+
+fileFlushHandler :: MVar Handle -> Handler
+fileFlushHandler mvar = Catch $ do
+    hdl <- takeMVar mvar
+    hFlush hdl
+    putMVar mvar hdl
+    exitImmediately ExitSuccess
 
 fileFlusher :: MVar Handle -> FileLogSpec -> IO ()
 fileFlusher mvar spec = forever $ do
