@@ -24,7 +24,7 @@ Executable mighty
   Build-Depends:        base >= 4.0 && < 5, parsec >= 3,
                         network >=2.2 && <2.3,
                         unix, bytestring, warp, old-locale, time,
-                        wai-app-file-cgi, wai, transformers,
+                        wai-app-file-cgi, wai, transformers, http-types,
                         directory, filepath,
                         haskell98
   Other-Modules:	Config

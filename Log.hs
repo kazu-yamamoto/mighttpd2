@@ -8,6 +8,7 @@ import qualified Data.ByteString.Char8 as BS
 import Data.ByteString.Lazy (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as BL
 import Data.Time
+import Network.HTTP.Types
 import Network.Wai
 import Network.Wai.Application.Classic
 import System.Directory
@@ -127,7 +128,7 @@ mightyLogger chan req st = do
       , "] \""
       , requestMethod req
       , " "
-      , pathInfo req
+      , rawPathInfo req
       , "\" "
       , BS.pack (show . statusCode $ st)
       , " - \"" -- size

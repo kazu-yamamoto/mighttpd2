@@ -44,7 +44,7 @@ server opt route = handle handler $ do
                chan <- if debug then stdoutInit else fileInit logspec
                return $ mightyLogger chan
               else return (\_ _ -> return ())
-    serveConnections' setting (fileCgiApp (spec lgr) route) s
+    runSettingsSocket setting s $ fileCgiApp (spec lgr) route
   where
     debug = opt_debug_mode opt
     port = opt_port opt

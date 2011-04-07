@@ -4,6 +4,7 @@ module FileCGIApp (fileCgiApp) where
 
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
+import Network.HTTP.Types
 import Network.Wai
 import Network.Wai.Application.Classic
 import Types
@@ -17,7 +18,7 @@ fileCgiApp spec um req = case mmp of
         OpFile -> fileApp spec (FileRoute src dst) req
         OpCGI  -> cgiApp  spec (CgiRoute  src dst) req
   where
-    mmp = getBlock (serverName req) um >>= getRoute (pathInfo req)
+    mmp = getBlock (serverName req) um >>= getRoute (rawPathInfo req)
 
 getBlock :: ByteString -> RouteDB -> Maybe [Route]
 getBlock _ [] = Nothing
