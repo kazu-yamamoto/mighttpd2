@@ -1,7 +1,7 @@
 module Main where
 
 import Config
-import Control.Exception (catch, SomeException)
+import Control.Exception (handle, SomeException)
 import Control.Monad
 import qualified Data.ByteString.Char8 as BS
 import Data.List (isSuffixOf)
@@ -34,7 +34,7 @@ main = do
         return $ args !! n
 
 server :: Option -> RouteDB -> IO ()
-server opt route = flip catch handle $ do
+server opt route = handle handler $ do
     s <- sOpen
     installHandler sigCHLD Ignore Nothing
     unless debug writePidFile
@@ -73,8 +73,8 @@ server opt route = flip catch handle $ do
         pid <- getProcessID
         writeFile pidfile $ show pid ++ "\n"
         setFileMode pidfile 0o644
-    handle :: SomeException -> IO ()
-    handle e
+    handler :: SomeException -> IO ()
+    handler e
       | debug = hPutStrLn stderr $ show e
       | otherwise = writeFile "/tmp/mighty_error" (show e)
 

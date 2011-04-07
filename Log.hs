@@ -93,7 +93,7 @@ locate spec = mapM_ move srcdsts
   where
     path = log_file spec
     n = log_backup_number spec
-    dsts' = reverse . ("":) . map ('.':) . map show $ [0..n-1]
+    dsts' = reverse . ("":) . map (('.':). show) $ [0..n-1]
     dsts = map (path++) dsts'
     srcs = tail dsts
     srcdsts = zip srcs dsts

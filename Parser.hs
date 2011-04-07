@@ -13,7 +13,7 @@ spcs1 :: Parser ()
 spcs1 = () <$ many1 spc
 
 spc :: Parser Char
-spc = satisfy (\c -> c == ' ' || c == '\t')
+spc = satisfy (`elem` " \t")
 
 commentLines :: Parser ()
 commentLines = () <$ many commentLine
