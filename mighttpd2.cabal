@@ -15,12 +15,12 @@ Data-Files:             sample.conf sample.route
 Executable mighty
   Main-Is:              Mighty.hs
   if impl(ghc >= 7)
-    GHC-Options:        -Wall -O2 -fno-warn-unused-do-bind -threaded
+    GHC-Options:        -Wall -fno-warn-unused-do-bind -threaded
   else
     if impl(ghc >= 6.12)
-      GHC-Options:        -Wall -O2 -fno-warn-unused-do-bind
+      GHC-Options:        -Wall -fno-warn-unused-do-bind
     else
-      GHC-Options:        -Wall -O2
+      GHC-Options:        -Wall
   Build-Depends:        base >= 4.0 && < 5, parsec >= 3,
                         network >=2.2 && <2.3,
                         unix, bytestring, warp, old-locale, time,
