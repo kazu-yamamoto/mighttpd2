@@ -12,8 +12,9 @@ import Types
 fileCgiApp :: AppSpec -> RouteDB -> Application
 fileCgiApp spec um req = case mmp of
     Nothing -> return $ responseLBS statusNotFound
-                                    [("Content-Type", "text/plain")]
-                                    "Not found"
+                                    [("Content-Type", "text/plain")
+                                    ,("Server", softwareName spec)]
+                                    "Not Found\r\n"
     Just (Route src op dst) -> case op of
         OpFile -> fileApp spec (FileRoute src dst) req
         OpCGI  -> cgiApp  spec (CgiRoute  src dst) req
