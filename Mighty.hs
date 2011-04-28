@@ -1,10 +1,11 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
 import Config
 import Control.Exception (handle, SomeException)
 import Control.Monad
 import qualified Data.ByteString.Char8 as BS
-import Data.List (isSuffixOf)
 import FileCGIApp
 import Log
 import Network
@@ -52,8 +53,8 @@ server opt route = handle handler $ do
     sOpen = listenOn (PortNumber . fromIntegral $ port)
     spec lgr = AppSpec {
         softwareName = BS.pack $ opt_server_name opt
-      , indexFile = opt_index_file opt
-      , isHTML = \x -> ".html" `isSuffixOf` x || ".htm" `isSuffixOf` x
+      , indexFile = BS.pack $ opt_index_file opt
+      , isHTML = \x -> ".html" `BS.isSuffixOf` x || ".htm" `BS.isSuffixOf` x
       , logger = lgr
       }
     logspec = FileLogSpec {

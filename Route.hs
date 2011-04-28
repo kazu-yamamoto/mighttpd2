@@ -35,6 +35,6 @@ route = Route <$> src <*> op <*> dst <* trailing
   where
     path = many1 (noneOf "[], \t\n")
     src = BS.pack <$> path <* spcs
-    dst = path <* spcs
+    dst = BS.pack <$> path <* spcs
     op0 = OpFile <$ string "->" <|> OpCGI <$ string "=>"
     op  = op0 <* spcs

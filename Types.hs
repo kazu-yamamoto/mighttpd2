@@ -3,7 +3,7 @@ module Types where
 import Data.ByteString
 
 type Src      = ByteString
-type Dst      = FilePath
+type Dst      = ByteString
 type Domain   = ByteString
 type PathInfo = ByteString
 data Block    = Block [Domain] [Route] deriving (Eq,Show)
