@@ -136,6 +136,6 @@ mightyLogger chan req st msize = do
       , " \"" -- size
       , lookupRequestField' "referer" req
       , "\" \""
-      , lookupRequestField' "useragent" req
+      , lookupRequestField' "user-agent" req
       , "\"\n"
       ]
