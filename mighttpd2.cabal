@@ -26,7 +26,7 @@ Executable mighty
                         unix, bytestring, warp, old-locale, time,
                         wai-app-file-cgi, wai, transformers, http-types,
                         directory, filepath,
-                        haskell98
+                        haskell98, http-date, hashmap
   Other-Modules:	Config
                         Config.Internal
                         FileCGIApp
@@ -35,6 +35,7 @@ Executable mighty
                         Parser
                         Route
                         Types
+                        FileCache
 Executable mkindex
   Main-Is:              mkindex.hs
   if impl(ghc >= 6.12)

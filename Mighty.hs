@@ -18,6 +18,7 @@ import System.Exit
 import System.IO
 import System.Posix
 import Types
+import FileCache
 
 main :: IO ()
 main = do
@@ -45,17 +46,19 @@ server opt route = handle handler $ do
                chan <- if debug then stdoutInit else fileInit logspec
                return $ mightyLogger chan
               else return (\_ _ _ -> return ())
-    runSettingsSocket setting s $ fileCgiApp (spec lgr) route
+    fif <- initialize
+    runSettingsSocket setting s $ fileCgiApp (spec lgr fif) route
   where
     debug = opt_debug_mode opt
     port = opt_port opt
     ignore = const $ return ()
     sOpen = listenOn (PortNumber . fromIntegral $ port)
-    spec lgr = AppSpec {
+    spec lgr fif = AppSpec {
         softwareName = BS.pack $ opt_server_name opt
       , indexFile = BS.pack $ opt_index_file opt
       , isHTML = \x -> ".html" `BS.isSuffixOf` x || ".htm" `BS.isSuffixOf` x
       , logger = lgr
+      , getFileInfo = fif
       }
     logspec = FileLogSpec {
         log_file          = opt_log_file opt
