@@ -41,13 +41,14 @@ server opt route = handle handler $ do
     installHandler sigCHLD Ignore Nothing
     unless debug writePidFile
     setGroupUser opt
-    lgr <- if opt_logging opt
-              then do
-               chan <- if debug then stdoutInit else fileInit logspec
-               return $ mightyLogger chan
-              else return (\_ _ _ -> return ())
-    fif <- initialize
-    runSettingsSocket setting s $ fileCgiApp (spec lgr fif) route
+    replicateM_ 1 $ forkProcess $ do
+      lgr <- if opt_logging opt
+                then do
+                 chan <- if debug then stdoutInit else fileInit logspec
+                 return $ mightyLogger chan
+                else return (\_ _ _ -> return ())
+      fif <- initialize
+      runSettingsSocket setting s $ fileCgiApp (spec lgr fif) route
   where
     debug = opt_debug_mode opt
     port = opt_port opt
