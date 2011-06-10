@@ -37,14 +37,13 @@ main = do
         return $ args !! n
 
 server :: Option -> RouteDB -> IO ()
-server opt route = handle handler $ runC10kServer svr c10kCfg
+server opt route = runC10kServer (\s -> do
+    installHandler sigCHLD Ignore Nothing
+    lgr <- return (\_ _ _ -> return ())
+    fif <- initialize
+    runSettingsSocket setting s $ fileCgiApp (spec lgr fif) route)
+    c10kCfg
   where
-    svr s = do
-        print s
-        installHandler sigCHLD Ignore Nothing
-        lgr <- return (\_ _ _ -> return ())
-        fif <- initialize
-        runSettingsSocket setting s $ fileCgiApp (spec lgr fif) route
     debug = opt_debug_mode opt
     port = opt_port opt
     ignore = const $ return ()
@@ -83,7 +82,7 @@ server opt route = handle handler $ runC10kServer svr c10kCfg
       , parentStartedHook = return ()
       , startedHook = return ()
       , sleepTimer = 1
-      , preforkProcessNumber = 2
+      , preforkProcessNumber = 1
       , threadNumberPerProcess = 100000
       , portName = show port
       , ipAddr = Nothing
