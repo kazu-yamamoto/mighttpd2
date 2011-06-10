@@ -19,7 +19,6 @@ import System.IO
 import System.Posix
 import Types
 import FileCache
-import Network.C10kServer
 
 main :: IO ()
 main = do
@@ -37,12 +36,18 @@ main = do
         return $ args !! n
 
 server :: Option -> RouteDB -> IO ()
-server opt route = runC10kServer (\s -> do
+server opt route = handle handler $ do
+    s <- sOpen
     installHandler sigCHLD Ignore Nothing
-    lgr <- return (\_ _ _ -> return ())
+    unless debug writePidFile
+    setGroupUser opt
+    lgr <- if opt_logging opt
+              then do
+               chan <- if debug then stdoutInit else fileInit logspec
+               return $ mightyLogger chan
+              else return (\_ _ _ -> return ())
     fif <- initialize
-    runSettingsSocket setting s $ fileCgiApp (spec lgr fif) route)
-    c10kCfg
+    runSettingsSocket setting s $ fileCgiApp (spec lgr fif) route
   where
     debug = opt_debug_mode opt
     port = opt_port opt
@@ -76,20 +81,6 @@ server opt route = runC10kServer (\s -> do
     handler e
       | debug = hPutStrLn stderr $ show e
       | otherwise = writeFile "/tmp/mighty_error" (show e)
-    c10kCfg = C10kConfig {
-        initHook = return ()
-      , exitHook = \_ -> return ()
-      , parentStartedHook = return ()
-      , startedHook = return ()
-      , sleepTimer = 1
-      , preforkProcessNumber = 1
-      , threadNumberPerProcess = 100000
-      , portName = show port
-      , ipAddr = Nothing
-      , pidFile = pidfile
-      , user = opt_user opt
-      , group = opt_group opt
-      }
 
 ----------------------------------------------------------------
 
