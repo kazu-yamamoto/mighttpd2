@@ -41,7 +41,10 @@ server opt route = handle handler $ do
     installHandler sigCHLD Ignore Nothing
     unless debug writePidFile
     setGroupUser opt
-    replicateM_ 1 $ forkProcess $ do
+    replicateM_ 3 $ forkProcess (svr s)
+    svr s
+  where
+    svr s = do
       lgr <- if opt_logging opt
                 then do
                  chan <- if debug then stdoutInit else fileInit logspec
@@ -49,7 +52,6 @@ server opt route = handle handler $ do
                 else return (\_ _ _ -> return ())
       fif <- initialize
       runSettingsSocket setting s $ fileCgiApp (spec lgr fif) route
-  where
     debug = opt_debug_mode opt
     port = opt_port opt
     ignore = const $ return ()
