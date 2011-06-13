@@ -41,7 +41,7 @@ server opt route = handle handler $ do
     installHandler sigCHLD Ignore Nothing
     unless debug writePidFile
     setGroupUser opt
-    replicateM_ 3 $ forkProcess (svr s)
+    replicateM_ (opt_prefork_process_number opt) $ forkProcess (svr s)
     svr s
   where
     svr s = do
