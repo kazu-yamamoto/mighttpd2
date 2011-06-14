@@ -1,5 +1,6 @@
 module FileCache where
 
+import Control.Concurrent
 import Control.Exception
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
@@ -7,9 +8,9 @@ import Data.HashMap (Map)
 import qualified Data.HashMap as M
 import Data.IORef
 import Network.HTTP.Date
+import Network.Wai.Application.Classic
 import System.IO.Unsafe
 import System.Posix.Files
-import Network.Wai.Application.Classic
 
 data Entry = Negative | Positive FileInfo
 type Cache = Map ByteString Entry
@@ -50,4 +51,11 @@ lok path cache = unsafePerformIO $ do
 initialize :: IO (GetInfo)
 initialize = do
     ref <- newIORef M.empty
+    forkIO (remover ref)
     return $ fileInfo ref
+
+remover :: IORef Cache -> IO ()
+remover ref = do
+    threadDelay 10000000
+    _ <- atomicModifyIORef ref (\_ -> (M.empty, undefined))
+    remover ref
