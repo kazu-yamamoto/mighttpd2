@@ -40,6 +40,7 @@ main = do
 server :: Option -> RouteDB -> IO ()
 server opt route = handle handler $ do
     s <- sOpen
+    installHandler sigCHLD Ignore Nothing
     unless debug writePidFile
     setGroupUser opt
     -- FIXME logging
@@ -93,22 +94,19 @@ server' opt route s = do
 
 prefork :: Option -> RouteDB -> Socket -> IO ()
 prefork opt route s = do
-    ignoreSigChild
+    pid <- getProcessID
     cids <- replicateM preN $ forkProcess (server' opt route s)
+    mapM_ (terminator pid cids) [sigTERM,sigINT]
     sClose s
     pause
-    terminateChildren cids
   where
-    preN = opt_prefork_process_number opt
-    pause = do
-        blockSignals reservedSignals
-        awaitSignal Nothing >> yield
-    terminateChildren cids = do
-        ignoreSigChild
+    terminator pid cids sig = installHandler sig (Catch (terminate pid cids)) Nothing
+    terminate pid cids = do
         mapM_ terminateChild cids
-    terminateChild cid = signalProcess sigTERM cid `catch` ignore
-    initHandler func sig = installHandler sig func Nothing
-    ignoreSigChild = initHandler Ignore sigCHLD
+        signalProcess killProcess pid
+    terminateChild cid =  signalProcess sigTERM cid `catch` ignore
+    preN = opt_prefork_process_number opt
+    pause = threadDelay 5000000 >> pause
 
 ----------------------------------------------------------------
 
