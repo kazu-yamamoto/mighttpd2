@@ -3,13 +3,10 @@
 module Main where
 
 import Config
-import Control.Applicative
-import Control.Concurrent
-import Control.Exception (catch, handle, SomeException)
+import Control.Exception (handle, SomeException)
 import Control.Monad
 import qualified Data.ByteString.Char8 as BS
 import FileCGIApp
-import FileCache
 import Log
 import Network
 import Network.Wai.Application.Classic
@@ -21,6 +18,7 @@ import System.Exit
 import System.IO
 import System.Posix
 import Types
+import FileCache
 
 main :: IO ()
 main = do
@@ -43,40 +41,21 @@ server opt route = handle handler $ do
     installHandler sigCHLD Ignore Nothing
     unless debug writePidFile
     setGroupUser opt
-    -- FIXME logging
-    if preN == 1
-       then server' opt route s
-       else prefork opt route s
+    replicateM_ (opt_prefork_process_number opt) $ forkProcess (svr s)
+    svr s
   where
+    svr s = do
+      lgr <- if opt_logging opt
+                then do
+                 chan <- if debug then stdoutInit else fileInit logspec
+                 return $ mightyLogger chan
+                else return (\_ _ _ -> return ())
+      fif <- initialize
+      runSettingsSocket setting s $ fileCgiApp (spec lgr fif) route
     debug = opt_debug_mode opt
     port = opt_port opt
+    ignore = const $ return ()
     sOpen = listenOn (PortNumber . fromIntegral $ port)
-    pidfile = opt_pid_file opt
-    preN = opt_prefork_process_number opt
-    writePidFile = do
-        pid <- getProcessID
-        writeFile pidfile $ show pid ++ "\n"
-        setFileMode pidfile 0o644
-    handler :: SomeException -> IO ()
-    handler e
-      | debug = hPutStrLn stderr $ show e
-      | otherwise = writeFile "/tmp/mighty_error" (show e)
-
-server' :: Option -> RouteDB -> Socket -> IO ()
-server' opt route s = do
-    lgr <- if opt_logging opt
-              then mightyLogger <$> if debug then stdoutInit
-                                             else fileInit logspec
-              else return (\_ _ _ -> return ())
-    fif <- initialize
-    runSettingsSocket setting s $ fileCgiApp (spec lgr fif) route
-  where
-    debug = opt_debug_mode opt
-    setting = defaultSettings {
-        settingsPort        = opt_port opt
-      , settingsOnException = ignore
-      , settingsTimeout     = opt_connection_timeout opt
-      }
     spec lgr fif = AppSpec {
         softwareName = BS.pack $ opt_server_name opt
       , indexFile = BS.pack $ opt_index_file opt
@@ -91,22 +70,20 @@ server' opt route s = do
       , log_buffer_size   = opt_log_buffer_size opt
       , log_flush_period  = opt_log_flush_period opt * 1000000
       }
-
-prefork :: Option -> RouteDB -> Socket -> IO ()
-prefork opt route s = do
-    pid <- getProcessID
-    cids <- replicateM preN $ forkProcess (server' opt route s)
-    mapM_ (terminator pid cids) [sigTERM,sigINT]
-    sClose s
-    pause
-  where
-    terminator pid cids sig = installHandler sig (Catch (terminate pid cids)) Nothing
-    terminate pid cids = do
-        mapM_ terminateChild cids
-        signalProcess killProcess pid
-    terminateChild cid =  signalProcess sigTERM cid `catch` ignore
-    preN = opt_prefork_process_number opt
-    pause = threadDelay 5000000 >> pause
+    setting = defaultSettings {
+        settingsPort        = opt_port opt
+      , settingsOnException = ignore
+      , settingsTimeout     = opt_connection_timeout opt
+      }
+    pidfile = opt_pid_file opt
+    writePidFile = do
+        pid <- getProcessID
+        writeFile pidfile $ show pid ++ "\n"
+        setFileMode pidfile 0o644
+    handler :: SomeException -> IO ()
+    handler e
+      | debug = hPutStrLn stderr $ show e
+      | otherwise = writeFile "/tmp/mighty_error" (show e)
 
 ----------------------------------------------------------------
 
@@ -135,8 +112,3 @@ daemonize program = ensureDetachTerminalCanWork $ do
         forkProcess p
         exitImmediately ExitSuccess
     detachTerminal = createSession
-
-----------------------------------------------------------------
-
-ignore :: SomeException -> IO ()
-ignore = const $ return ()
