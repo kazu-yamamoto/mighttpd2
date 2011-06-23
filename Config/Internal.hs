@@ -26,7 +26,6 @@ defaultOption = Option {
   , opt_index_file = "index.html"
   , opt_connection_timeout = 30
   , opt_server_name = programName ++ "/" ++ programVersion
-  , opt_prefork_process_number = 1
 }
 
 data Option = Option {
@@ -44,7 +43,6 @@ data Option = Option {
   , opt_index_file :: !String
   , opt_connection_timeout :: !Int
   , opt_server_name :: !String
-  , opt_prefork_process_number :: !Int
 } deriving (Eq,Show)
 
 ----------------------------------------------------------------
@@ -70,7 +68,6 @@ makeOpt def conf = Option {
   , opt_index_file         = get "Index_File" opt_index_file
   , opt_connection_timeout = get "Connection_Timeout" opt_connection_timeout
   , opt_server_name        = get "Server_Name" opt_server_name
-  , opt_prefork_process_number = get "Prefork_Process_Number" opt_prefork_process_number
   }
   where
     get k func = maybe (func def) fromConf $ lookup k conf
