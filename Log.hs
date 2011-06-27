@@ -101,7 +101,7 @@ fileFlusher spec mvar = forever $ do
 ----------------------------------------------------------------
 
 open :: FileLogSpec -> IO Fd
-open spec = openFd file WriteOnly Nothing defaultFileFlags { append = True }
+open spec = openFd file WriteOnly (Just 0o644) defaultFileFlags { append = True }
   where
     file = log_file spec
 
