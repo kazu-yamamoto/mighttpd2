@@ -129,10 +129,12 @@ fileRotateHandler spec mvar = Catch $ do
 fileRotater :: FileLogSpec -> [ProcessID] -> IO ()
 fileRotater spec ps = do
     threadDelay 10000000
-    size <- fromIntegral . fileSize <$> getFileStatus (log_file spec)
-    when (size > log_file_size spec) $ do
-        rotate spec
-        mapM_ (signalProcess sigHUP) ps
+    exist <- doesFileExist $ log_file spec
+    when exist $ do
+        size <- fromIntegral . fileSize <$> getFileStatus (log_file spec)
+        when (size > log_file_size spec) $ do
+            rotate spec
+            mapM_ (signalProcess sigHUP) ps
     fileRotater spec ps
 
 ----------------------------------------------------------------
