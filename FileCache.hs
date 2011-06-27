@@ -1,4 +1,4 @@
-module FileCache where
+module FileCache (fileCacheInit) where
 
 import Control.Concurrent
 import Control.Exception
@@ -48,8 +48,8 @@ lok path cache = unsafePerformIO $ do
     handler :: SomeException -> IO (Cache, Maybe FileInfo)
     handler _ = neg
 
-initialize :: IO (GetInfo)
-initialize = do
+fileCacheInit :: IO (GetInfo)
+fileCacheInit = do
     ref <- newIORef M.empty
     forkIO (remover ref)
     return $ fileInfo ref

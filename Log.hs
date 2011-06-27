@@ -1,12 +1,14 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, DoAndIfThenElse #-}
 
 module Log where
 
+import Buffer
+import Control.Applicative
 import Control.Concurrent
 import Control.Monad
+import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
-import Data.ByteString.Lazy (ByteString)
-import qualified Data.ByteString.Lazy.Char8 as BL
+import Data.IORef
 import Data.Time
 import Network.HTTP.Types
 import Network.Wai
@@ -16,7 +18,12 @@ import System.Exit
 import System.FilePath
 import System.IO
 import System.Locale
-import System.Posix
+import System.Posix.IO hiding (fdWrite,fdWriteBuf)
+import System.Posix.IO.ByteString
+import System.Posix.Process
+import System.Posix.Signals
+import System.Posix.Types
+import System.Posix.Files
 
 data FileLogSpec = FileLogSpec {
     log_file :: String
@@ -25,6 +32,10 @@ data FileLogSpec = FileLogSpec {
   , log_buffer_size :: Int
   , log_flush_period :: Int
   }
+
+type TimeRef = IORef ByteString
+
+----------------------------------------------------------------
 
 fileCheck :: FileLogSpec -> IO ()
 fileCheck spec = do
@@ -39,58 +50,63 @@ fileCheck spec = do
     dir = takeDirectory file
     exit msg = hPutStrLn stderr msg >> exitFailure
 
-fileInit :: FileLogSpec -> IO (Chan ByteString)
+fileInit :: FileLogSpec -> IO (TimeRef,Chan [ByteString])
 fileInit spec = do
-    hdl <- open spec
-    mvar <- newMVar hdl
+    fd <- open spec
+    buf <- createBuffer (log_buffer_size spec)
+    mvar <- newMVar (fd,buf)
     chan <- newChan
-    forkIO $ fileFlusher mvar spec
+    ref <- timeKeeperInit
+    forkIO $ fileFlusher spec mvar
     forkIO $ fileSerializer chan mvar
-    let handler = fileFlushHandler mvar
-    installHandler sigTERM handler Nothing
-    installHandler sigKILL handler Nothing
-    return chan
+    let flushHandler = fileFlushHandler mvar
+        rotateHandler = fileRotateHandler spec mvar
+    installHandler sigTERM flushHandler Nothing
+    installHandler sigKILL flushHandler Nothing
+    installHandler sigHUP rotateHandler Nothing
+    return (ref,chan)
 
-fileFlushHandler :: MVar Handle -> Handler
+----------------------------------------------------------------
+
+fileSerializer :: Chan [ByteString] -> MVar (Fd,Buffer) -> IO ()
+fileSerializer chan mvar = forever $ do
+    bss <- readChan chan
+    (fd,buf) <- takeMVar mvar
+    mbuf <- copyByteStrings buf bss
+    case mbuf of
+        Nothing -> do
+            buf' <- writeBuffer fd buf
+            Just buf'' <- copyByteStrings buf' bss -- xxx assuming large enough
+            putMVar mvar (fd,buf'')
+        Just buf' -> putMVar mvar (fd,buf')
+
+----------------------------------------------------------------
+
+fileFlush :: MVar (Fd, Buffer) -> IO ()
+fileFlush mvar = do
+    (fd,buf) <- takeMVar mvar
+    buf' <- writeBuffer fd buf
+    putMVar mvar (fd,buf')
+
+fileFlushHandler :: MVar (Fd,Buffer) -> Handler
 fileFlushHandler mvar = Catch $ do
-    hdl <- takeMVar mvar
-    hFlush hdl
-    putMVar mvar hdl
+    fileFlush mvar
     exitImmediately ExitSuccess
 
-fileFlusher :: MVar Handle -> FileLogSpec -> IO ()
-fileFlusher mvar spec = forever $ do
+fileFlusher :: FileLogSpec -> MVar (Fd,Buffer) -> IO ()
+fileFlusher spec mvar = forever $ do
     threadDelay $ log_flush_period spec
-    hdl <- takeMVar mvar
-    hFlush hdl
-    size <- hFileSize hdl
-    if size > log_file_size spec
-       then do
-        hClose hdl
-        locate spec
-        newhdl <- open spec
-        putMVar mvar newhdl
-       else putMVar mvar hdl
+    fileFlusher spec mvar
 
-fileSerializer :: Chan ByteString -> MVar Handle -> IO ()
-fileSerializer chan mvar = forever $ do
-    xs <- readChan chan
-    hdl <- takeMVar mvar
-    BL.hPut hdl xs
-    putMVar mvar hdl
+----------------------------------------------------------------
 
-open :: FileLogSpec -> IO Handle
-open spec = do
-    hdl <- openFile file AppendMode
-    setFileMode file 0o644
-    hSetEncoding hdl latin1
-    hSetBuffering hdl $ BlockBuffering (Just $ log_buffer_size spec)
-    return hdl
+open :: FileLogSpec -> IO Fd
+open spec = openFd file WriteOnly Nothing defaultFileFlags { append = True }
   where
     file = log_file spec
 
-locate :: FileLogSpec -> IO ()
-locate spec = mapM_ move srcdsts
+rotate :: FileLogSpec -> IO ()
+rotate spec = mapM_ move srcdsts
   where
     path = log_file spec
     n = log_backup_number spec
@@ -102,29 +118,48 @@ locate spec = mapM_ move srcdsts
         exist <- doesFileExist src
         when exist $ renameFile src dst
 
+fileRotateHandler :: FileLogSpec -> MVar (Fd, Buffer) -> Handler
+fileRotateHandler spec mvar = Catch $ do
+    (fd,buf) <- takeMVar mvar
+    buf' <- writeBuffer fd buf
+    closeFd fd
+    fd' <- open spec
+    putMVar mvar (fd',buf')
+
+fileRotater :: FileLogSpec -> [ProcessID] -> IO ()
+fileRotater spec ps = do
+    size <- fromIntegral . fileSize <$> getFileStatus (log_file spec)
+    when (size > log_file_size spec) $ do
+        rotate spec
+        mapM_ (signalProcess sigHUP) ps
+    threadDelay 10000000
+    fileRotater spec ps
+
 ----------------------------------------------------------------
 
-stdoutInit :: IO (Chan ByteString)
+stdoutInit :: IO (TimeRef,Chan [ByteString])
 stdoutInit = do
     chan <- newChan
+    ref <- timeKeeperInit
+    forkIO $ timeKeeper ref
     forkIO $ stdoutSerializer chan
-    return chan
+    return (ref,chan)
 
-stdoutSerializer :: Chan ByteString -> IO ()
-stdoutSerializer chan = forever $ readChan chan >>= BL.putStr
+stdoutSerializer :: Chan [ByteString] -> IO ()
+stdoutSerializer chan = forever $ readChan chan >>= \bss -> do
+    fdWrite 1 $ BS.concat bss
+    return ()
 
 ----------------------------------------------------------------
 
-mightyLogger :: Chan ByteString -> Request -> Status -> Maybe Integer -> IO ()
-mightyLogger chan req st msize = do
-    zt <- getZonedTime
+mightyLogger :: (TimeRef,Chan [ByteString]) -> Request -> Status -> Maybe Integer -> IO ()
+mightyLogger (ref,chan) req st msize = do
     addr <- getPeerAddr (remoteHost req)
-    writeChan chan $ BL.fromChunks (logmsg addr zt)
-  where
-    logmsg addr zt = [
+    tmstr <- readIORef ref
+    writeChan chan [
         BS.pack addr
       , " - - ["
-      , BS.pack (formatTime defaultTimeLocale "%d/%b/%Y:%T %z" zt)
+      , tmstr
       , "] \""
       , requestMethod req
       , " "
@@ -139,3 +174,19 @@ mightyLogger chan req st msize = do
       , lookupRequestField' "user-agent" req
       , "\"\n"
       ]
+
+----------------------------------------------------------------
+
+timeKeeperInit :: IO (TimeRef)
+timeKeeperInit = timeByteString >>= newIORef
+
+timeKeeper :: TimeRef -> IO ()
+timeKeeper ref = do
+    tmstr <- timeByteString
+    atomicModifyIORef ref (\_ -> (tmstr, undefined))
+    threadDelay 1000000
+    timeKeeper ref
+
+timeByteString :: IO ByteString
+timeByteString =
+    BS.pack . formatTime defaultTimeLocale "%d/%b/%Y:%T %z" <$> getZonedTime

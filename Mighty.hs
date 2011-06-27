@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, DoAndIfThenElse #-}
 
 module Main where
 
@@ -26,9 +26,10 @@ main :: IO ()
 main = do
     opt  <- fileName 0 >>= parseOption
     route <- fileName 1 >>= parseRoute
-    if opt_debug_mode opt
-       then server opt route
-       else daemonize $ server opt route
+    if opt_debug_mode opt then
+        server opt route
+    else
+        daemonize $ server opt route
   where
     fileName n = do
         args <- getArgs
@@ -43,9 +44,12 @@ server opt route = handle handler $ do
     unless debug writePidFile
     setGroupUser opt
     -- FIXME logging
-    if preN == 1
-       then server' opt route s
-       else prefork opt route s
+    if preN == 1 then do
+        pid <- getProcessID
+        forkIO $ fileRotater logspec [pid]
+        server' opt route s logspec
+    else
+        prefork opt route s logspec
   where
     debug = opt_debug_mode opt
     port = opt_port opt
@@ -60,29 +64,6 @@ server opt route = handle handler $ do
     handler e
       | debug = hPutStrLn stderr $ show e
       | otherwise = writeFile "/tmp/mighty_error" (show e)
-
-server' :: Option -> RouteDB -> Socket -> IO ()
-server' opt route s = do
-    lgr <- if opt_logging opt
-              then mightyLogger <$> if debug then stdoutInit
-                                             else fileInit logspec
-              else return (\_ _ _ -> return ())
-    fif <- initialize
-    runSettingsSocket setting s $ fileCgiApp (spec lgr fif) route
-  where
-    debug = opt_debug_mode opt
-    setting = defaultSettings {
-        settingsPort        = opt_port opt
-      , settingsOnException = ignore
-      , settingsTimeout     = opt_connection_timeout opt
-      }
-    spec lgr fif = AppSpec {
-        softwareName = BS.pack $ opt_server_name opt
-      , indexFile = BS.pack $ opt_index_file opt
-      , isHTML = \x -> ".html" `BS.isSuffixOf` x || ".htm" `BS.isSuffixOf` x
-      , logger = lgr
-      , getFileInfo = fif
-      }
     logspec = FileLogSpec {
         log_file          = opt_log_file opt
       , log_file_size     = fromIntegral $ opt_log_file_size opt
@@ -91,24 +72,46 @@ server' opt route s = do
       , log_flush_period  = opt_log_flush_period opt * 1000000
       }
 
-prefork :: Option -> RouteDB -> Socket -> IO ()
-prefork opt route s = do
+server' :: Option -> RouteDB -> Socket -> FileLogSpec -> IO ()
+server' opt route s logspec = do
+    lgr <- if opt_logging opt then do
+               let ini = if debug then stdoutInit else fileInit logspec
+               mightyLogger <$> ini
+           else
+               return (\_ _ _ -> return ())
+    getInfo <- fileCacheInit
+    runSettingsSocket setting s $ fileCgiApp (spec lgr getInfo) route
+  where
+    debug = opt_debug_mode opt
+    setting = defaultSettings {
+        settingsPort        = opt_port opt
+      , settingsOnException = ignore
+      , settingsTimeout     = opt_connection_timeout opt
+      }
+    spec lgr getInfo = AppSpec {
+        softwareName = BS.pack $ opt_server_name opt
+      , indexFile = BS.pack $ opt_index_file opt
+      , isHTML = \x -> ".html" `BS.isSuffixOf` x || ".htm" `BS.isSuffixOf` x
+      , logger = lgr
+      , getFileInfo = getInfo
+      }
+
+prefork :: Option -> RouteDB -> Socket -> FileLogSpec -> IO ()
+prefork opt route s logspec = do
     ignoreSigChild
-    cids <- replicateM preN $ forkProcess (server' opt route s)
+    cids <- replicateM preN $ forkProcess (server' opt route s logspec)
     sClose s
-    pause
-    terminateChildren cids
+    initHandler sigTERM $ terminateHandler cids
+    initHandler sigKILL $ terminateHandler cids
+    fileRotater logspec cids
   where
     preN = opt_prefork_process_number opt
-    pause = do
-        blockSignals reservedSignals
-        awaitSignal Nothing >> yield
-    terminateChildren cids = do
-        ignoreSigChild
+    initHandler sig func = installHandler sig func Nothing
+    ignoreSigChild = initHandler sigCHLD Ignore
+    terminateHandler cids = Catch $ do
         mapM_ terminateChild cids
+        exitImmediately ExitSuccess
     terminateChild cid = signalProcess sigTERM cid `catch` ignore
-    initHandler func sig = installHandler sig func Nothing
-    ignoreSigChild = initHandler Ignore sigCHLD
 
 ----------------------------------------------------------------
 
