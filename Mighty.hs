@@ -103,6 +103,7 @@ prefork opt route s logspec = do
     sClose s
     initHandler sigTERM $ terminateHandler cids
     initHandler sigKILL $ terminateHandler cids
+    initHandler sigINT  $ terminateHandler cids
     fileRotater logspec cids
   where
     preN = opt_prefork_process_number opt
