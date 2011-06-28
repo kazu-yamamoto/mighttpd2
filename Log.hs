@@ -62,7 +62,7 @@ fileInit spec = do
     let flushHandler = fileFlushHandler mvar
         rotateHandler = fileRotateHandler spec mvar
     installHandler sigTERM flushHandler Nothing
-    installHandler sigKILL flushHandler Nothing
+    installHandler sigINT flushHandler Nothing
     installHandler sigHUP rotateHandler Nothing
     return (ref,chan)
 

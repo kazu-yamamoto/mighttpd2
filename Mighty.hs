@@ -102,7 +102,6 @@ prefork opt route s logspec = do
     cids <- replicateM preN $ forkProcess (server' opt route s logspec)
     sClose s
     initHandler sigTERM $ terminateHandler cids
-    initHandler sigKILL $ terminateHandler cids
     initHandler sigINT  $ terminateHandler cids
     fileRotater logspec cids
   where
