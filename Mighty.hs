@@ -3,7 +3,6 @@
 module Main where
 
 import Config
-import Control.Applicative
 import Control.Concurrent
 import Control.Exception (catch, handle, SomeException)
 import Control.Monad
@@ -43,13 +42,12 @@ server opt route = handle handler $ do
     s <- sOpen
     unless debug writePidFile
     setGroupUser opt
-    -- FIXME logging
     if preN == 1 then do
-        pid <- getProcessID
-        forkIO $ fileRotater logspec [pid]
-        server' opt route s logspec
-    else
-        prefork opt route s logspec
+        single opt route s logspec
+--        fileRotater logspec [pid]
+    else do
+        multi opt route s logspec
+--        fileRotater logspec [pid]
   where
     debug = opt_debug_mode opt
     port = opt_port opt
@@ -68,21 +66,18 @@ server opt route = handle handler $ do
         log_file          = opt_log_file opt
       , log_file_size     = fromIntegral $ opt_log_file_size opt
       , log_backup_number = opt_log_backup_number opt
-      , log_buffer_size   = opt_log_buffer_size opt
-      , log_flush_period  = opt_log_flush_period opt * 1000000
       }
 
-server' :: Option -> RouteDB -> Socket -> FileLogSpec -> IO ()
-server' opt route s logspec = do
+single :: Option -> RouteDB -> Socket -> FileLogSpec -> IO ()
+single opt route s logspec = do
     lgr <- if opt_logging opt then do
-               let ini = if debug then stdoutInit else fileInit logspec
-               mightyLogger <$> ini
+               logInit logspec
            else
                return (\_ _ _ -> return ())
     getInfo <- fileCacheInit
     runSettingsSocket setting s $ fileCgiApp (spec lgr getInfo) route
   where
-    debug = opt_debug_mode opt
+--    debug = opt_debug_mode opt
     setting = defaultSettings {
         settingsPort        = opt_port opt
       , settingsOnException = ignore
@@ -96,14 +91,16 @@ server' opt route s logspec = do
       , getFileInfo = getInfo
       }
 
-prefork :: Option -> RouteDB -> Socket -> FileLogSpec -> IO ()
-prefork opt route s logspec = do
+multi :: Option -> RouteDB -> Socket -> FileLogSpec -> IO ()
+multi opt route s logspec = do
     ignoreSigChild
-    cids <- replicateM preN $ forkProcess (server' opt route s logspec)
+    cids <- replicateM preN $ forkProcess (single opt route s logspec)
     sClose s
     initHandler sigTERM $ terminateHandler cids
     initHandler sigINT  $ terminateHandler cids
-    fileRotater logspec cids
+    forever $ threadDelay 10000000
+    return ()
+--    fileRotater logspec cids
   where
     preN = opt_prefork_process_number opt
     initHandler sig func = installHandler sig func Nothing

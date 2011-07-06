@@ -2,7 +2,6 @@
 
 module Log where
 
-import Buffer
 import Control.Applicative
 import Control.Concurrent
 import Control.Monad
@@ -14,91 +13,40 @@ import Network.HTTP.Types
 import Network.Wai
 import Network.Wai.Application.Classic
 import System.Directory
-import System.Exit
-import System.FilePath
-import System.IO
 import System.Locale
 import System.Posix.IO hiding (fdWrite,fdWriteBuf)
 import System.Posix.IO.ByteString
-import System.Posix.Process
-import System.Posix.Signals
 import System.Posix.Types
-import System.Posix.Files
 
 data FileLogSpec = FileLogSpec {
     log_file :: String
   , log_file_size :: Integer
   , log_backup_number :: Int
-  , log_buffer_size :: Int
-  , log_flush_period :: Int
   }
 
-type TimeRef = IORef ByteString
+newtype TimeRef = TimeRef (IORef ByteString)
+newtype FdRef = FdRef (IORef Fd)
 
 ----------------------------------------------------------------
 
-fileCheck :: FileLogSpec -> IO ()
-fileCheck spec = do
-    dirperm <- getPermissions dir
-    unless (writable dirperm) $ exit $ dir ++ " is not writable"
-    fileexist <- doesFileExist file
-    when fileexist $ do
-        fileperm <- getPermissions file
-        unless (writable fileperm) $ exit $ file ++ " is not writable"
-  where
-    file = log_file spec
-    dir = takeDirectory file
-    exit msg = hPutStrLn stderr msg >> exitFailure
-
-fileInit :: FileLogSpec -> IO (TimeRef,Chan [ByteString])
-fileInit spec = do
-    fd <- open spec
-    buf <- createBuffer (log_buffer_size spec)
-    mvar <- newMVar (fd,buf)
-    chan <- newChan
-    ref <- timeKeeperInit
-    forkIO $ fileFlusher spec mvar
-    forkIO $ fileSerializer chan mvar
-    let flushHandler = fileFlushHandler mvar
-        rotateHandler = fileRotateHandler spec mvar
-    installHandler sigTERM flushHandler Nothing
-    installHandler sigINT flushHandler Nothing
-    installHandler sigHUP rotateHandler Nothing
-    return (ref,chan)
+logInit :: FileLogSpec -> IO Logger
+logInit spec = do
+    timref <- clockInit
+    fdref <- fileInit spec
+    return $ apacheLogger timref fdref
 
 ----------------------------------------------------------------
 
-fileSerializer :: Chan [ByteString] -> MVar (Fd,Buffer) -> IO ()
-fileSerializer chan mvar = forever $ do
-    bss <- readChan chan
-    (fd,buf) <- takeMVar mvar
-    mbuf <- copyByteStrings buf bss
-    case mbuf of
-        Nothing -> do
-            buf' <- writeBuffer fd buf
-            Just buf'' <- copyByteStrings buf' bss -- xxx assuming large enough
-            putMVar mvar (fd,buf'')
-        Just buf' -> putMVar mvar (fd,buf')
+getDate :: TimeRef -> IO ByteString
+getDate (TimeRef ref) = readIORef ref
+
+getFd :: FdRef -> IO Fd
+getFd (FdRef ref) = readIORef ref
 
 ----------------------------------------------------------------
 
-fileFlush :: MVar (Fd, Buffer) -> IO ()
-fileFlush mvar = do
-    (fd,buf) <- takeMVar mvar
-    buf' <- writeBuffer fd buf
-    putMVar mvar (fd,buf')
-
-fileFlushHandler :: MVar (Fd,Buffer) -> Handler
-fileFlushHandler mvar = Catch $ do
-    fileFlush mvar
-    exitImmediately ExitSuccess
-
-fileFlusher :: FileLogSpec -> MVar (Fd,Buffer) -> IO ()
-fileFlusher spec mvar = forever $ do
-    threadDelay $ log_flush_period spec
-    fileFlusher spec mvar
-
-----------------------------------------------------------------
+fileInit :: FileLogSpec -> IO FdRef
+fileInit spec = open spec >>= (\ref -> FdRef <$> newIORef ref) 
 
 open :: FileLogSpec -> IO Fd
 open spec = openFd file WriteOnly (Just 0o644) defaultFileFlags { append = True }
@@ -118,47 +66,14 @@ rotate spec = mapM_ move srcdsts
         exist <- doesFileExist src
         when exist $ renameFile src dst
 
-fileRotateHandler :: FileLogSpec -> MVar (Fd, Buffer) -> Handler
-fileRotateHandler spec mvar = Catch $ do
-    (fd,buf) <- takeMVar mvar
-    buf' <- writeBuffer fd buf
-    closeFd fd
-    fd' <- open spec
-    putMVar mvar (fd',buf')
-
-fileRotater :: FileLogSpec -> [ProcessID] -> IO ()
-fileRotater spec ps = do
-    threadDelay 10000000
-    exist <- doesFileExist $ log_file spec
-    when exist $ do
-        size <- fromIntegral . fileSize <$> getFileStatus (log_file spec)
-        when (size > log_file_size spec) $ do
-            rotate spec
-            mapM_ (signalProcess sigHUP) ps
-    fileRotater spec ps
-
 ----------------------------------------------------------------
 
-stdoutInit :: IO (TimeRef,Chan [ByteString])
-stdoutInit = do
-    chan <- newChan
-    ref <- timeKeeperInit
-    forkIO $ timeKeeper ref
-    forkIO $ stdoutSerializer chan
-    return (ref,chan)
-
-stdoutSerializer :: Chan [ByteString] -> IO ()
-stdoutSerializer chan = forever $ readChan chan >>= \bss -> do
-    fdWrite 1 $ BS.concat bss
-    return ()
-
-----------------------------------------------------------------
-
-mightyLogger :: (TimeRef,Chan [ByteString]) -> Request -> Status -> Maybe Integer -> IO ()
-mightyLogger (ref,chan) req st msize = do
+apacheLogger :: TimeRef -> FdRef -> Request -> Status -> Maybe Integer -> IO ()
+apacheLogger timref fdref req st msize = do
     addr <- getPeerAddr (remoteHost req)
-    tmstr <- readIORef ref
-    writeChan chan [
+    tmstr <- getDate timref
+    fd <- getFd fdref
+    fdWrite fd $ BS.concat [
         BS.pack addr
       , " - - ["
       , tmstr
@@ -176,18 +91,23 @@ mightyLogger (ref,chan) req st msize = do
       , lookupRequestField' "user-agent" req
       , "\"\n"
       ]
+    return ()
 
 ----------------------------------------------------------------
 
-timeKeeperInit :: IO (TimeRef)
-timeKeeperInit = timeByteString >>= newIORef
+clockInit :: IO (TimeRef)
+clockInit = do
+    ref <- timeByteString >>= newIORef
+    let timeref = TimeRef ref
+    forkIO $ clock timeref
+    return timeref
 
-timeKeeper :: TimeRef -> IO ()
-timeKeeper ref = do
+clock :: TimeRef -> IO ()
+clock timeref@(TimeRef ref) = do
     tmstr <- timeByteString
     atomicModifyIORef ref (\_ -> (tmstr, undefined))
     threadDelay 1000000
-    timeKeeper ref
+    clock timeref
 
 timeByteString :: IO ByteString
 timeByteString =
