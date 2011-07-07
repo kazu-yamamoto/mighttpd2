@@ -71,7 +71,7 @@ rotate spec = mapM_ move srcdsts
 
 apacheLogger :: TimeRef -> HandleRef -> Request -> Status -> Maybe Integer -> IO ()
 apacheLogger timref hdlref req st msize = do
-    addr <- getPeerAddr (remoteHost req)
+    let addr = getPeerAddr (remoteHost req)
     tmstr <- getDate timref
     hdl <- getHandle hdlref
     BS.hPut hdl $ BS.concat [
