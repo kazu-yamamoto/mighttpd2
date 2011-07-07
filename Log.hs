@@ -14,9 +14,7 @@ import Network.Wai
 import Network.Wai.Application.Classic
 import System.Directory
 import System.Locale
-import System.Posix.IO hiding (fdWrite,fdWriteBuf)
-import System.Posix.IO.ByteString
-import System.Posix.Types
+import System.IO
 
 data FileLogSpec = FileLogSpec {
     log_file :: String
@@ -25,7 +23,7 @@ data FileLogSpec = FileLogSpec {
   }
 
 newtype TimeRef = TimeRef (IORef ByteString)
-newtype FdRef = FdRef (IORef Fd)
+newtype HandleRef = HandleRef (IORef Handle)
 
 ----------------------------------------------------------------
 
@@ -40,16 +38,19 @@ logInit spec = do
 getDate :: TimeRef -> IO ByteString
 getDate (TimeRef ref) = readIORef ref
 
-getFd :: FdRef -> IO Fd
-getFd (FdRef ref) = readIORef ref
+getHandle :: HandleRef -> IO Handle
+getHandle (HandleRef ref) = readIORef ref
 
 ----------------------------------------------------------------
 
-fileInit :: FileLogSpec -> IO FdRef
-fileInit spec = open spec >>= (\ref -> FdRef <$> newIORef ref) 
+fileInit :: FileLogSpec -> IO HandleRef
+fileInit spec = open spec >>= (\ref -> HandleRef <$> newIORef ref)
 
-open :: FileLogSpec -> IO Fd
-open spec = openFd file WriteOnly (Just 0o644) defaultFileFlags { append = True }
+open :: FileLogSpec -> IO Handle
+open spec = do
+    hdl <- openFile file AppendMode
+    hSetBuffering hdl LineBuffering
+    return hdl
   where
     file = log_file spec
 
@@ -68,12 +69,12 @@ rotate spec = mapM_ move srcdsts
 
 ----------------------------------------------------------------
 
-apacheLogger :: TimeRef -> FdRef -> Request -> Status -> Maybe Integer -> IO ()
-apacheLogger timref fdref req st msize = do
+apacheLogger :: TimeRef -> HandleRef -> Request -> Status -> Maybe Integer -> IO ()
+apacheLogger timref hdlref req st msize = do
     addr <- getPeerAddr (remoteHost req)
     tmstr <- getDate timref
-    fd <- getFd fdref
-    fdWrite fd $ BS.concat [
+    hdl <- getHandle hdlref
+    BS.hPut hdl $ BS.concat [
         BS.pack addr
       , " - - ["
       , tmstr
