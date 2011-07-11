@@ -46,11 +46,12 @@ getHandle (HandleRef ref) = readIORef ref
 zeroCount :: IO CountRef
 zeroCount = CountRef <$> newIORef 0
 
-getCount :: CountRef -> IO Int
-getCount (CountRef ref) = readIORef ref
-
-setCount :: CountRef -> Int -> IO ()
-setCount (CountRef ref) n = atomicModifyIORef ref (\_ -> (n, ()))
+getCount :: CountRef -> IO Bool
+getCount (CountRef ref) = atomicModifyIORef ref func
+  where
+    func n
+      | n == 25   = (0,True) -- FIXME
+      | otherwise = (n+1,False)
 
 ----------------------------------------------------------------
 
@@ -60,8 +61,7 @@ fileInit spec = open spec >>= (\ref -> HandleRef <$> newIORef ref)
 open :: FileLogSpec -> IO Handle
 open spec = do
     hdl <- openFile file AppendMode
---    hSetBuffering hdl LineBuffering
-    hSetBuffering hdl (BlockBuffering (Just 4096))
+    hSetBuffering hdl (BlockBuffering (Just 4096)) -- FIXME
     return hdl
   where
     file = log_file spec
@@ -104,12 +104,8 @@ apacheLogger timref hdlref cntref req st msize = do
       , lookupRequestField' "user-agent" req
       , "\"\n"
       ]
-    cnt <- getCount cntref
-    if cnt == 26 then do
-        hFlush hdl
-        setCount cntref 0
-    else
-        setCount cntref (cnt + 1)
+    flush <- getCount cntref
+    when flush $ hFlush hdl
     return ()
 
 ----------------------------------------------------------------
