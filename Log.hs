@@ -24,6 +24,7 @@ data FileLogSpec = FileLogSpec {
 
 newtype TimeRef = TimeRef (IORef ByteString)
 newtype HandleRef = HandleRef (IORef Handle)
+newtype CountRef = CountRef (IORef Int)
 
 ----------------------------------------------------------------
 
@@ -31,7 +32,8 @@ logInit :: FileLogSpec -> IO Logger
 logInit spec = do
     timref <- clockInit
     fdref <- fileInit spec
-    return $ apacheLogger timref fdref
+    cntref <- zeroCount
+    return $ apacheLogger timref fdref cntref
 
 ----------------------------------------------------------------
 
@@ -41,6 +43,15 @@ getDate (TimeRef ref) = readIORef ref
 getHandle :: HandleRef -> IO Handle
 getHandle (HandleRef ref) = readIORef ref
 
+zeroCount :: IO CountRef
+zeroCount = CountRef <$> newIORef 0
+
+getCount :: CountRef -> IO Int
+getCount (CountRef ref) = readIORef ref
+
+setCount :: CountRef -> Int -> IO ()
+setCount (CountRef ref) n = atomicModifyIORef ref (\_ -> (n, ()))
+
 ----------------------------------------------------------------
 
 fileInit :: FileLogSpec -> IO HandleRef
@@ -49,7 +60,7 @@ fileInit spec = open spec >>= (\ref -> HandleRef <$> newIORef ref)
 open :: FileLogSpec -> IO Handle
 open spec = do
     hdl <- openFile file AppendMode
-    hSetBuffering hdl LineBuffering
+--    hSetBuffering hdl LineBuffering
     return hdl
   where
     file = log_file spec
@@ -69,8 +80,8 @@ rotate spec = mapM_ move srcdsts
 
 ----------------------------------------------------------------
 
-apacheLogger :: TimeRef -> HandleRef -> Request -> Status -> Maybe Integer -> IO ()
-apacheLogger timref hdlref req st msize = do
+apacheLogger :: TimeRef -> HandleRef -> CountRef -> Request -> Status -> Maybe Integer -> IO ()
+apacheLogger timref hdlref cntref req st msize = do
     let addr = showSockAddr (remoteHost req)
     tmstr <- getDate timref
     hdl <- getHandle hdlref
@@ -92,6 +103,12 @@ apacheLogger timref hdlref req st msize = do
       , lookupRequestField' "user-agent" req
       , "\"\n"
       ]
+    cnt <- getCount cntref
+    if cnt == 6 then do
+        hFlush hdl
+        setCount cntref 0
+    else
+        setCount cntref (cnt + 1)
     return ()
 
 ----------------------------------------------------------------
