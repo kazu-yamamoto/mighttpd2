@@ -61,6 +61,7 @@ open :: FileLogSpec -> IO Handle
 open spec = do
     hdl <- openFile file AppendMode
 --    hSetBuffering hdl LineBuffering
+    hSetBuffering hdl (BlockBuffering (Just 4096))
     return hdl
   where
     file = log_file spec
@@ -104,7 +105,7 @@ apacheLogger timref hdlref cntref req st msize = do
       , "\"\n"
       ]
     cnt <- getCount cntref
-    if cnt == 6 then do
+    if cnt == 26 then do
         hFlush hdl
         setCount cntref 0
     else
