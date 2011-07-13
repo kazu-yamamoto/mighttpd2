@@ -57,7 +57,7 @@ ppSize st
   | otherwise      = sizeFormat . fromIntegral . fileSize $ st
   where
     sizeFormat siz = unit siz " KMGT"
-    unit _ []  = undefined
+    unit _ []  = error "unit"
     unit s [u] = format s u
     unit s (u:us)
       | s >= 1024 = unit (s `div` 1024) us

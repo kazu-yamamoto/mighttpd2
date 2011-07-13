@@ -57,5 +57,5 @@ fileCacheInit = do
 remover :: IORef Cache -> IO ()
 remover ref = do
     threadDelay 10000000
-    _ <- atomicModifyIORef ref (\_ -> (M.empty, undefined))
+    _ <- atomicModifyIORef ref (\_ -> (M.empty, ()))
     remover ref

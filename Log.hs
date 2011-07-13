@@ -120,7 +120,7 @@ clockInit = do
 clock :: TimeRef -> IO ()
 clock timeref@(TimeRef ref) = do
     tmstr <- timeByteString
-    atomicModifyIORef ref (\_ -> (tmstr, undefined))
+    atomicModifyIORef ref (\_ -> (tmstr, ()))
     threadDelay 1000000
     clock timeref
 
