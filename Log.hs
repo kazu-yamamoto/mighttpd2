@@ -16,6 +16,12 @@ import System.Directory
 import System.Locale
 import System.IO
 
+logBufSize :: Int
+logBufSize = 4096
+
+logsInBuffer :: Int
+logsInBuffer = 25
+
 data FileLogSpec = FileLogSpec {
     log_file :: String
   , log_file_size :: Integer
@@ -50,8 +56,8 @@ getCount :: CountRef -> IO Bool
 getCount (CountRef ref) = atomicModifyIORef ref func
   where
     func n
-      | n == 25   = (0,True) -- FIXME
-      | otherwise = (n+1,False)
+      | n == logsInBuffer   = (0,True) -- FIXME
+      | otherwise           = (n+1,False)
 
 ----------------------------------------------------------------
 
@@ -61,7 +67,7 @@ fileInit spec = open spec >>= (\ref -> HandleRef <$> newIORef ref)
 open :: FileLogSpec -> IO Handle
 open spec = do
     hdl <- openFile file AppendMode
-    hSetBuffering hdl (BlockBuffering (Just 4096)) -- FIXME
+    hSetBuffering hdl (BlockBuffering (Just logBufSize))
     return hdl
   where
     file = log_file spec
