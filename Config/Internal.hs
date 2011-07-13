@@ -21,12 +21,10 @@ defaultOption = Option {
   , opt_log_file = "/var/log/mighty"
   , opt_log_file_size = 16777216
   , opt_log_backup_number = 10
-  , opt_log_buffer_size = 16384
-  , opt_log_flush_period = 10
   , opt_index_file = "index.html"
   , opt_connection_timeout = 30
   , opt_server_name = programName ++ "/" ++ programVersion
-  , opt_prefork_process_number = 1
+  , opt_worker_processes = 1
 }
 
 data Option = Option {
@@ -39,12 +37,10 @@ data Option = Option {
   , opt_log_file :: !String
   , opt_log_file_size :: !Int
   , opt_log_backup_number :: !Int
-  , opt_log_buffer_size :: !Int
-  , opt_log_flush_period :: !Int
   , opt_index_file :: !String
   , opt_connection_timeout :: !Int
   , opt_server_name :: !String
-  , opt_prefork_process_number :: !Int
+  , opt_worker_processes :: !Int
 } deriving (Eq,Show)
 
 ----------------------------------------------------------------
@@ -65,12 +61,10 @@ makeOpt def conf = Option {
   , opt_log_file           = get "Log_File" opt_log_file
   , opt_log_file_size      = get "Log_File_Size" opt_log_file_size
   , opt_log_backup_number  = get "Log_Backup_Number" opt_log_backup_number
-  , opt_log_buffer_size    = get "Log_Buffer_Size" opt_log_buffer_size
-  , opt_log_flush_period   = get "Log_Flush_Period" opt_log_flush_period
   , opt_index_file         = get "Index_File" opt_index_file
   , opt_connection_timeout = get "Connection_Timeout" opt_connection_timeout
   , opt_server_name        = get "Server_Name" opt_server_name
-  , opt_prefork_process_number = get "Prefork_Process_Number" opt_prefork_process_number
+  , opt_worker_processes   = get "Worker_Processes" opt_worker_processes
   }
   where
     get k func = maybe (func def) fromConf $ lookup k conf

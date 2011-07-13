@@ -29,16 +29,16 @@ test_config = do
  where
     ans = [("Port",CV_Int 80)
           ,("Debug_Mode",CV_Bool True)
-          ,("User",CV_String "root")
-          ,("Group",CV_String "wheel")
+          ,("User",CV_String "nobody")
+          ,("Group",CV_String "nobody")
           ,("Pid_File",CV_String "/var/run/mighty.pid")
+          ,("Logging",CV_Bool True)
           ,("Log_File",CV_String "/var/log/mighty")
           ,("Log_File_Size",CV_Int 16777216)
           ,("Log_Backup_Number",CV_Int 10)
-          ,("Log_Buffer_Size",CV_Int 16384)
-          ,("Log_Flush_Period",CV_Int 10)
           ,("Index_File",CV_String "index.html")
-          ,("Prefork_Process_Number",CV_Int 1)]
+          ,("Connection_Timeout",CV_Int 30)
+          ,("Worker_Processes",CV_Int 1)]
 
 test_route :: Assertion
 test_route = do

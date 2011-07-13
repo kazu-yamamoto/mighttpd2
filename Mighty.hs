@@ -42,7 +42,7 @@ server opt route = handle handler $ do
     s <- sOpen
     unless debug writePidFile
     setGroupUser opt
-    if preN == 1 then do
+    if workers == 1 then do
         single opt route s logspec
 --        fileRotater logspec [pid]
     else do
@@ -53,7 +53,7 @@ server opt route = handle handler $ do
     port = opt_port opt
     sOpen = listenOn (PortNumber . fromIntegral $ port)
     pidfile = opt_pid_file opt
-    preN = opt_prefork_process_number opt
+    workers = opt_worker_processes opt
     writePidFile = do
         pid <- getProcessID
         writeFile pidfile $ show pid ++ "\n"
@@ -94,7 +94,7 @@ single opt route s logspec = do
 multi :: Option -> RouteDB -> Socket -> FileLogSpec -> IO ()
 multi opt route s logspec = do
     ignoreSigChild
-    cids <- replicateM preN $ forkProcess (single opt route s logspec)
+    cids <- replicateM workers $ forkProcess (single opt route s logspec)
     sClose s
     initHandler sigTERM $ terminateHandler cids
     initHandler sigINT  $ terminateHandler cids
@@ -102,7 +102,7 @@ multi opt route s logspec = do
     return ()
 --    fileRotater logspec cids
   where
-    preN = opt_prefork_process_number opt
+    workers = opt_worker_processes opt
     initHandler sig func = installHandler sig func Nothing
     ignoreSigChild = initHandler sigCHLD Ignore
     terminateHandler cids = Catch $ do
