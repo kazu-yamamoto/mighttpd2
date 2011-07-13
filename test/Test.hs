@@ -37,7 +37,8 @@ test_config = do
           ,("Log_Backup_Number",CV_Int 10)
           ,("Log_Buffer_Size",CV_Int 16384)
           ,("Log_Flush_Period",CV_Int 10)
-          ,("Index_File",CV_String "index.html")]
+          ,("Index_File",CV_String "index.html")
+          ,("Prefork_Process_Number",CV_Int 1)]
 
 test_route :: Assertion
 test_route = do

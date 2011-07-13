@@ -1,96 +1,73 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, DoAndIfThenElse #-}
 
 module Log where
 
+import Control.Applicative
 import Control.Concurrent
 import Control.Monad
+import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
-import Data.ByteString.Lazy (ByteString)
-import qualified Data.ByteString.Lazy.Char8 as BL
+import Data.IORef
 import Data.Time
 import Network.HTTP.Types
 import Network.Wai
 import Network.Wai.Application.Classic
 import System.Directory
-import System.Exit
-import System.FilePath
-import System.IO
 import System.Locale
-import System.Posix
+import System.IO
 
 data FileLogSpec = FileLogSpec {
     log_file :: String
   , log_file_size :: Integer
   , log_backup_number :: Int
-  , log_buffer_size :: Int
-  , log_flush_period :: Int
   }
 
-fileCheck :: FileLogSpec -> IO ()
-fileCheck spec = do
-    dirperm <- getPermissions dir
-    unless (writable dirperm) $ exit $ dir ++ " is not writable"
-    fileexist <- doesFileExist file
-    when fileexist $ do
-        fileperm <- getPermissions file
-        unless (writable fileperm) $ exit $ file ++ " is not writable"
+newtype TimeRef = TimeRef (IORef ByteString)
+newtype HandleRef = HandleRef (IORef Handle)
+newtype CountRef = CountRef (IORef Int)
+
+----------------------------------------------------------------
+
+logInit :: FileLogSpec -> IO Logger
+logInit spec = do
+    timref <- clockInit
+    fdref <- fileInit spec
+    cntref <- zeroCount
+    return $ apacheLogger timref fdref cntref
+
+----------------------------------------------------------------
+
+getDate :: TimeRef -> IO ByteString
+getDate (TimeRef ref) = readIORef ref
+
+getHandle :: HandleRef -> IO Handle
+getHandle (HandleRef ref) = readIORef ref
+
+zeroCount :: IO CountRef
+zeroCount = CountRef <$> newIORef 0
+
+getCount :: CountRef -> IO Bool
+getCount (CountRef ref) = atomicModifyIORef ref func
   where
-    file = log_file spec
-    dir = takeDirectory file
-    exit msg = hPutStrLn stderr msg >> exitFailure
+    func n
+      | n == 25   = (0,True) -- FIXME
+      | otherwise = (n+1,False)
 
-fileInit :: FileLogSpec -> IO (Chan ByteString)
-fileInit spec = do
-    hdl <- open spec
-    mvar <- newMVar hdl
-    chan <- newChan
-    forkIO $ fileFlusher mvar spec
-    forkIO $ fileSerializer chan mvar
-    let handler = fileFlushHandler mvar
-    installHandler sigTERM handler Nothing
-    installHandler sigKILL handler Nothing
-    return chan
+----------------------------------------------------------------
 
-fileFlushHandler :: MVar Handle -> Handler
-fileFlushHandler mvar = Catch $ do
-    hdl <- takeMVar mvar
-    hFlush hdl
-    putMVar mvar hdl
-    exitImmediately ExitSuccess
-
-fileFlusher :: MVar Handle -> FileLogSpec -> IO ()
-fileFlusher mvar spec = forever $ do
-    threadDelay $ log_flush_period spec
-    hdl <- takeMVar mvar
-    hFlush hdl
-    size <- hFileSize hdl
-    if size > log_file_size spec
-       then do
-        hClose hdl
-        locate spec
-        newhdl <- open spec
-        putMVar mvar newhdl
-       else putMVar mvar hdl
-
-fileSerializer :: Chan ByteString -> MVar Handle -> IO ()
-fileSerializer chan mvar = forever $ do
-    xs <- readChan chan
-    hdl <- takeMVar mvar
-    BL.hPut hdl xs
-    putMVar mvar hdl
+fileInit :: FileLogSpec -> IO HandleRef
+fileInit spec = open spec >>= (\ref -> HandleRef <$> newIORef ref)
 
 open :: FileLogSpec -> IO Handle
 open spec = do
     hdl <- openFile file AppendMode
-    setFileMode file 0o644
-    hSetEncoding hdl latin1
-    hSetBuffering hdl $ BlockBuffering (Just $ log_buffer_size spec)
+    hSetBuffering hdl (BlockBuffering (Just 4096)) -- FIXME
     return hdl
   where
     file = log_file spec
 
-locate :: FileLogSpec -> IO ()
-locate spec = mapM_ move srcdsts
+rotate :: FileLogSpec -> IO ()
+rotate spec = mapM_ move srcdsts
   where
     path = log_file spec
     n = log_backup_number spec
@@ -104,27 +81,15 @@ locate spec = mapM_ move srcdsts
 
 ----------------------------------------------------------------
 
-stdoutInit :: IO (Chan ByteString)
-stdoutInit = do
-    chan <- newChan
-    forkIO $ stdoutSerializer chan
-    return chan
-
-stdoutSerializer :: Chan ByteString -> IO ()
-stdoutSerializer chan = forever $ readChan chan >>= BL.putStr
-
-----------------------------------------------------------------
-
-mightyLogger :: Chan ByteString -> Request -> Status -> Maybe Integer -> IO ()
-mightyLogger chan req st msize = do
-    zt <- getZonedTime
-    addr <- getPeerAddr (remoteHost req)
-    writeChan chan $ BL.fromChunks (logmsg addr zt)
-  where
-    logmsg addr zt = [
+apacheLogger :: TimeRef -> HandleRef -> CountRef -> Request -> Status -> Maybe Integer -> IO ()
+apacheLogger timref hdlref cntref req st msize = do
+    let addr = showSockAddr (remoteHost req)
+    tmstr <- getDate timref
+    hdl <- getHandle hdlref
+    BS.hPut hdl $ BS.concat [
         BS.pack addr
       , " - - ["
-      , BS.pack (formatTime defaultTimeLocale "%d/%b/%Y:%T %z" zt)
+      , tmstr
       , "] \""
       , requestMethod req
       , " "
@@ -139,3 +104,26 @@ mightyLogger chan req st msize = do
       , lookupRequestField' "user-agent" req
       , "\"\n"
       ]
+    flush <- getCount cntref
+    when flush $ hFlush hdl
+    return ()
+
+----------------------------------------------------------------
+
+clockInit :: IO (TimeRef)
+clockInit = do
+    ref <- timeByteString >>= newIORef
+    let timeref = TimeRef ref
+    forkIO $ clock timeref
+    return timeref
+
+clock :: TimeRef -> IO ()
+clock timeref@(TimeRef ref) = do
+    tmstr <- timeByteString
+    atomicModifyIORef ref (\_ -> (tmstr, undefined))
+    threadDelay 1000000
+    clock timeref
+
+timeByteString :: IO ByteString
+timeByteString =
+    BS.pack . formatTime defaultTimeLocale "%d/%b/%Y:%T %z" <$> getZonedTime

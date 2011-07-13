@@ -14,16 +14,11 @@ Build-Type:             Simple
 Data-Files:             sample.conf sample.route
 Executable mighty
   Main-Is:              Mighty.hs
-  if impl(ghc >= 7)
-    GHC-Options:        -Wall -fno-warn-unused-do-bind -threaded
-  else
-    if impl(ghc >= 6.12)
-      GHC-Options:        -Wall -fno-warn-unused-do-bind
-    else
-      GHC-Options:        -Wall
+  GHC-Options:          -Wall -fno-warn-unused-do-bind -threaded
   Build-Depends:        base >= 4.0 && < 5, parsec >= 3,
                         network,
-                        unix, bytestring, warp, old-locale, time,
+                        unix, bytestring, unix-bytestring,
+                        warp, old-locale, time,
                         wai-app-file-cgi, wai, transformers, http-types,
                         directory, filepath,
                         haskell98, http-date, hashmap
@@ -38,10 +33,7 @@ Executable mighty
                         FileCache
 Executable mkindex
   Main-Is:              mkindex.hs
-  if impl(ghc >= 6.12)
-    GHC-Options:        -Wall -fno-warn-unused-do-bind
-  else
-    GHC-Options:        -Wall
+  GHC-Options:          -Wall -fno-warn-unused-do-bind
   Build-Depends:        base >= 4 && < 5
 Source-Repository head
   Type:                 git
