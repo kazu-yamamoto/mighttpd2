@@ -20,8 +20,8 @@ apacheFormat tmstr req st msize = BS.concat [
   , "\" "
   , BS.pack (show . statusCode $ st)
   , " "
-  , BS.pack (maybe "-" show msize)
-  , " \"" -- size
+  , maybe "-" (BS.pack.show) msize
+  , " \""
   , lookupRequestField' "referer" req
   , "\" \""
   , lookupRequestField' "user-agent" req
