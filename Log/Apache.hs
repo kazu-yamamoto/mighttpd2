@@ -3,29 +3,30 @@
 module Log.Apache where
 
 import Data.ByteString (ByteString)
-import qualified Data.ByteString.Char8 as BS
+import Data.ByteString.Char8 ()
 import Network.HTTP.Types
 import Network.Wai
 import Network.Wai.Application.Classic
+import Log.Types
 
-apacheFormat :: ByteString -> Request -> Status -> Maybe Integer -> [ByteString]
+apacheFormat :: ByteString -> Request -> Status -> Maybe Integer -> [LogStr]
 apacheFormat tmstr req st msize = [
-    BS.pack addr
-  , " - - ["
-  , tmstr
-  , "] \""
-  , requestMethod req
-  , " "
-  , rawPathInfo req
-  , "\" "
-  , BS.pack (show . statusCode $ st)
-  , " "
-  , maybe "-" (BS.pack.show) msize
-  , " \""
-  , lookupRequestField' "referer" req
-  , "\" \""
-  , lookupRequestField' "user-agent" req
-  , "\"\n"
+    LS addr
+  , LB " - - ["
+  , LB tmstr
+  , LB "] \""
+  , LB $ requestMethod req
+  , LB " "
+  , LB $ rawPathInfo req
+  , LB "\" "
+  , LS . show . statusCode $ st
+  , LB $ " "
+  , LS $ maybe "-" show msize
+  , LB " \""
+  , LB $ lookupRequestField' "referer" req
+  , LB "\" \""
+  , LB $ lookupRequestField' "user-agent" req
+  , LB "\"\n"
   ]
   where
     addr = showSockAddr (remoteHost req)

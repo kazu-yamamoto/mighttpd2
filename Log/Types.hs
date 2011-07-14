@@ -3,8 +3,10 @@ module Log.Types (
   , FileLogSpec(..)
   , LogType(..)
   , LogController
+  , LogStr(..)
   ) where
 
+import Data.ByteString
 import Network.Wai.Application.Classic (Logger)
 import System.Posix (ProcessID)
 
@@ -17,3 +19,5 @@ data FileLogSpec = FileLogSpec {
 data LogType = LogNone | LogStdout | LogFile FileLogSpec
 
 type LogController = [ProcessID] -> IO ()
+
+data LogStr = LS !String | LB !ByteString
