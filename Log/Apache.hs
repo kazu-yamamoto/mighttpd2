@@ -20,7 +20,7 @@ apacheFormat tmstr req st msize = [
   , LB $ rawPathInfo req
   , LB "\" "
   , LS . show . statusCode $ st
-  , LB $ " "
+  , LB " "
   , LS $ maybe "-" show msize
   , LB " \""
   , LB $ lookupRequestField' "referer" req

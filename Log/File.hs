@@ -42,7 +42,7 @@ fileLoggerInit spec = do
 {-
  For BlockBuffering, hPut flushes the buffer before writing
  the target string. In other words, hPut does not split
- the target string. So, to implment multiple line buffering, 
+ the target string. So, to implment multiple line buffering,
  just use BlockBuffering.
 -}
 open :: FileLogSpec -> IO Handle
