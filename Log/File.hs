@@ -38,8 +38,8 @@ newtype CountRef = CountRef (IORef Int)
 zeroCount :: IO CountRef
 zeroCount = CountRef <$> newIORef 0
 
-getCount :: CountRef -> IO Bool
-getCount (CountRef ref) = atomicModifyIORef ref func
+checkCount :: CountRef -> IO Bool
+checkCount (CountRef ref) = atomicModifyIORef ref func
   where
     func n
       | n == logsInBuffer   = (0,True)
@@ -78,7 +78,7 @@ fileLogger dateref hdlref cntref req status msiz = do
     date <- getDate dateref
     hdl <- getHandle hdlref
     BS.hPut hdl $ apacheFormat date req status msiz
-    flush <- getCount cntref
+    flush <- checkCount cntref
     when flush $ hFlush hdl
     return ()
 
