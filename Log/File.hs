@@ -21,9 +21,6 @@ import System.Posix
 logBufSize :: Int
 logBufSize = 4096
 
-logsInBuffer :: Int
-logsInBuffer = 25
-
 ----------------------------------------------------------------
 
 newtype HandleRef = HandleRef (IORef Handle)
@@ -33,30 +30,21 @@ getHandle (HandleRef ref) = readIORef ref
 
 ----------------------------------------------------------------
 
-newtype CountRef = CountRef (IORef Int)
-
-zeroCount :: IO CountRef
-zeroCount = CountRef <$> newIORef 0
-
-checkCount :: CountRef -> IO Bool
-checkCount (CountRef ref) = atomicModifyIORef ref func
-  where
-    func n
-      | n == logsInBuffer   = (0,True)
-      | otherwise           = (n+1,False)
-
-----------------------------------------------------------------
-
 fileLoggerInit :: FileLogSpec -> IO Logger
 fileLoggerInit spec = do
     hdl <- open spec
     hdlref <- HandleRef <$> newIORef hdl
     forkIO $ fileFlusher hdlref
     dateref <- dateInit
-    cntref <- zeroCount
     installHandler sigUSR1 (Catch $ reopen spec hdlref) Nothing
-    return $ fileLogger dateref hdlref cntref
+    return $ fileLogger dateref hdlref
 
+{-
+ For BlockBuffering, hPut flushes the buffer before writing
+ the target string. In other words, hPut does not split
+ the target string. So, to implment multiple line buffering, 
+ just use BlockBuffering.
+-}
 open :: FileLogSpec -> IO Handle
 open spec = do
     hdl <- openFile file AppendMode
@@ -73,14 +61,11 @@ reopen spec (HandleRef ref) = do
 
 ----------------------------------------------------------------
 
-fileLogger :: DateRef -> HandleRef -> CountRef -> Logger
-fileLogger dateref hdlref cntref req status msiz = do
+fileLogger :: DateRef -> HandleRef -> Logger
+fileLogger dateref hdlref req status msiz = do
     date <- getDate dateref
     hdl <- getHandle hdlref
     BS.hPut hdl $ apacheFormat date req status msiz
-    flush <- checkCount cntref
-    when flush $ hFlush hdl
-    return ()
 
 fileFlusher :: HandleRef -> IO ()
 fileFlusher hdlref = forever $ do
