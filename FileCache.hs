@@ -48,7 +48,7 @@ lok path cache = unsafePerformIO $ do
     handler :: SomeException -> IO (Cache, Maybe FileInfo)
     handler _ = neg
 
-fileCacheInit :: IO (GetInfo)
+fileCacheInit :: IO GetInfo
 fileCacheInit = do
     ref <- newIORef M.empty
     forkIO (remover ref)

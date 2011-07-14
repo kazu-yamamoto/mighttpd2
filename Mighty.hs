@@ -37,17 +37,20 @@ main = do
             exitFailure
         return $ args !! n
 
+----------------------------------------------------------------
+
 server :: Option -> RouteDB -> IO ()
 server opt route = handle handler $ do
     s <- sOpen
     unless debug writePidFile
     setGroupUser opt
     if workers == 1 then do
-        single opt route s logspec
---        fileRotater logspec [pid]
+        forkIO $ single opt route s logtype
+        myid <- getProcessID
+        logController logtype [myid]
     else do
-        multi opt route s logspec
---        fileRotater logspec [pid]
+        cids <- multi opt route s logtype
+        logController logtype cids
   where
     debug = opt_debug_mode opt
     port = opt_port opt
@@ -67,17 +70,19 @@ server opt route = handle handler $ do
       , log_file_size     = fromIntegral $ opt_log_file_size opt
       , log_backup_number = opt_log_backup_number opt
       }
+    logtype
+      | not (opt_logging opt) = LogNone
+      | debug                 = LogStdout
+      | otherwise             = LogFile logspec
 
-single :: Option -> RouteDB -> Socket -> FileLogSpec -> IO ()
-single opt route s logspec = do
-    lgr <- if opt_logging opt then do
-               logInit logspec
-           else
-               return (\_ _ _ -> return ())
+----------------------------------------------------------------
+
+single :: Option -> RouteDB -> Socket -> LogType -> IO ()
+single opt route s logtype = do
+    lgr <- logInit logtype
     getInfo <- fileCacheInit
     runSettingsSocket setting s $ fileCgiApp (spec lgr getInfo) route
   where
---    debug = opt_debug_mode opt
     setting = defaultSettings {
         settingsPort        = opt_port opt
       , settingsOnException = ignore
@@ -91,16 +96,14 @@ single opt route s logspec = do
       , getFileInfo = getInfo
       }
 
-multi :: Option -> RouteDB -> Socket -> FileLogSpec -> IO ()
-multi opt route s logspec = do
+multi :: Option -> RouteDB -> Socket -> LogType -> IO [ProcessID]
+multi opt route s logtype = do
     ignoreSigChild
-    cids <- replicateM workers $ forkProcess (single opt route s logspec)
+    cids <- replicateM workers $ forkProcess (single opt route s logtype)
     sClose s
     initHandler sigTERM $ terminateHandler cids
     initHandler sigINT  $ terminateHandler cids
-    forever $ threadDelay 10000000
-    return ()
---    fileRotater logspec cids
+    return cids
   where
     workers = opt_worker_processes opt
     initHandler sig func = installHandler sig func Nothing
