@@ -6,10 +6,10 @@ import Control.Applicative
 import Control.Concurrent
 import Control.Exception (handle, SomeException, catch)
 import Control.Monad
-import qualified Data.ByteString as BS
 import Data.IORef
 import Log.Apache
 import Log.Date
+import Log.Hput
 import Log.Rotate
 import Log.Types
 import Prelude hiding (catch)
@@ -65,7 +65,7 @@ fileLogger :: DateRef -> HandleRef -> Logger
 fileLogger dateref hdlref req status msiz = do
     date <- getDate dateref
     hdl <- getHandle hdlref
-    BS.hPut hdl $ apacheFormat date req status msiz
+    hPutByteStrings hdl $ apacheFormat date req status msiz
 
 fileFlusher :: HandleRef -> IO ()
 fileFlusher hdlref = forever $ do

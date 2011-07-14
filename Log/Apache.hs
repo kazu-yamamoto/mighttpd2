@@ -8,8 +8,8 @@ import Network.HTTP.Types
 import Network.Wai
 import Network.Wai.Application.Classic
 
-apacheFormat :: ByteString -> Request -> Status -> Maybe Integer -> ByteString
-apacheFormat tmstr req st msize = BS.concat [
+apacheFormat :: ByteString -> Request -> Status -> Maybe Integer -> [ByteString]
+apacheFormat tmstr req st msize = [
     BS.pack addr
   , " - - ["
   , tmstr

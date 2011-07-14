@@ -12,4 +12,4 @@ stdoutLoggerInit = stdoutLogger <$> dateInit
 stdoutLogger :: DateRef -> Logger
 stdoutLogger dateref req status msiz = do
     date <- getDate dateref
-    BS.putStr $ apacheFormat date req status msiz
+    BS.putStr $ BS.concat $ apacheFormat date req status msiz
