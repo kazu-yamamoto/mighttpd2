@@ -18,6 +18,8 @@ apacheFormat tmstr req st msize = [
   , LB $ requestMethod req
   , LB " "
   , LB $ rawPathInfo req
+  , LB " "
+  , LS $ show . httpVersion $ req
   , LB "\" "
   , LS . show . statusCode $ st
   , LB " "
