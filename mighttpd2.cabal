@@ -25,12 +25,20 @@ Executable mighty
   Other-Modules:	Config
                         Config.Internal
                         FileCGIApp
+                        FileCache
                         Log
+                        Log.Apache
+                        Log.Check
+                        Log.Date
+                        Log.File
+                        Log.Hput
+                        Log.Rotate
+                        Log.Stdout
+                        Log.Types
                         Mighty
                         Parser
                         Route
                         Types
-                        FileCache
 Executable mkindex
   Main-Is:              mkindex.hs
   GHC-Options:          -Wall -fno-warn-unused-do-bind
