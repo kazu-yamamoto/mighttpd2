@@ -44,6 +44,7 @@ server opt route = handle handler $ do
     s <- sOpen
     unless debug writePidFile
     setGroupUser opt
+    logCheck logtype
     if workers == 1 then do
         forkIO $ single opt route s logtype
         myid <- getProcessID

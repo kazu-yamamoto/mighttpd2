@@ -3,11 +3,13 @@
 module Log (
     logInit
   , logController
+  , logCheck
   , module Log.Types
   ) where
 
 import Control.Concurrent
 import Control.Monad
+import Log.Check
 import Log.File
 import Log.Stdout
 import Log.Types
