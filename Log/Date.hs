@@ -1,7 +1,9 @@
+{-# LANGUAGE BangPatterns #-}
+
 module Log.Date (dateInit, getDate, DateRef) where
 
-import Control.Applicative
 import Control.Concurrent
+import Control.DeepSeq
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
 import Data.IORef
@@ -21,12 +23,16 @@ dateInit = do
     return dateref
 
 date :: DateRef -> IO ()
-date dateref@(DateRef ref) = do
-    tmstr <- formatDate
-    atomicModifyIORef ref (\_ -> (tmstr, ()))
+date dateref@(DateRef !ref) = do
+    !tmstr <- formatDate
+    x <- atomicModifyIORef ref (\_ -> (tmstr, ()))
+    x `seq` return ()
     threadDelay 1000000
     date dateref
 
 formatDate :: IO ByteString
-formatDate =
-    BS.pack . formatTime defaultTimeLocale "%d/%b/%Y:%T %z" <$> getZonedTime
+formatDate = do
+    tm <- getZonedTime
+    let !str = formatTime defaultTimeLocale "%d/%b/%Y:%T %z" tm
+        !tmstr = str `deepseq` BS.pack str
+    return tmstr
