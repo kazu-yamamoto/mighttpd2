@@ -26,6 +26,7 @@ date :: DateRef -> IO ()
 date dateref@(DateRef !ref) = do
     !tmstr <- formatDate
     x <- atomicModifyIORef ref (\_ -> (tmstr, ()))
+    -- atomicModifyIORef is prone to leak spaces.
     x `seq` return ()
     threadDelay 1000000
     date dateref
