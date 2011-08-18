@@ -9,10 +9,10 @@ import Control.Monad
 import qualified Data.ByteString.Char8 as BS
 import FileCGIApp
 import FileCache
-import Log
 import Network
 import Network.Wai.Application.Classic
 import Network.Wai.Handler.Warp
+import Network.Wai.Logger.Prefork
 import Prelude hiding (catch)
 import Route
 import System.Environment
@@ -86,7 +86,7 @@ single opt route s logtype = do
   where
     setting = defaultSettings {
         settingsPort        = opt_port opt
-      , settingsOnException = ignore
+      , settingsOnException = printStdout
       , settingsTimeout     = opt_connection_timeout opt
       }
     spec lgr getInfo = AppSpec {
@@ -146,3 +146,6 @@ daemonize program = ensureDetachTerminalCanWork $ do
 
 ignore :: SomeException -> IO ()
 ignore = const $ return ()
+
+printStdout :: SomeException -> IO ()
+printStdout e = print e

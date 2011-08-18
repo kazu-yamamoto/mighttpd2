@@ -21,20 +21,11 @@ Executable mighty
                         warp, old-locale, time,
                         wai-app-file-cgi, wai, transformers, http-types,
                         directory, filepath,
-                        haskell98, http-date, hashmap, deepseq
+                        haskell98, http-date, hashmap, deepseq, wai-logger
   Other-Modules:	Config
                         Config.Internal
                         FileCGIApp
                         FileCache
-                        Log
-                        Log.Apache
-                        Log.Check
-                        Log.Date
-                        Log.File
-                        Log.Hput
-                        Log.Rotate
-                        Log.Stdout
-                        Log.Types
                         Mighty
                         Parser
                         Route
