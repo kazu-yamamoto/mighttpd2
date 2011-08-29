@@ -80,7 +80,7 @@ server opt route = handle handler $ do
 
 single :: Option -> RouteDB -> Socket -> LogType -> IO ()
 single opt route s logtype = do
-    lgr <- logInit logtype
+    lgr <- logInit FromSocket logtype
     getInfo <- fileCacheInit
     runSettingsSocket setting s $ fileCgiApp (spec lgr getInfo) route
   where
