@@ -21,7 +21,7 @@ Executable mighty
                         warp, old-locale, time,
                         wai-app-file-cgi, wai, transformers, http-types,
                         directory, filepath,
-                        haskell98, http-date, hashmap, deepseq, wai-logger
+                        http-date, hashmap, deepseq, wai-logger
   Other-Modules:	Config
                         Config.Internal
                         FileCGIApp

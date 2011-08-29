@@ -2,13 +2,13 @@
   mkindex :: Making index.html for the current directory.
 -}
 import Control.Applicative
+import Data.Bits
 import Data.Time
 import Data.Time.Clock.POSIX
-import Locale
 import System.Directory
+import System.Locale
 import System.Posix.Files
 import Text.Printf
-import Data.Bits
 
 indexFile :: String
 indexFile = "index.html"
