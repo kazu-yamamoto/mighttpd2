@@ -79,6 +79,7 @@ server opt route = handle handler $ do
 
 single :: Option -> RouteDB -> Socket -> LogType -> IO ()
 single opt route s logtype = do
+    ignoreSigChild
     lgr <- logInit FromSocket logtype
     getInfo <- fileCacheInit
     runSettingsSocket setting s $ fileCgiApp (spec lgr getInfo) route
@@ -106,12 +107,16 @@ multi opt route s logtype = do
     return cids
   where
     workers = opt_worker_processes opt
-    initHandler sig func = installHandler sig func Nothing
-    ignoreSigChild = initHandler sigCHLD Ignore
     terminateHandler cids = Catch $ do
         mapM_ terminateChild cids
         exitImmediately ExitSuccess
     terminateChild cid = signalProcess sigTERM cid `onException` ignore
+
+initHandler :: Signal -> Handler -> IO Handler
+initHandler sig func = installHandler sig func Nothing
+
+ignoreSigChild :: IO Handler
+ignoreSigChild = initHandler sigCHLD Ignore
 
 ----------------------------------------------------------------
 
