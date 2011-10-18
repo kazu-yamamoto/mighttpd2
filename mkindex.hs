@@ -25,15 +25,15 @@ mkContents :: IO String
 mkContents = do
     fileNames <- filter dotAndIndex <$> getDirectoryContents "."
     stats <- mapM getFileStatus fileNames
-    let fmsls = map pp $ zip fileNames stats
+    let fmsls = zipWith pp fileNames stats
         maxLen = maximum $ map (\(_,_,_,x) -> x) fmsls
         contents = concatMap (content maxLen) fmsls
     return contents
   where
     dotAndIndex x = head x /= '.' && x /= indexFile
 
-pp :: (String,FileStatus) -> (String,String,String,Int)
-pp (f,st) = (file,mtime,size,flen)
+pp :: String -> FileStatus -> (String,String,String,Int)
+pp f st = (file,mtime,size,flen)
   where
     file = ppFile f st
     flen = length file
