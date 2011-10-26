@@ -2,6 +2,7 @@ module FileCache (fileCacheInit) where
 
 import Control.Concurrent
 import Control.Exception
+import Control.Monad
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
 import Data.HashMap (Map)
@@ -51,11 +52,5 @@ lok path cache = unsafePerformIO $ do
 fileCacheInit :: IO GetInfo
 fileCacheInit = do
     ref <- newIORef M.empty
-    forkIO (remover ref)
+    forkIO $ forever $ threadDelay 10000000 >> writeIORef ref M.empty
     return $ fileInfo ref
-
-remover :: IORef Cache -> IO ()
-remover ref = do
-    threadDelay 10000000
-    _ <- atomicModifyIORef ref (\_ -> (M.empty, ()))
-    remover ref
