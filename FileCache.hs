@@ -52,5 +52,9 @@ lok path cache = unsafePerformIO $ do
 fileCacheInit :: IO GetInfo
 fileCacheInit = do
     ref <- newIORef M.empty
-    forkIO $ forever $ threadDelay 10000000 >> writeIORef ref M.empty
+    forkIO (remover ref)
     return $ fileInfo ref
+
+-- atomicModifyIORef is not necessary here.
+remover :: IORef Cache -> IO ()
+remover ref = forever $ threadDelay 10000000 >> writeIORef ref M.empty
