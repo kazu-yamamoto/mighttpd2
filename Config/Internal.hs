@@ -115,11 +115,11 @@ value :: Parser ConfValue
 value = choice [try cv_int, try cv_bool, cv_string] <* spcs
 
 cv_int :: Parser ConfValue
-cv_int = CV_Int . read <$> (many1 digit)
+cv_int = CV_Int . read <$> many1 digit
 
 cv_bool :: Parser ConfValue
-cv_bool = CV_Bool True  <$ (string "Yes") <|>
-          CV_Bool False <$ (string "No")
+cv_bool = CV_Bool True  <$ string "Yes" <|>
+          CV_Bool False <$ string "No"
 
 cv_string :: Parser ConfValue
 cv_string = CV_String <$> many1 (noneOf " \t\n")
