@@ -13,4 +13,8 @@
 /~alice/         -> /home/alice/public_html/
 
 /cgi-bin/        => /export/cgi-bin/
+
+/app/wiki        >> :8080/
+/app/cal         >> example.net/path
+
 /                -> /export/www/

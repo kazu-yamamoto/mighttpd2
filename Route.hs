@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, DoAndIfThenElse, TupleSections #-}
 
 module Route (parseRoute) where
 
@@ -30,11 +30,39 @@ domains = open *> doms <* close <* trailing
     domain = BS.pack <$> many1 (noneOf "[], \t\n")
     sep = () <$ spcs1
 
+data Op = OpFile | OpCGI | OpRevProxy
+
 route :: Parser Route
-route = Route <$> src <*> op <*> dst <* trailing
+route = do
+    s <- src
+    o <- op
+    case o of
+        OpFile  -> RouteFile s <$> dst <* trailing
+        OpCGI   -> RouteCGI  s <$> dst <* trailing
+        OpRevProxy -> do
+            (dom,prt,d) <- domPortDst
+            return $ RouteRevProxy s d dom prt
   where
-    path = many1 (noneOf "[], \t\n")
-    src = BS.pack <$> path <* spcs
-    dst = BS.pack <$> path <* spcs
-    op0 = OpFile <$ string "->" <|> OpCGI <$ string "=>"
+    src = path
+    dst = path
+    op0 = OpFile     <$ string "->"
+      <|> OpCGI      <$ string "=>"
+      <|> OpRevProxy <$ string ">>"
     op  = op0 <* spcs
+
+path :: Parser Dst
+path = do
+    c <- char '/'
+    BS.pack . (c:) <$> many (noneOf "[], \t\n") <* spcs
+
+-- [host1][:port2]/path2
+
+domPortDst :: Parser (Domain, Port, Dst)
+domPortDst = (defaultDomain,,) <$> port <*> path
+         <|> try((,,) <$> domain <*> port <*> path)
+         <|> (,defaultPort,) <$> domain <*> path
+  where
+    domain = BS.pack <$> many1 (noneOf ":/[], \t\n")
+    port = do
+        char ':'
+        read <$> many1 (oneOf ['0'..'9'])

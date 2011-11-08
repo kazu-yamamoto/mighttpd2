@@ -10,6 +10,7 @@ import qualified Data.ByteString.Char8 as BS
 import FileCGIApp
 import FileCache
 import Network
+import qualified Network.HTTP.Enumerator as H
 import Network.Wai.Application.Classic
 import Network.Wai.Handler.Warp
 import Network.Wai.Logger.Prefork
@@ -82,19 +83,29 @@ single opt route s logtype = do
     ignoreSigChild
     lgr <- logInit FromSocket logtype
     getInfo <- fileCacheInit
-    runSettingsSocket setting s $ fileCgiApp (spec lgr getInfo) route
+    mgr <- H.newManager
+    runSettingsSocket setting s $
+        fileCgiApp (filespec lgr getInfo) (cgispec lgr) (revproxyspec mgr) route
   where
     setting = defaultSettings {
         settingsPort        = opt_port opt
       , settingsOnException = printStdout
       , settingsTimeout     = opt_connection_timeout opt
       }
-    spec lgr getInfo = AppSpec {
-        softwareName = BS.pack $ opt_server_name opt
+    serverName = BS.pack $ opt_server_name opt
+    filespec lgr getInfo = FileAppSpec {
+        softwareName = serverName
       , indexFile = BS.pack $ opt_index_file opt
       , isHTML = \x -> ".html" `BS.isSuffixOf` x || ".htm" `BS.isSuffixOf` x
       , logger = lgr
       , getFileInfo = getInfo
+      }
+    cgispec lgr = CgiAppSpec {
+        cgiSoftwareName = serverName
+      , cgiLogger = lgr
+      }
+    revproxyspec mgr = RevProxyAppSpec {
+        revProxyManager = mgr
       }
 
 multi :: Option -> RouteDB -> Socket -> LogType -> IO [ProcessID]

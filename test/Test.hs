@@ -45,11 +45,14 @@ test_route = do
     res <- parseRoute "sample.route"
     res @?= ans
  where
-    ans = [Block ["localhost","www.example.com"]
-           [Route "/~alice/cgi-bin/" OpCGI "/home/alice/public_html/cgi-bin/"
-           ,Route "/~alice/" OpFile "/home/alice/public_html/"
-           ,Route "/cgi-bin/" OpCGI "/export/cgi-bin/"
-           ,Route "/" OpFile "/export/www/"]]
+    ans = [Block
+           ["localhost","www.example.com"]
+           [RouteCGI "/~alice/cgi-bin/" "/home/alice/public_html/cgi-bin/"
+           ,RouteFile "/~alice/" "/home/alice/public_html/"
+           ,RouteCGI "/cgi-bin/" "/export/cgi-bin/"
+           ,RouteRevProxy "/app/wiki" "/" "localhost" 8080
+           ,RouteRevProxy "/app/cal" "/path" "example.net" 80
+           ,RouteFile "/" "/export/www/"]]
 
 ----------------------------------------------------------------
 
