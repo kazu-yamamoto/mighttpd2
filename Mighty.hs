@@ -4,7 +4,7 @@ module Main where
 
 import Config
 import Control.Concurrent
-import Control.Exception (onException, handle, SomeException)
+import Control.Exception (catch, handle, SomeException)
 import Control.Monad
 import qualified Data.ByteString.Char8 as BS
 import FileCGIApp
@@ -14,6 +14,7 @@ import qualified Network.HTTP.Enumerator as H
 import Network.Wai.Application.Classic
 import Network.Wai.Handler.Warp
 import Network.Wai.Logger.Prefork
+import Prelude hiding (catch)
 import Route
 import System.Environment
 import System.Exit
@@ -121,7 +122,7 @@ multi opt route s logtype = do
     terminateHandler cids = Catch $ do
         mapM_ terminateChild cids
         exitImmediately ExitSuccess
-    terminateChild cid = signalProcess sigTERM cid `onException` ignore
+    terminateChild cid = signalProcess sigTERM cid `catch` ignore
 
 initHandler :: Signal -> Handler -> IO Handler
 initHandler sig func = installHandler sig func Nothing
@@ -159,8 +160,8 @@ daemonize program = ensureDetachTerminalCanWork $ do
 
 ----------------------------------------------------------------
 
-ignore :: IO ()
-ignore = return ()
+ignore :: SomeException -> IO ()
+ignore _ = return ()
 
 printStdout :: SomeException -> IO ()
 printStdout e = print e
