@@ -106,7 +106,8 @@ single opt route s logtype = do
       , cgiLogger = lgr
       }
     revproxyspec mgr = RevProxyAppSpec {
-        revProxyManager = mgr
+        revProxySoftwareName = serverName
+      , revProxyManager = mgr
       }
 
 multi :: Option -> RouteDB -> Socket -> LogType -> IO [ProcessID]
