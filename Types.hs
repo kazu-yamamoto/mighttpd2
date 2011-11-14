@@ -21,7 +21,7 @@ programName :: String
 programName = "Mighttpd"
 
 programVersion :: String
-programVersion = "2.3.5"
+programVersion = "2.4.0"
 
 defaultDomain :: Domain
 defaultDomain = "localhost"
