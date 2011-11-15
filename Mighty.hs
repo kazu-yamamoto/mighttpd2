@@ -86,7 +86,7 @@ single opt route s logtype = do
     getInfo <- fileCacheInit
     mgr <- H.newManager
     runSettingsSocket setting s $
-        fileCgiApp (filespec lgr getInfo) (cgispec lgr) (revproxyspec mgr) route
+        fileCgiApp (cspec lgr) (filespec getInfo) (revproxyspec mgr) route
   where
     setting = defaultSettings {
         settingsPort        = opt_port opt
@@ -94,20 +94,17 @@ single opt route s logtype = do
       , settingsTimeout     = opt_connection_timeout opt
       }
     serverName = BS.pack $ opt_server_name opt
-    filespec lgr getInfo = FileAppSpec {
+    cspec lgr = ClassicAppSpec {
         softwareName = serverName
-      , indexFile = BS.pack $ opt_index_file opt
-      , isHTML = \x -> ".html" `BS.isSuffixOf` x || ".htm" `BS.isSuffixOf` x
       , logger = lgr
+      }
+    filespec getInfo = FileAppSpec {
+        indexFile = BS.pack $ opt_index_file opt
+      , isHTML = \x -> ".html" `BS.isSuffixOf` x || ".htm" `BS.isSuffixOf` x
       , getFileInfo = getInfo
       }
-    cgispec lgr = CgiAppSpec {
-        cgiSoftwareName = serverName
-      , cgiLogger = lgr
-      }
     revproxyspec mgr = RevProxyAppSpec {
-        revProxySoftwareName = serverName
-      , revProxyManager = mgr
+        revProxyManager = mgr
       }
 
 multi :: Option -> RouteDB -> Socket -> LogType -> IO [ProcessID]

@@ -9,16 +9,16 @@ import Network.Wai
 import Network.Wai.Application.Classic
 import Types
 
-fileCgiApp :: FileAppSpec -> CgiAppSpec -> RevProxyAppSpec -> RouteDB -> Application
-fileCgiApp filespec cgispec revproxyspec um req = case mmp of
+fileCgiApp :: ClassicAppSpec -> FileAppSpec -> RevProxyAppSpec -> RouteDB -> Application
+fileCgiApp cspec filespec revproxyspec um req = case mmp of
     Nothing -> return $ responseLBS statusNotFound
                                     [("Content-Type", "text/plain")
-                                    ,("Server", softwareName filespec)]
+                                    ,("Server", softwareName cspec)]
                                     "Not Found\r\n"
-    Just (RouteFile  src dst) -> fileApp filespec (FileRoute src dst) req
-    Just (RouteCGI   src dst) -> cgiApp  cgispec  (CgiRoute  src dst) req
+    Just (RouteFile  src dst) -> fileApp cspec filespec (FileRoute src dst) req
+    Just (RouteCGI   src dst) -> cgiApp cspec (CgiRoute  src dst) req
     Just (RouteRevProxy src dst dom prt) ->
-        revProxyApp revproxyspec (RevProxyRoute src dst dom prt) req
+        revProxyApp cspec revproxyspec (RevProxyRoute src dst dom prt) req
   where
     mmp = getBlock (serverName req) um >>= getRoute (rawPathInfo req)
 
