@@ -97,6 +97,7 @@ single opt route s logtype = do
     cspec lgr = ClassicAppSpec {
         softwareName = serverName
       , logger = lgr
+      , statusManager = defaultSatusManager
       }
     filespec getInfo = FileAppSpec {
         indexFile = BS.pack $ opt_index_file opt
