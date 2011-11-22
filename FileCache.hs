@@ -4,7 +4,6 @@ import Control.Concurrent
 import Control.Exception
 import Control.Monad
 import Data.ByteString (ByteString)
-import qualified Data.ByteString.Char8 as BS
 import Data.HashMap (Map)
 import qualified Data.HashMap as M
 import Data.IORef
@@ -15,36 +14,37 @@ import System.Posix.Files
 
 data Entry = Negative | Positive FileInfo
 type Cache = Map ByteString Entry
-type GetInfo = ByteString -> IO (Maybe FileInfo)
+type GetInfo = Path -> IO (Maybe FileInfo)
 
 fileInfo :: IORef Cache -> GetInfo
 fileInfo ref path = atomicModifyIORef ref (lok path)
 
-lok :: ByteString -> Cache -> (Cache, Maybe FileInfo)
+lok :: Path -> Cache -> (Cache, Maybe FileInfo)
 lok path cache = unsafePerformIO $ do
-    let ment = M.lookup path cache
+    let ment = M.lookup bpath cache
     case ment of
         Nothing -> handle handler $ do
-            let sfile =  BS.unpack path
+            let sfile = pathString path
             fs <- getFileStatus sfile
-            if doesExist fs then pos fs sfile else neg
+            if doesExist fs then pos fs else neg
         Just Negative     -> return (cache, Nothing)
         Just (Positive x) -> return (cache, Just x)
   where
     size = fromIntegral . fileSize
     mtime = epochTimeToHTTPDate . modificationTime
     doesExist = not . isDirectory
-    pos fs sfile = do
+    bpath = pathByteString path
+    pos fs = do
         let info = FileInfo {
-                fileInfoName = sfile
+                fileInfoName = path
               , fileInfoSize = size fs
               , fileInfoTime = mtime fs
               }
             entry = Positive info
-            cache' = M.insert path entry cache
+            cache' = M.insert bpath entry cache
         return (cache', Just info)
     neg = do
-        let cache' = M.insert path Negative cache
+        let cache' = M.insert bpath Negative cache
         return (cache', Nothing)
     handler :: SomeException -> IO (Cache, Maybe FileInfo)
     handler _ = neg

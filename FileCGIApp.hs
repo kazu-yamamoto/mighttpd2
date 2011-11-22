@@ -15,12 +15,15 @@ fileCgiApp cspec filespec revproxyspec um req = case mmp of
                                     [("Content-Type", "text/plain")
                                     ,("Server", softwareName cspec)]
                                     "Not Found\r\n"
-    Just (RouteFile  src dst) -> fileApp cspec filespec (FileRoute src dst) req
-    Just (RouteCGI   src dst) -> cgiApp cspec (CgiRoute  src dst) req
+    Just (RouteFile  src dst) ->
+        fileApp cspec filespec (FileRoute (toP src) (toP dst)) req
+    Just (RouteCGI   src dst) ->
+        cgiApp cspec (CgiRoute (toP src) (toP dst)) req
     Just (RouteRevProxy src dst dom prt) ->
-        revProxyApp cspec revproxyspec (RevProxyRoute src dst dom prt) req
+        revProxyApp cspec revproxyspec (RevProxyRoute (toP src) (toP dst) dom prt) req
   where
     mmp = getBlock (serverName req) um >>= getRoute (rawPathInfo req)
+    toP = fromByteString
 
 getBlock :: ByteString -> RouteDB -> Maybe [Route]
 getBlock _ [] = Nothing

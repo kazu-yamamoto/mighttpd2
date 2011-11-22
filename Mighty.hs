@@ -97,11 +97,11 @@ single opt route s logtype = do
     cspec lgr = ClassicAppSpec {
         softwareName = serverName
       , logger = lgr
-      , statusManager = defaultSatusManager
+      , statusFileDir = fromString $ opt_status_file_dir opt
       }
     filespec getInfo = FileAppSpec {
-        indexFile = BS.pack $ opt_index_file opt
-      , isHTML = \x -> ".html" `BS.isSuffixOf` x || ".htm" `BS.isSuffixOf` x
+        indexFile = fromString $ opt_index_file opt
+      , isHTML = \x -> ".html" `isSuffixOf` x || ".htm" `isSuffixOf` x
       , getFileInfo = getInfo
       }
     revproxyspec mgr = RevProxyAppSpec {
