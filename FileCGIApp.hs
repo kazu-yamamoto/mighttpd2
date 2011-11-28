@@ -11,10 +11,10 @@ import Types
 
 fileCgiApp :: ClassicAppSpec -> FileAppSpec -> RevProxyAppSpec -> RouteDB -> Application
 fileCgiApp cspec filespec revproxyspec um req = case mmp of
-    Nothing -> return $ responseLBS statusNotFound
+    Nothing -> return $ responseLBS statusPreconditionFailed
                                     [("Content-Type", "text/plain")
                                     ,("Server", softwareName cspec)]
-                                    "Not Found\r\n"
+                                    "Precondition Failed\r\n"
     Just (RouteFile  src dst) ->
         fileApp cspec filespec (FileRoute (toP src) (toP dst)) req
     Just (RouteCGI   src dst) ->
