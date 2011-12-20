@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
 
 {-
   % runghc -i.. Test.hs
@@ -8,22 +8,20 @@ module Test where
 
 import Config.Internal
 import Route
-import Test.Framework (defaultMain, testGroup, Test)
 import Test.Framework.Providers.HUnit
-import Test.HUnit hiding (Test)
+import Test.Framework.TH
+import Test.HUnit
 import Types
-tests :: [Test]
-tests = [
-    testGroup "Parser" [
-         testCase "config" test_config
-       , testCase "route" test_route
-       ]
-  ]
 
 ----------------------------------------------------------------
 
-test_config :: Assertion
-test_config = do
+main :: IO ()
+main = $(defaultMainGenerator)
+
+----------------------------------------------------------------
+
+case_config :: Assertion
+case_config = do
     res <- parseConfig "sample.conf"
     res @?= ans
  where
@@ -40,8 +38,8 @@ test_config = do
           ,("Connection_Timeout",CV_Int 30)
           ,("Worker_Processes",CV_Int 1)]
 
-test_route :: Assertion
-test_route = do
+case_route :: Assertion
+case_route = do
     res <- parseRoute "sample.route"
     res @?= ans
  where
@@ -55,6 +53,3 @@ test_route = do
            ,RouteFile "/" "/export/www/"]]
 
 ----------------------------------------------------------------
-
-main :: Assertion
-main = defaultMain tests
