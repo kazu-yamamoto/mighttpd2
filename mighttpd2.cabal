@@ -1,5 +1,5 @@
 Name:                   mighttpd2
-Version:                2.4.0
+Version:                2.4.1
 Author:                 Kazu Yamamoto <kazu@iij.ad.jp>
 Maintainer:             Kazu Yamamoto <kazu@iij.ad.jp>
 License:                BSD3
@@ -21,7 +21,7 @@ Executable mighty
                         warp, old-locale, time,
                         wai-app-file-cgi, wai, transformers, http-types,
                         directory, filepath,
-                        http-date, hashmap, deepseq, wai-logger,
+                        http-date, hashmap, deepseq, wai-logger-prefork,
                         http-enumerator
   Other-Modules:	Config
                         Config.Internal
