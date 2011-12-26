@@ -4,6 +4,8 @@ module Types where
 
 import Data.ByteString
 import Data.ByteString.Char8 ()
+import Data.Version
+import Paths_mighttpd2
 
 type Src      = ByteString
 type Dst      = ByteString
@@ -21,7 +23,7 @@ programName :: String
 programName = "Mighttpd"
 
 programVersion :: String
-programVersion = "2.4.0"
+programVersion = showVersion version
 
 defaultDomain :: Domain
 defaultDomain = "localhost"

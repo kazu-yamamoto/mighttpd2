@@ -31,6 +31,7 @@ Executable mighty
                         Parser
                         Route
                         Types
+                        Paths_mighttpd2
 Executable mkindex
   Main-Is:              mkindex.hs
   GHC-Options:          -Wall -fno-warn-unused-do-bind
