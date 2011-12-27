@@ -1,3 +1,5 @@
+{-# LANGUAGE BangPatterns #-}
+
 module FileCache (fileCacheInit) where
 
 import Control.Concurrent
@@ -14,10 +16,14 @@ import System.Posix.Files
 
 data Entry = Negative | Positive FileInfo
 type Cache = Map ByteString Entry
-type GetInfo = Path -> IO (Maybe FileInfo)
+type GetInfo = Path -> IO FileInfo
 
 fileInfo :: IORef Cache -> GetInfo
-fileInfo ref path = atomicModifyIORef ref (lok path)
+fileInfo ref path = do
+  !mx <- atomicModifyIORef ref (lok path)
+  case mx of
+      Nothing -> error "fileInfo"
+      Just x  -> return x
 
 lok :: Path -> Cache -> (Cache, Maybe FileInfo)
 lok path cache = unsafePerformIO $ do
