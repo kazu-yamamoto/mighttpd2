@@ -22,7 +22,7 @@ fileInfo :: IORef Cache -> GetInfo
 fileInfo ref path = do
   !mx <- atomicModifyIORef ref (lok path)
   case mx of
-      Nothing -> error "fileInfo"
+      Nothing -> throwIO (userError "fileInfo")
       Just x  -> return x
 
 lok :: Path -> Cache -> (Cache, Maybe FileInfo)

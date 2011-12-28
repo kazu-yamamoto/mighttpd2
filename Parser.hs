@@ -1,6 +1,7 @@
 module Parser where
 
 import Control.Applicative hiding (many,(<|>))
+import Control.Exception
 import qualified Data.ByteString.Lazy.Char8 as BL
 import System.IO
 import Text.Parsec
@@ -33,4 +34,4 @@ parseFile p file = do
     bs <- BL.hGetContents hdl
     case parse p "parseFile" bs of
         Right x -> return x
-        Left  e -> error . show $ e
+        Left  e -> throwIO . userError . show $ e
