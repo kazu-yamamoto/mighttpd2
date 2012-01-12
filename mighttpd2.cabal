@@ -22,7 +22,7 @@ Executable mighty
                         wai-app-file-cgi, wai, transformers, http-types,
                         directory, filepath,
                         http-date, hashmap, deepseq, wai-logger-prefork,
-                        http-enumerator
+                        http-conduit
   Other-Modules:	Config
                         Config.Internal
                         FileCGIApp

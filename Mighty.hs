@@ -10,7 +10,7 @@ import qualified Data.ByteString.Char8 as BS
 import FileCGIApp
 import FileCache
 import Network
-import qualified Network.HTTP.Enumerator as H
+import qualified Network.HTTP.Conduit as H
 import Network.Wai.Application.Classic
 import Network.Wai.Handler.Warp
 import Network.Wai.Logger.Prefork
@@ -84,9 +84,9 @@ single opt route s logtype = do
     ignoreSigChild
     lgr <- logInit FromSocket logtype
     getInfo <- fileCacheInit
-    mgr <- H.newManager
-    runSettingsSocket setting s $
-        fileCgiApp (cspec lgr) (filespec getInfo) (revproxyspec mgr) route
+    runSettingsSocket setting s $ \req -> do
+        mgr <- H.newManager
+        fileCgiApp (cspec lgr) (filespec getInfo) (revproxyspec mgr) route req
   where
     setting = defaultSettings {
         settingsPort        = opt_port opt
