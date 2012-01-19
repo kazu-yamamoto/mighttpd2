@@ -84,8 +84,11 @@ single opt route s logtype = do
     ignoreSigChild
     lgr <- logInit FromSocket logtype
     getInfo <- fileCacheInit
-    runSettingsSocket setting s $ \req -> do
-        mgr <- H.newManager
+    mgr <- H.newManager H.def {
+            -- FIXME
+            H.managerConnCount = 1024
+          }
+    runSettingsSocket setting s $ \req ->
         fileCgiApp (cspec lgr) (filespec getInfo) (revproxyspec mgr) route req
   where
     setting = defaultSettings {
