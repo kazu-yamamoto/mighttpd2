@@ -95,6 +95,7 @@ single opt route s logtype = do
         settingsPort        = opt_port opt
       , settingsOnException = printStdout
       , settingsTimeout     = opt_connection_timeout opt
+      , settingsHost        = HostAny
       }
     serverName = BS.pack $ opt_server_name opt
     cspec lgr = ClassicAppSpec {
