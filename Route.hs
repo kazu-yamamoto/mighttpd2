@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, DoAndIfThenElse, TupleSections #-}
+{-# LANGUAGE OverloadedStrings, TupleSections #-}
 
 module Route (parseRoute) where
 

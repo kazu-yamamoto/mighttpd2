@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, DoAndIfThenElse #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Main where
 
@@ -28,7 +28,7 @@ main = do
     route <- fileName 1 >>= parseRoute
     if opt_debug_mode opt then
         server opt route
-    else
+      else
         daemonize $ server opt route
   where
     fileName n = do
@@ -50,7 +50,7 @@ server opt route = handle handler $ do
         forkIO $ single opt route s logtype
         myid <- getProcessID
         logController logtype [myid]
-    else do
+      else do
         cids <- multi opt route s logtype
         logController logtype cids
   where
@@ -65,7 +65,7 @@ server opt route = handle handler $ do
         setFileMode pidfile 0o644
     handler :: SomeException -> IO ()
     handler e
-      | debug = hPutStrLn stderr $ show e
+      | debug = hPrint stderr e
       | otherwise = writeFile "/tmp/mighty_error" (show e)
     logspec = FileLogSpec {
         log_file          = opt_log_file opt
@@ -167,4 +167,4 @@ ignore :: SomeException -> IO ()
 ignore _ = return ()
 
 printStdout :: SomeException -> IO ()
-printStdout e = print e
+printStdout = print
