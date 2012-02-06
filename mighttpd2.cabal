@@ -1,5 +1,5 @@
 Name:                   mighttpd2
-Version:                2.5.0
+Version:                2.5.1
 Author:                 Kazu Yamamoto <kazu@iij.ad.jp>
 Maintainer:             Kazu Yamamoto <kazu@iij.ad.jp>
 License:                BSD3
@@ -19,7 +19,7 @@ Executable mighty
                         network,
                         unix, bytestring, unix-bytestring,
                         warp, old-locale, time,
-                        wai-app-file-cgi, wai, transformers, http-types,
+                        wai-app-file-cgi, wai >= 1.1, transformers, http-types,
                         directory, filepath,
                         http-date, hashmap, deepseq, wai-logger-prefork,
                         http-conduit
