@@ -55,7 +55,6 @@ Test-Suite test
   Main-Is:              Test.hs
   Hs-Source-Dirs:       test, .
   Type:                 exitcode-stdio-1.0
---  Ghc-Options:          -fhpc -hpcdir dist/hpc
   Build-Depends:        base >= 4 && < 5
                       , HUnit
                       , test-framework-hunit
