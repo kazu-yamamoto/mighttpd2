@@ -12,18 +12,31 @@ Category:               Network, Web
 Cabal-Version:          >= 1.6
 Build-Type:             Simple
 Data-Files:             sample.conf sample.route
+
 Executable mighty
   Main-Is:              Mighty.hs
   GHC-Options:          -Wall -fno-warn-unused-do-bind -threaded
-  Build-Depends:        base >= 4.0 && < 5, parsec >= 3,
-                        network,
-                        unix, bytestring, unix-bytestring,
-                        warp, old-locale, time,
-                        wai-app-file-cgi, wai >= 1.1, transformers, http-types,
-                        directory, filepath,
-                        http-date, hashmap, deepseq, wai-logger-prefork,
-                        http-conduit
-  Other-Modules:	Config
+  Build-Depends:        base >= 4.0 && < 5
+                      , bytestring
+                      , deepseq
+                      , directory
+                      , filepath
+                      , hashmap
+                      , http-conduit
+                      , http-date
+                      , http-types
+                      , network
+                      , old-locale
+                      , parsec >= 3
+                      , time
+                      , transformers
+                      , unix
+                      , unix-bytestring
+                      , wai >= 1.1
+                      , wai-app-file-cgi
+                      , wai-logger-prefork
+                      , warp
+  Other-Modules:        Config
                         Config.Internal
                         FileCGIApp
                         FileCache
@@ -32,10 +45,22 @@ Executable mighty
                         Route
                         Types
                         Paths_mighttpd2
+
 Executable mkindex
   Main-Is:              mkindex.hs
   GHC-Options:          -Wall -fno-warn-unused-do-bind
   Build-Depends:        base >= 4 && < 5
+
+Test-Suite test
+  Main-Is:              Test.hs
+  Hs-Source-Dirs:       test, .
+  Type:                 exitcode-stdio-1.0
+--  Ghc-Options:          -fhpc -hpcdir dist/hpc
+  Build-Depends:        base >= 4 && < 5
+                      , HUnit
+                      , test-framework-hunit
+                      , test-framework-th-prime
+
 Source-Repository head
   Type:                 git
-  Location:             git://github.com/kazu-yamamoto/mighttpd2.git
+  Location:             git clone git://github.com/kazu-yamamoto/mighttpd2.git
