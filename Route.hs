@@ -4,6 +4,7 @@ module Route (parseRoute) where
 
 import Control.Applicative hiding (many,(<|>))
 import qualified Data.ByteString.Char8 as BS
+import Network.Wai.Application.Classic
 import Parser
 import Text.Parsec
 import Text.Parsec.ByteString.Lazy
@@ -50,10 +51,10 @@ route = do
       <|> OpRevProxy <$ string ">>"
     op  = op0 <* spcs
 
-path :: Parser Dst
+path :: Parser Path
 path = do
     c <- char '/'
-    BS.pack . (c:) <$> many (noneOf "[], \t\n") <* spcs
+    fromByteString . BS.pack . (c:) <$> many (noneOf "[], \t\n") <* spcs
 
 -- [host1][:port2]/path2
 

@@ -5,10 +5,11 @@ module Types where
 import Data.ByteString
 import Data.ByteString.Char8 ()
 import Data.Version
+import Network.Wai.Application.Classic
 import Paths_mighttpd2
 
-type Src      = ByteString
-type Dst      = ByteString
+type Src      = Path
+type Dst      = Path
 type Domain   = ByteString
 type PathInfo = ByteString
 type Port     = Int
