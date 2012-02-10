@@ -3,6 +3,7 @@
 module Main where
 
 import Config
+import Control.Applicative
 import Control.Concurrent
 import Control.Exception (catch, handle, SomeException)
 import Control.Monad
@@ -16,27 +17,44 @@ import Network.Wai.Handler.Warp
 import Network.Wai.Logger.Prefork
 import Prelude hiding (catch)
 import Route
+import System.Directory
 import System.Environment
 import System.Exit
+import System.FilePath
 import System.IO
 import System.Posix
 import Types
 
 main :: IO ()
 main = do
-    opt  <- fileName 0 >>= parseOption
-    route <- fileName 1 >>= parseRoute
+    (opt,route) <- getOptRoute
     if opt_debug_mode opt then
         server opt route
       else
         daemonize $ server opt route
   where
-    fileName n = do
-        args <- getArgs
-        when (length args /= 2) $ do
-            hPutStrLn stderr "Usage: mighty config_file routing_file"
-            exitFailure
-        return $ args !! n
+    getOptRoute = getArgs >>= eachCase
+    eachCase args
+      | n == 0 = do
+          root <- amIrootUser
+          let opt = if root then
+                        defaultOption { opt_port = 80 }
+                    else
+                        defaultOption
+          dir <- getCurrentDirectory
+          let dst = fromString . addTrailingPathSeparator $ dir
+              route = [Block ["localhost"] [RouteFile "/" dst]]
+          return (opt, route)
+      | n == 2 = do
+          opt   <- parseOption $ args !! 0
+          route <- parseRoute  $ args !! 1
+          return (opt,route)
+      | otherwise = do
+          hPutStrLn stderr "Usage: mighty"
+          hPutStrLn stderr "       mighty config_file routing_file"
+          exitFailure
+      where
+        n = length args
 
 ----------------------------------------------------------------
 
@@ -135,10 +153,13 @@ ignoreSigChild = initHandler sigCHLD Ignore
 
 ----------------------------------------------------------------
 
+amIrootUser :: IO Bool
+amIrootUser = (== 0) <$> getRealUserID
+
 setGroupUser :: Option -> IO ()
 setGroupUser opt = do
-    uid <- getRealUserID
-    when (uid == 0) $ do
+    root <- amIrootUser
+    when root $ do
         getGroupEntryForName (opt_group opt) >>= setGroupID . groupID
         getUserEntryForName (opt_user opt) >>= setUserID . userID
 
