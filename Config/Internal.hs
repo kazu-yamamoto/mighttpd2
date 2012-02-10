@@ -22,6 +22,7 @@ defaultOption = Option {
   , opt_log_file_size = 16777216
   , opt_log_backup_number = 10
   , opt_index_file = "index.html"
+  , opt_index_cgi = "index.cgi"
   , opt_status_file_dir = "/usr/local/share/mighty/status"
   , opt_connection_timeout = 30
   , opt_server_name = programName ++ "/" ++ programVersion
@@ -39,6 +40,7 @@ data Option = Option {
   , opt_log_file_size :: !Int
   , opt_log_backup_number :: !Int
   , opt_index_file :: !String
+  , opt_index_cgi  :: !String
   , opt_status_file_dir :: !String
   , opt_connection_timeout :: !Int
   , opt_server_name :: !String
@@ -64,6 +66,7 @@ makeOpt def conf = Option {
   , opt_log_file_size      = get "Log_File_Size" opt_log_file_size
   , opt_log_backup_number  = get "Log_Backup_Number" opt_log_backup_number
   , opt_index_file         = get "Index_File" opt_index_file
+  , opt_index_cgi          = get "Index_Cgi" opt_index_cgi
   , opt_status_file_dir    = get "Status_File_Dir" opt_status_file_dir
   , opt_connection_timeout = get "Connection_Timeout" opt_connection_timeout
   , opt_server_name        = get "Server_Name" opt_server_name

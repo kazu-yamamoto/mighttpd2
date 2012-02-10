@@ -12,8 +12,8 @@ import Types
 
 data Perhaps a = Found a | Redirect | Fail
 
-fileCgiApp :: ClassicAppSpec -> FileAppSpec -> RevProxyAppSpec -> RouteDB -> Application
-fileCgiApp cspec filespec revproxyspec um req = case mmp of
+fileCgiApp :: ClassicAppSpec -> FileAppSpec -> CgiAppSpec -> RevProxyAppSpec -> RouteDB -> Application
+fileCgiApp cspec filespec cgispec revproxyspec um req = case mmp of
     Fail -> do
         let st = statusPreconditionFailed
         liftIO $ logger cspec req st Nothing
@@ -26,7 +26,7 @@ fileCgiApp cspec filespec revproxyspec um req = case mmp of
     Found (RouteFile  src dst) -> do
         fileApp cspec filespec (FileRoute src dst) req
     Found (RouteCGI   src dst) ->
-        cgiApp cspec (CgiRoute src dst) req
+        cgiApp cspec cgispec (CgiRoute src dst) req
     Found (RouteRevProxy src dst dom prt) ->
         revProxyApp cspec revproxyspec (RevProxyRoute src dst dom prt) req
   where
@@ -51,6 +51,7 @@ getRoute key (m@(RouteFile src _):ms)
   | otherwise                = getRoute key ms
 getRoute key (m@(RouteCGI src _):ms)
   | src `isPrefixOf` key     = Found m
+  | src `isMountPointOf` key = Redirect
   | otherwise                = getRoute key ms
 getRoute key (m@(RouteRevProxy src _ _ _):ms)
   | src `isPrefixOf` key     = Found m

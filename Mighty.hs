@@ -107,7 +107,7 @@ single opt route s logtype = do
             H.managerConnCount = 1024
           }
     runSettingsSocket setting s $ \req ->
-        fileCgiApp (cspec lgr) (filespec getInfo) (revproxyspec mgr) route req
+        fileCgiApp (cspec lgr) (filespec getInfo) cgispec (revproxyspec mgr) route req
   where
     setting = defaultSettings {
         settingsPort        = opt_port opt
@@ -125,6 +125,9 @@ single opt route s logtype = do
         indexFile = fromString $ opt_index_file opt
       , isHTML = \x -> ".html" `isSuffixOf` x || ".htm" `isSuffixOf` x
       , getFileInfo = getInfo
+      }
+    cgispec = CgiAppSpec {
+        indexCgi = "index.cgi"
       }
     revproxyspec mgr = RevProxyAppSpec {
         revProxyManager = mgr
