@@ -14,6 +14,7 @@ import Network
 import qualified Network.HTTP.Conduit as H
 import Network.Wai.Application.Classic
 import Network.Wai.Handler.Warp
+import Network.Wai.Logger
 import Network.Wai.Logger.Prefork
 import Prelude hiding (catch)
 import Route

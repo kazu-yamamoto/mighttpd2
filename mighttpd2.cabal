@@ -21,7 +21,7 @@ Executable mighty
                       , deepseq
                       , directory
                       , filepath
-                      , hashmap
+                      , hashmap >= 1.2 && < 1.3
                       , http-conduit
                       , http-date
                       , http-types
@@ -34,6 +34,7 @@ Executable mighty
                       , unix-bytestring
                       , wai >= 1.1
                       , wai-app-file-cgi
+                      , wai-logger
                       , wai-logger-prefork
                       , warp
   Other-Modules:        Config
