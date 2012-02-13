@@ -9,7 +9,7 @@ Description:            A classical web server on WAI/warp.
                         Static files and CGI can be handled.
 Homepage:               http://www.mew.org/~kazu/proj/mighttpd/
 Category:               Network, Web
-Cabal-Version:          >= 1.6
+Cabal-Version:          >= 1.8
 Build-Type:             Simple
 Data-Files:             sample.conf sample.route
 
