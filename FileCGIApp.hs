@@ -15,11 +15,11 @@ data Perhaps a = Found a | Redirect | Fail
 fileCgiApp :: ClassicAppSpec -> FileAppSpec -> CgiAppSpec -> RevProxyAppSpec -> RouteDB -> Application
 fileCgiApp cspec filespec cgispec revproxyspec um req = case mmp of
     Fail -> do
-        let st = statusPreconditionFailed
+        let st = preconditionFailed412
         liftIO $ logger cspec req st Nothing
         fastResponse st defaultHeader "Precondition Failed\r\n"
     Redirect -> do
-        let st = statusMovedPermanently
+        let st = movedPermanently301
             hdr = defaultHeader ++ redirectHeader req
         liftIO $ logger cspec req st Nothing
         fastResponse st hdr "Moved Permanently\r\n"
