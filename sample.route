@@ -16,7 +16,7 @@
 # Reverse proxy rules should be specified with ">>"
 # /path >> host:port/path2
 # Either "host" or ":port" can be committed, but not both.
-/app/cal         >> example.net/calendar
+/app/cal/        >> example.net/calendar/
 # Yesod app in the same server
 /app/wiki/       >> 127.0.0.1:8080/
 
