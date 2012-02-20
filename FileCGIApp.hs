@@ -55,6 +55,7 @@ getRoute key (m@(RouteCGI src _):ms)
   | otherwise                = getRoute key ms
 getRoute key (m@(RouteRevProxy src _ _ _):ms)
   | src `isPrefixOf` key     = Found m
+  | src `isMountPointOf` key = Redirect
   | otherwise                = getRoute key ms
 
 isPrefixOf :: Path -> ByteString -> Bool
