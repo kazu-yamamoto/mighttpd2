@@ -6,8 +6,8 @@ import Control.Concurrent
 import Control.Exception
 import Control.Monad
 import Data.ByteString (ByteString)
-import Data.HashMap (Map)
-import qualified Data.HashMap as M
+import Data.HashMap.Strict (HashMap)
+import qualified Data.HashMap.Strict as M
 import Data.IORef
 import Network.HTTP.Date
 import Network.Wai.Application.Classic
@@ -15,7 +15,7 @@ import System.IO.Unsafe
 import System.Posix.Files
 
 data Entry = Negative | Positive FileInfo
-type Cache = Map ByteString Entry
+type Cache = HashMap ByteString Entry
 type GetInfo = Path -> IO FileInfo
 
 fileInfo :: IORef Cache -> GetInfo

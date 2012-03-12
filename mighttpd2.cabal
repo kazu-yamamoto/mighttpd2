@@ -23,7 +23,7 @@ Executable mighty
                       , deepseq
                       , directory
                       , filepath
-                      , hashmap >= 1.2
+                      , unordered-containers
                       , http-conduit
                       , http-date
                       , http-types
@@ -67,7 +67,7 @@ Test-Suite test
                       , deepseq
                       , directory
                       , filepath
-                      , hashmap >= 1.2 && < 1.3
+                      , unordered-containers
                       , http-conduit
                       , http-date
                       , http-types
