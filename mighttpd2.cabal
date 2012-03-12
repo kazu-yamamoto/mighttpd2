@@ -23,7 +23,6 @@ Executable mighty
                       , deepseq
                       , directory
                       , filepath
-                      , unordered-containers
                       , http-conduit
                       , http-date
                       , http-types
@@ -34,6 +33,7 @@ Executable mighty
                       , transformers
                       , unix
                       , unix-bytestring
+                      , unordered-containers
                       , wai >= 1.1
                       , wai-app-file-cgi
                       , wai-logger
@@ -67,7 +67,6 @@ Test-Suite test
                       , deepseq
                       , directory
                       , filepath
-                      , unordered-containers
                       , http-conduit
                       , http-date
                       , http-types
@@ -78,6 +77,7 @@ Test-Suite test
                       , transformers
                       , unix
                       , unix-bytestring
+                      , unordered-containers
                       , wai >= 1.1
                       , wai-app-file-cgi
                       , wai-logger
