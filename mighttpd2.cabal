@@ -89,4 +89,4 @@ Test-Suite test
 
 Source-Repository head
   Type:                 git
-  Location:             git clone git://github.com/kazu-yamamoto/mighttpd2.git
+  Location:             git://github.com/kazu-yamamoto/mighttpd2.git
