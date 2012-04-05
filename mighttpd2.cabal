@@ -27,6 +27,7 @@ Executable mighty
                       , http-date
                       , http-types
                       , network
+                      , network-conduit
                       , old-locale
                       , parsec >= 3
                       , time
@@ -71,6 +72,7 @@ Test-Suite test
                       , http-date
                       , http-types
                       , network
+                      , network-conduit
                       , old-locale
                       , parsec >= 3
                       , time

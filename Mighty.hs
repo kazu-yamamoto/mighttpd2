@@ -8,6 +8,7 @@ import Control.Concurrent
 import Control.Exception (catch, handle, SomeException)
 import Control.Monad
 import qualified Data.ByteString.Char8 as BS
+import Data.Conduit.Network
 import FileCGIApp
 import FileCache
 import Network
