@@ -18,6 +18,6 @@
 # Either "host" or ":port" can be committed, but not both.
 /app/cal/        >> example.net/calendar/
 # Yesod app in the same server
-/app/wiki/       >> 127.0.0.1:8080/
+/app/wiki/       >> 127.0.0.1:3000/
 
 /                -> /export/www/
