@@ -1,4 +1,4 @@
-# Sample routing for Mighttpd 2
+# Example routing for Mighttpd 2
 
 # Domain lists
 [localhost www.example.com]
