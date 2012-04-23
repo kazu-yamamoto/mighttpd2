@@ -36,8 +36,9 @@ main = do
     if opt_debug_mode opt then
         server opt route
       else do
-        putStrLn $ "Detaching this terminal..." ++ errorFile
+        putStrLn "Detaching this terminal..."
         putStrLn $ "If any, errors can be found in \"" ++ errorFile ++ "\""
+        hFlush stdout
         daemonize $ server opt route
   where
     getOptRoute = getArgs >>= eachCase
