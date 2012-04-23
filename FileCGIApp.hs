@@ -40,6 +40,7 @@ fileCgiApp cspec filespec cgispec revproxyspec um req = case mmp of
 getBlock :: ByteString -> RouteDB -> Maybe [Route]
 getBlock _ [] = Nothing
 getBlock key (Block doms maps : ms)
+  | "*" `elem` doms = Just maps
   | key `elem` doms = Just maps
   | otherwise       = getBlock key ms
 

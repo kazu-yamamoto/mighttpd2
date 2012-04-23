@@ -27,12 +27,17 @@ import System.IO
 import System.Posix
 import Types
 
+errorFile :: FilePath
+errorFile = "/tmp/mighty_error"
+
 main :: IO ()
 main = do
     (opt,route) <- getOptRoute
     if opt_debug_mode opt then
         server opt route
-      else
+      else do
+        putStrLn $ "Detaching this terminal..." ++ errorFile
+        putStrLn $ "If any, errors can be found in \"" ++ errorFile ++ "\""
         daemonize $ server opt route
   where
     getOptRoute = getArgs >>= eachCase
@@ -45,7 +50,7 @@ main = do
                         defaultOption
           dir <- getCurrentDirectory
           let dst = fromString . addTrailingPathSeparator $ dir
-              route = [Block ["localhost"] [RouteFile "/" dst]]
+              route = [Block ["*"] [RouteFile "/" dst]]
           return (opt, route)
       | n == 2 = do
           opt   <- parseOption $ args !! 0
@@ -63,7 +68,11 @@ main = do
 server :: Option -> RouteDB -> IO ()
 server opt route = handle handler $ do
     s <- sOpen
-    unless debug writePidFile
+    if debug then do
+        putStrLn $ "Serving on port " ++ show port ++ "."
+        hFlush stdout
+      else
+        writePidFile
     setGroupUser opt
     logCheck logtype
     if workers == 1 then do
@@ -86,7 +95,7 @@ server opt route = handle handler $ do
     handler :: SomeException -> IO ()
     handler e
       | debug = hPrint stderr e
-      | otherwise = writeFile "/tmp/mighty_error" (show e)
+      | otherwise = writeFile errorFile (show e)
     logspec = FileLogSpec {
         log_file          = opt_log_file opt
       , log_file_size     = fromIntegral $ opt_log_file_size opt
