@@ -1,5 +1,5 @@
 Name:                   mighttpd2
-Version:                2.5.9
+Version:                2.5.10
 Author:                 Kazu Yamamoto <kazu@iij.ad.jp>
 Maintainer:             Kazu Yamamoto <kazu@iij.ad.jp>
 License:                BSD3
@@ -36,6 +36,8 @@ Executable mighty
                       , unix-bytestring
                       , unordered-containers
                       , wai >= 1.1
+                      -- should be removed someday
+                      , blaze-html >= 0.5
                       , wai-app-file-cgi
                       , wai-logger
                       , wai-logger-prefork
