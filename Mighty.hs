@@ -121,9 +121,10 @@ single opt route s logtype = do
     runSettingsSocket setting s $ \req ->
         fileCgiApp (cspec lgr) (filespec getInfo) cgispec (revproxyspec mgr) route req
   where
+    debug = opt_debug_mode opt
     setting = defaultSettings {
         settingsPort        = opt_port opt
-      , settingsOnException = printStdout
+      , settingsOnException = if debug then printStdout else ignore
       , settingsTimeout     = opt_connection_timeout opt
       , settingsHost        = HostAny
       }
