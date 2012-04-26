@@ -77,7 +77,7 @@ server opt route = handle handler $ do
     setGroupUser opt
     logCheck logtype
     if workers == 1 then do
-        forkIO $ single opt route s logtype
+        _ <- forkIO $ single opt route s logtype
         myid <- getProcessID
         logController logtype [myid]
       else do
@@ -111,7 +111,7 @@ server opt route = handle handler $ do
 
 single :: Option -> RouteDB -> Socket -> LogType -> IO ()
 single opt route s logtype = do
-    ignoreSigChild
+    _ <- ignoreSigChild
     lgr <- logInit FromSocket logtype
     getInfo <- fileCacheInit
     mgr <- H.newManager H.def {
@@ -148,11 +148,11 @@ single opt route s logtype = do
 
 multi :: Option -> RouteDB -> Socket -> LogType -> IO [ProcessID]
 multi opt route s logtype = do
-    ignoreSigChild
+    _ <- ignoreSigChild
     cids <- replicateM workers $ forkProcess (single opt route s logtype)
     sClose s
-    initHandler sigTERM $ terminateHandler cids
-    initHandler sigINT  $ terminateHandler cids
+    _ <- initHandler sigTERM $ terminateHandler cids
+    _ <- initHandler sigINT  $ terminateHandler cids
     return cids
   where
     workers = opt_worker_processes opt
@@ -183,18 +183,18 @@ setGroupUser opt = do
 
 daemonize :: IO () -> IO ()
 daemonize program = ensureDetachTerminalCanWork $ do
-    detachTerminal
+    _ <- detachTerminal
     ensureNeverAttachTerminal $ do
         changeWorkingDirectory "/"
-        setFileCreationMask 0
+        _ <- setFileCreationMask 0
         mapM_ closeFd [stdInput, stdOutput, stdError]
         program
   where
     ensureDetachTerminalCanWork p = do
-        forkProcess p
+        _ <- forkProcess p
         exitImmediately ExitSuccess
     ensureNeverAttachTerminal p = do
-        forkProcess p
+        _ <- forkProcess p
         exitImmediately ExitSuccess
     detachTerminal = createSession
 

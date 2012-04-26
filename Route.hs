@@ -65,5 +65,5 @@ domPortDst = (defaultDomain,,) <$> port <*> path
   where
     domain = BS.pack <$> many1 (noneOf ":/[], \t\n")
     port = do
-        char ':'
+        _ <- char ':'
         read <$> many1 (oneOf ['0'..'9'])

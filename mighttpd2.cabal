@@ -17,7 +17,7 @@ Data-Files:             example.conf example.route
 
 Executable mighty
   Main-Is:              Mighty.hs
-  GHC-Options:          -Wall -fno-warn-unused-do-bind -threaded
+  GHC-Options:          -Wall -threaded
   Build-Depends:        base >= 4.0 && < 5
                       -- should be removed someday
                       , blaze-html >= 0.5

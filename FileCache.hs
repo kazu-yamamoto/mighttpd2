@@ -68,7 +68,7 @@ negative ref path = do
 fileCacheInit :: IO GetInfo
 fileCacheInit = do
     ref <- newIORef M.empty
-    forkIO (remover ref)
+    _ <- forkIO (remover ref)
     return $ fileInfo ref
 
 -- atomicModifyIORef is not necessary here.
