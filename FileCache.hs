@@ -4,6 +4,7 @@ module FileCache (fileCacheInit) where
 
 import Control.Concurrent
 import Control.Exception
+import Control.Exception.IOChoice
 import Control.Monad
 import Data.ByteString (ByteString)
 import Data.HashMap.Strict (HashMap)
@@ -11,7 +12,6 @@ import qualified Data.HashMap.Strict as M
 import Data.IORef
 import Network.HTTP.Date
 import Network.Wai.Application.Classic
-import System.IO.Unsafe
 import System.Posix.Files
 
 data Entry = Negative | Positive FileInfo
@@ -20,40 +20,50 @@ type GetInfo = Path -> IO FileInfo
 
 fileInfo :: IORef Cache -> GetInfo
 fileInfo ref path = do
-  !mx <- atomicModifyIORef ref (lok path)
-  case mx of
-      Nothing -> throwIO (userError "fileInfo")
-      Just x  -> return x
-
-lok :: Path -> Cache -> (Cache, Maybe FileInfo)
-lok path cache = unsafePerformIO $ do
-    let ment = M.lookup bpath cache
-    case ment of
-        Nothing -> handle handler $ do
-            let sfile = pathString path
-            fs <- getFileStatus sfile
-            if doesExist fs then pos fs else neg
-        Just Negative     -> return (cache, Nothing)
-        Just (Positive x) -> return (cache, Just x)
+    cache <- readIORef ref
+    case M.lookup bpath cache of
+        Just Negative     -> throwIO (userError "fileInfo")
+        Just (Positive x) -> return x
+        Nothing           -> register ||> negative ref path
   where
+    bpath = pathByteString path
+    sfile = pathString path
+    register = do
+        fs <- getFileStatus sfile
+        if not (isDirectory fs) then
+            positive ref fs path
+          else
+            goNext
+
+positive :: IORef Cache -> FileStatus -> GetInfo
+positive ref fs path = do
+    !_ <- atomicModifyIORef ref modify
+    return info
+  where
+    info = FileInfo {
+        fileInfoName = path
+        , fileInfoSize = size fs
+        , fileInfoTime = mtime fs
+        }
     size = fromIntegral . fileSize
     mtime = epochTimeToHTTPDate . modificationTime
-    doesExist = not . isDirectory
+    entry = Positive info
     bpath = pathByteString path
-    pos fs = do
-        let info = FileInfo {
-                fileInfoName = path
-              , fileInfoSize = size fs
-              , fileInfoTime = mtime fs
-              }
-            entry = Positive info
-            cache' = M.insert bpath entry cache
-        return (cache', Just info)
-    neg = do
-        let cache' = M.insert bpath Negative cache
-        return (cache', Nothing)
-    handler :: SomeException -> IO (Cache, Maybe FileInfo)
-    handler _ = neg
+    modify cache = (cache', ())
+      where
+        cache' = M.insert bpath entry cache
+
+negative :: IORef Cache -> GetInfo
+negative ref path = do
+    !_ <- atomicModifyIORef ref modify
+    throwIO (userError "fileInfo")
+  where
+    bpath = pathByteString path
+    modify cache = (cache', ())
+      where
+        cache' = M.insert bpath Negative cache
+
+----------------------------------------------------------------
 
 fileCacheInit :: IO GetInfo
 fileCacheInit = do

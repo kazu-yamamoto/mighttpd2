@@ -19,6 +19,8 @@ Executable mighty
   Main-Is:              Mighty.hs
   GHC-Options:          -Wall -fno-warn-unused-do-bind -threaded
   Build-Depends:        base >= 4.0 && < 5
+                      -- should be removed someday
+                      , blaze-html >= 0.5
                       , bytestring
                       , deepseq
                       , directory
@@ -26,6 +28,7 @@ Executable mighty
                       , http-conduit
                       , http-date
                       , http-types
+                      , io-choice
                       , network
                       , network-conduit
                       , old-locale
@@ -36,8 +39,6 @@ Executable mighty
                       , unix-bytestring
                       , unordered-containers
                       , wai >= 1.1
-                      -- should be removed someday
-                      , blaze-html >= 0.5
                       , wai-app-file-cgi
                       , wai-logger
                       , wai-logger-prefork
