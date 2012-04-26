@@ -24,15 +24,16 @@ fileInfo ref path = do
     case M.lookup bpath cache of
         Just Negative     -> throwIO (userError "fileInfo")
         Just (Positive x) -> return x
-        Nothing           -> do
-            let sfile = pathString path
-            fs <- getFileStatus sfile
-            if not (isDirectory fs) then
-                positive ref fs path ||> negative ref path
-              else
-                negative ref path
+        Nothing           -> register ||> negative ref path
   where
     bpath = pathByteString path
+    sfile = pathString path
+    register = do
+        fs <- getFileStatus sfile
+        if not (isDirectory fs) then
+            positive ref fs path
+          else
+            goNext
 
 positive :: IORef Cache -> FileStatus -> GetInfo
 positive ref fs path = do
