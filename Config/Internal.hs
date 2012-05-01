@@ -14,8 +14,8 @@ defaultOption :: Option
 defaultOption = Option {
     opt_port = 8080
   , opt_debug_mode = True
-  , opt_user = "nobody"
-  , opt_group = "nobody"
+  , opt_user = "root"
+  , opt_group = "root"
   , opt_pid_file = "/var/run/mighty.pid"
   , opt_logging = True
   , opt_log_file = "/var/log/mighty"

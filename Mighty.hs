@@ -45,10 +45,8 @@ main = do
     eachCase args
       | n == 0 = do
           root <- amIrootUser
-          let opt = if root then
-                        defaultOption { opt_port = 80 }
-                    else
-                        defaultOption
+          let opt | root      = defaultOption { opt_port = 80 }
+                  | otherwise = defaultOption
           dir <- getCurrentDirectory
           let dst = fromString . addTrailingPathSeparator $ dir
               route = [Block ["*"] [RouteFile "/" dst]]
