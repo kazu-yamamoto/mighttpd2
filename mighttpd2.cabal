@@ -55,12 +55,21 @@ Executable mighty
 
 Executable mkindex
   Main-Is:              mkindex.hs
-  GHC-Options:          -Wall -fno-warn-unused-do-bind
+  GHC-Options:          -Wall
   Build-Depends:        base >= 4 && < 5
                       , unix
                       , old-locale
                       , directory
                       , time
+
+Executable mightyctl
+  Main-Is:              mightyctl.hs
+  GHC-Options:          -Wall
+  Build-Depends:        base >= 4 && < 5
+                      , bytestring
+                      , conduit
+                      , process-conduit
+                      , unix
 
 Test-Suite test
   Main-Is:              Test.hs
