@@ -25,6 +25,8 @@ fileCgiApp cspec filespec cgispec revproxyspec um req = case mmp of
         fastResponse st hdr "Moved Permanently\r\n"
     Found (RouteFile  src dst) -> do
         fileApp cspec filespec (FileRoute src dst) req
+    Found (RouteRedirect src dst) -> do
+        redirectApp cspec (RedirectRoute src dst) req
     Found (RouteCGI   src dst) ->
         cgiApp cspec cgispec (CgiRoute src dst) req
     Found (RouteRevProxy src dst dom prt) ->
@@ -46,18 +48,18 @@ getBlock key (Block doms maps : ms)
 
 getRoute :: ByteString -> [Route] -> Perhaps Route
 getRoute _ []                = Fail
-getRoute key (m@(RouteFile src _):ms)
+getRoute key (m:ms)
   | src `isPrefixOf` key     = Found m
   | src `isMountPointOf` key = Redirect
   | otherwise                = getRoute key ms
-getRoute key (m@(RouteCGI src _):ms)
-  | src `isPrefixOf` key     = Found m
-  | src `isMountPointOf` key = Redirect
-  | otherwise                = getRoute key ms
-getRoute key (m@(RouteRevProxy src _ _ _):ms)
-  | src `isPrefixOf` key     = Found m
-  | src `isMountPointOf` key = Redirect
-  | otherwise                = getRoute key ms
+  where
+    src = routeSource m
+
+routeSource :: Route -> Src
+routeSource (RouteFile     src _)     = src
+routeSource (RouteRedirect src _)     = src
+routeSource (RouteCGI      src _)     = src
+routeSource (RouteRevProxy src _ _ _) = src
 
 isPrefixOf :: Path -> ByteString -> Bool
 isPrefixOf src key = src' `BS.isPrefixOf` key

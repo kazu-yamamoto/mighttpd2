@@ -15,6 +15,7 @@ type PathInfo = ByteString
 type Port     = Int
 data Block    = Block [Domain] [Route] deriving (Eq,Show)
 data Route    = RouteFile     Src Dst
+              | RouteRedirect Src Dst
               | RouteCGI      Src Dst
               | RouteRevProxy Src Dst Domain Port
               deriving (Eq,Show)

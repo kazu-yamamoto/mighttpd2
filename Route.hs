@@ -31,22 +31,25 @@ domains = open *> doms <* close <* trailing
     domain = BS.pack <$> many1 (noneOf "[], \t\n")
     sep = () <$ spcs1
 
-data Op = OpFile | OpCGI | OpRevProxy
+data Op = OpFile | OpCGI | OpRevProxy | OpRedirect
 
 route :: Parser Route
 route = do
     s <- src
     o <- op
     case o of
-        OpFile  -> RouteFile s <$> dst <* trailing
-        OpCGI   -> RouteCGI  s <$> dst <* trailing
+        OpFile     -> RouteFile     s <$> dst <* trailing
+        OpRedirect -> RouteRedirect s <$> dst' <* trailing
+        OpCGI      -> RouteCGI      s <$> dst <* trailing
         OpRevProxy -> do
             (dom,prt,d) <- domPortDst
             return $ RouteRevProxy s d dom prt
   where
     src = path
     dst = path
+    dst' = path'
     op0 = OpFile     <$ string "->"
+      <|> OpRedirect <$ string "<<"
       <|> OpCGI      <$ string "=>"
       <|> OpRevProxy <$ string ">>"
     op  = op0 <* spcs
@@ -55,6 +58,9 @@ path :: Parser Path
 path = do
     c <- char '/'
     fromByteString . BS.pack . (c:) <$> many (noneOf "[], \t\n") <* spcs
+
+path' :: Parser Path
+path' = fromByteString . BS.pack <$> many (noneOf "[], \t\n") <* spcs
 
 -- [host1][:port2]/path2
 
