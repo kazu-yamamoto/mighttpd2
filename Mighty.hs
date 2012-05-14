@@ -36,8 +36,9 @@ main = do
     if opt_debug_mode opt then
         server opt route
       else do
-        putStrLn "Detaching this terminal..."
-        putStrLn $ "If any, errors can be found in \"" ++ errorFile ++ "\""
+        let port = opt_port opt
+        putStrLn $ "Serving on port " ++ show port ++ " and detaching this terminal..."
+        putStrLn $ "(If errors occur, they will be written in \"" ++ errorFile ++ "\".)"
         hFlush stdout
         daemonize $ server opt route
   where
