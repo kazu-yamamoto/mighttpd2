@@ -36,12 +36,18 @@ toPsResult _ = PsResult "unknown" 0 0 "unknown"
 
 runPS :: IO [PsResult]
 runPS = runResourceT $
-      sourceCmd "ps -ef"
-   $= CB.lines
-   $= CL.map BS.words
-   $= CL.map toPsResult
-   $= CL.filter (\ps -> "mighty" `BS.isSuffixOf` command ps)
-   $$ CL.consume
+       sourceCmd "ps -ef"
+    $= CB.lines
+    $= CL.map BS.words
+    $= CL.map toPsResult
+    $= CL.filter mighty
+    $$ CL.consume
+  where
+    commandName = last . split '/' . command
+    mighty ps = "mighty" `BS.isInfixOf` name
+             && (not $ "mightyctl" `BS.isInfixOf` name)
+        where
+          name = commandName ps
 
 ----------------------------------------------------------------
 
@@ -55,3 +61,12 @@ findParent ps = map head
 
 getMightyPid :: IO [ProcessID]
 getMightyPid = (map pid . findParent) <$> runPS
+
+----------------------------------------------------------------
+
+split :: Char -> ByteString -> [ByteString]
+split _ "" = []
+split c s = case BS.break (c==) s of
+    ("",r)  -> split c (BS.tail r)
+    (s',"") -> [s']
+    (s',r)  -> s' : split c (BS.tail r)
