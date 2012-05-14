@@ -76,11 +76,13 @@ server opt route = handle handler $ do
     setGroupUser opt
     logCheck logtype
     if workers == 1 then do
-        _ <- forkIO $ single opt route s logtype
+        _ <- forkIO $ single opt route s logtype -- killed by signal
+        -- main thread
         myid <- getProcessID
         logController logtype [myid]
       else do
         cids <- multi opt route s logtype
+        -- main thread
         logController logtype cids
   where
     debug = opt_debug_mode opt
@@ -111,6 +113,10 @@ server opt route = handle handler $ do
 single :: Option -> RouteDB -> Socket -> LogType -> IO ()
 single opt route s logtype = do
     _ <- ignoreSigChild
+    _ <- initHandler sigTERM $ Catch (sClose s >> exitImmediately ExitSuccess)
+    _ <- initHandler sigINT  $ Catch (sClose s >> exitImmediately ExitSuccess)
+    myid <- myThreadId
+    _ <- initHandler sigUSR1 $ Catch (killThread myid >> sClose s)
     lgr <- logInit FromSocket logtype
     getInfo <- fileCacheInit
     mgr <- H.newManager H.def {
@@ -148,17 +154,25 @@ single opt route s logtype = do
 multi :: Option -> RouteDB -> Socket -> LogType -> IO [ProcessID]
 multi opt route s logtype = do
     _ <- ignoreSigChild
-    cids <- replicateM workers $ forkProcess (single opt route s logtype)
+    cids <- replicateM workers $ forkProcess $ do
+        forkIO $ single opt route s logtype -- killed by signal
+        -- main thread
+        mainLoop
     sClose s
-    _ <- initHandler sigTERM $ terminateHandler cids
-    _ <- initHandler sigINT  $ terminateHandler cids
+    _ <- initHandler sigTERM $ stopHandler cids
+    _ <- initHandler sigINT  $ stopHandler cids
+    _ <- initHandler sigUSR1 $ quitHandler cids
     return cids
   where
     workers = opt_worker_processes opt
-    terminateHandler cids = Catch $ do
+    stopHandler cids = Catch $ do
         mapM_ terminateChild cids
         exitImmediately ExitSuccess
     terminateChild cid = signalProcess sigTERM cid `catch` ignore
+    quitHandler cids = Catch $ do
+        mapM_ quitChild cids
+    quitChild cid = signalProcess sigUSR1 cid `catch` ignore
+    mainLoop = threadDelay 1000000 >> mainLoop
 
 initHandler :: Signal -> Handler -> IO Handler
 initHandler sig func = installHandler sig func Nothing
