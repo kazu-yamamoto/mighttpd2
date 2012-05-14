@@ -116,7 +116,7 @@ single opt route s logtype = do
     _ <- initHandler sigTERM $ Catch (sClose s >> exitImmediately ExitSuccess)
     _ <- initHandler sigINT  $ Catch (sClose s >> exitImmediately ExitSuccess)
     myid <- myThreadId
-    _ <- initHandler sigUSR1 $ Catch (killThread myid >> sClose s)
+    _ <- initHandler sigQUIT $ Catch (killThread myid >> sClose s)
     lgr <- logInit FromSocket logtype
     getInfo <- fileCacheInit
     mgr <- H.newManager H.def {
@@ -161,7 +161,7 @@ multi opt route s logtype = do
     sClose s
     _ <- initHandler sigTERM $ stopHandler cids
     _ <- initHandler sigINT  $ stopHandler cids
-    _ <- initHandler sigUSR1 $ quitHandler cids
+    _ <- initHandler sigQUIT $ quitHandler cids
     return cids
   where
     workers = opt_worker_processes opt
@@ -171,7 +171,7 @@ multi opt route s logtype = do
     terminateChild cid = signalProcess sigTERM cid `catch` ignore
     quitHandler cids = Catch $ do
         mapM_ quitChild cids
-    quitChild cid = signalProcess sigUSR1 cid `catch` ignore
+    quitChild cid = signalProcess sigQUIT cid `catch` ignore
     mainLoop = threadDelay 1000000 >> mainLoop
 
 initHandler :: Signal -> Handler -> IO Handler
