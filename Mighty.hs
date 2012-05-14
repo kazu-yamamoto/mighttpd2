@@ -155,7 +155,7 @@ multi :: Option -> RouteDB -> Socket -> LogType -> IO [ProcessID]
 multi opt route s logtype = do
     _ <- ignoreSigChild
     cids <- replicateM workers $ forkProcess $ do
-        forkIO $ single opt route s logtype -- killed by signal
+        _ <- forkIO $ single opt route s logtype -- killed by signal
         -- main thread
         mainLoop
     sClose s
