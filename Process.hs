@@ -52,11 +52,16 @@ runPS = runResourceT $
 ----------------------------------------------------------------
 
 findParent :: [PsResult] -> [PsResult]
-findParent ps = deleteAloneChild
-              $ map head
-              $ filter (\xs -> length xs == 1) -- master is alone
-              $ groupBy ((==) `on` ppid)
-              $ sortBy (comparing ppid) ps
+findParent ps = deleteAloneChild $ masters ++ candidates
+  where
+    iAmMaster p = ppid p == 1
+    masters = filter iAmMaster ps
+    rest    = filter (not.iAmMaster) ps
+    candidates = map head
+               $ filter (\xs -> length xs == 1) -- master is alone
+               $ groupBy ((==) `on` ppid)
+               $ sortBy (comparing ppid) rest
+
 
 deleteAloneChild :: [PsResult] -> [PsResult]
 deleteAloneChild [] = []
