@@ -73,7 +73,6 @@ server opt route = handle handler $ do
         hFlush stdout
       else
         writePidFile
-    setGroupUser opt
     logCheck logtype
     if workers == 1 then do
         _ <- forkIO $ single opt route s logtype -- killed by signal
@@ -112,6 +111,7 @@ server opt route = handle handler $ do
 
 single :: Option -> RouteDB -> Socket -> LogType -> IO ()
 single opt route s logtype = do
+    setGroupUser opt -- don't change the user of the master process
     _ <- ignoreSigChild
     _ <- initHandler sigTERM $ Catch (sClose s >> exitImmediately ExitSuccess)
     _ <- initHandler sigINT  $ Catch (sClose s >> exitImmediately ExitSuccess)
