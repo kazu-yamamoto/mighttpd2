@@ -2,6 +2,7 @@ module Main where
 
 import Data.List
 import Process
+import Signal
 import System.Environment
 import System.Exit
 import System.Posix.Signals
@@ -9,10 +10,10 @@ import System.Posix.Types
 
 commandDB :: [(String, Signal)]
 commandDB = [
-    ("stop",   sigTERM)
-  , ("reload", sigHUP)
-  , ("retire", sigQUIT)
-  , ("info",   sigUSR1)
+    ("stop",   sigStop)
+  , ("reload", sigReload)
+  , ("retire", sigRetire)
+  , ("info",   sigInfo)
   ]
 
 usage :: IO a

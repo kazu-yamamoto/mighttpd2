@@ -52,7 +52,10 @@ Executable mighty
                         FileCache
                         Mighty
                         Parser
+                        Report
                         Route
+                        Signal
+                        State
                         Types
                         Paths_mighttpd2
 

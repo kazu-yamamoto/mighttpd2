@@ -1,17 +1,14 @@
-{-# LANGUAGE OverloadedStrings, BangPatterns #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Main where
 
 import Config
 import Control.Applicative
 import Control.Concurrent
-import Control.Exception (catch, handle, SomeException)
+import Control.Exception (handle, SomeException)
 import Control.Monad
-import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
 import Data.Conduit.Network
-import Data.IORef
-import Data.UnixTime
 import FileCGIApp
 import FileCache
 import Network
@@ -20,9 +17,11 @@ import Network.Wai.Application.Classic
 import Network.Wai.Handler.Warp
 import Network.Wai.Logger
 import Network.Wai.Logger.Prefork
-import Prelude hiding (catch)
 import Process
+import Report
 import Route
+import Signal
+import State
 import System.Directory
 import System.Environment
 import System.Exit
@@ -31,8 +30,7 @@ import System.IO
 import System.Posix
 import Types
 
-reportFile :: FilePath
-reportFile = "/tmp/mighty_report"
+----------------------------------------------------------------
 
 main :: IO ()
 main = do
@@ -69,20 +67,6 @@ main = do
 
 ----------------------------------------------------------------
 
-data Status = Serving | Retiring deriving Eq
-
-data State = State {
-    connectionCounter :: !Int
-  , serverStatus :: !Status
-  }
-
-initialState :: State
-initialState = State 0 Serving
-
-type StateRef = IORef State
-
-----------------------------------------------------------------
-
 server :: Option -> RouteDB -> IO ()
 server opt route = handle handler $ do
     s <- sOpen
@@ -92,7 +76,7 @@ server opt route = handle handler $ do
       else
         writePidFile
     logCheck logtype
-    sref <- newIORef initialState
+    sref <- initState
     myid <- getProcessID
     if workers == 1 then do
         _ <- forkIO $ single opt route s logtype sref -- killed by signal
@@ -126,6 +110,8 @@ server opt route = handle handler $ do
       | debug                 = LogStdout
       | otherwise             = LogFile logspec
 
+----------------------------------------------------------------
+
 masterMainLoop :: ProcessID -> IO ()
 masterMainLoop myid = do
     threadDelay 10000000
@@ -138,7 +124,7 @@ masterMainLoop myid = do
 slaveMainLoop :: StateRef -> IO ()
 slaveMainLoop sref = do
     threadDelay 1000000
-    st <- readIORef sref
+    st <- getState sref
     if serverStatus st == Retiring && connectionCounter st == 0 then
         return () -- FIXME
       else
@@ -149,18 +135,11 @@ slaveMainLoop sref = do
 single :: Option -> RouteDB -> Socket -> LogType -> StateRef -> IO ()
 single opt route s logtype sref = do
     setGroupUser opt -- don't change the user of the master process
-    _ <- ignoreSigChild
-    _ <- initHandler sigTERM $ Catch (sClose s >> exitImmediately ExitSuccess)
-    _ <- initHandler sigINT  $ Catch (sClose s >> exitImmediately ExitSuccess)
     myid <- myThreadId
-    _ <- initHandler sigQUIT $ Catch $ do
-        killThread myid
-        sClose s
-        !_ <- atomicModifyIORef sref (\st -> (st {serverStatus = Retiring}, ()))
-        return ()
-    _ <- initHandler sigUSR1 $ Catch $ do
-        i <- BS.pack . show . connectionCounter <$> readIORef sref
-        report $ "# of connections = " `BS.append` i
+    ignoreSigChild
+    setHandler sigStop   $ stopHandler
+    setHandler sigRetire $ retireHandler myid
+    setHandler sigInfo   $ infoHandler
     lgr <- logInit FromSocket logtype
     getInfo <- fileCacheInit
     mgr <- H.newManager H.def {
@@ -174,17 +153,11 @@ single opt route s logtype sref = do
     setting = defaultSettings {
         settingsPort        = opt_port opt
       , settingsOnException = if debug then printStdout else ignore
-      , settingsOnOpen      = opener
-      , settingsOnClose     = closer
+      , settingsOnOpen      = increment sref
+      , settingsOnClose     = decrement sref
       , settingsTimeout     = opt_connection_timeout opt
       , settingsHost        = HostAny
       }
-    opener = do
-        !_ <- atomicModifyIORef sref (\st -> (st {connectionCounter = connectionCounter st + 1}, ()))
-        return ()
-    closer = do
-        !_ <- atomicModifyIORef sref (\st -> (st {connectionCounter = connectionCounter st - 1}, ()))
-        return ()
     serverName = BS.pack $ opt_server_name opt
     cspec lgr = ClassicAppSpec {
         softwareName = serverName
@@ -202,37 +175,45 @@ single opt route s logtype sref = do
     revproxyspec mgr = RevProxyAppSpec {
         revProxyManager = mgr
       }
+    stopHandler = Catch $ do
+        sClose s
+        exitImmediately ExitSuccess
+    retireHandler myid = Catch $ do
+        killThread myid
+        sClose s
+        retireStatus sref
+    infoHandler = Catch $ do
+        i <- BS.pack . show . connectionCounter <$> getState sref
+        report $ "# of connections = " `BS.append` i
+
+----------------------------------------------------------------
 
 multi :: Option -> RouteDB -> Socket -> LogType -> StateRef -> IO [ProcessID]
 multi opt route s logtype sref = do
-    _ <- ignoreSigChild
+    ignoreSigChild
     cids <- replicateM workers $ forkProcess $ do
         _ <- forkIO $ single opt route s logtype sref -- killed by signal
         slaveMainLoop sref
     sClose s
-    _ <- initHandler sigTERM $ stopHandler cids
-    _ <- initHandler sigINT  $ stopHandler cids
-    _ <- initHandler sigQUIT $ quitHandler cids
-    _ <- initHandler sigUSR1 $ usr1Handler cids
+    setHandler sigStop   $ stopHandler cids
+    setHandler sigRetire $ retireHandler cids
+    setHandler sigInfo   $ infoHandler cids
     return cids
   where
     workers = opt_worker_processes opt
     stopHandler cids = Catch $ do
         mapM_ terminateChild cids
         exitImmediately ExitSuccess
-    terminateChild cid = signalProcess sigTERM cid `catch` ignore
-    quitHandler cids = Catch $ do
-        !_ <- atomicModifyIORef sref (\st -> (st {serverStatus = Retiring}, ()))
-        mapM_ quitChild cids
-    quitChild cid = signalProcess sigQUIT cid `catch` ignore
-    usr1Handler cids = Catch $ mapM_ usr1Child cids
-    usr1Child cid = signalProcess sigUSR1 cid `catch` ignore
-    
-initHandler :: Signal -> Handler -> IO Handler
-initHandler sig func = installHandler sig func Nothing
-
-ignoreSigChild :: IO Handler
-ignoreSigChild = initHandler sigCHLD Ignore
+      where
+        terminateChild cid = sendSignal sigStop cid
+    retireHandler cids = Catch $ do
+        retireStatus sref
+        mapM_ retireChild cids
+      where
+        retireChild cid = sendSignal sigRetire cid
+    infoHandler cids = Catch $ mapM_ infoChild cids
+      where
+        infoChild cid = sendSignal sigInfo cid
 
 ----------------------------------------------------------------
 
@@ -250,7 +231,7 @@ setGroupUser opt = do
 
 daemonize :: IO () -> IO ()
 daemonize program = ensureDetachTerminalCanWork $ do
-    _ <- detachTerminal
+    detachTerminal
     ensureNeverAttachTerminal $ do
         changeWorkingDirectory "/"
         _ <- setFileCreationMask 0
@@ -263,20 +244,9 @@ daemonize program = ensureDetachTerminalCanWork $ do
     ensureNeverAttachTerminal p = do
         _ <- forkProcess p
         exitImmediately ExitSuccess
-    detachTerminal = createSession
+    detachTerminal = createSession >> return ()
 
 ----------------------------------------------------------------
-
-report :: ByteString -> IO ()
-report msg = do
-    pid <- BS.pack . show <$> getProcessID
-    tm <- formatUnixTime mailDateFormat <$> getUnixTime
-    BS.appendFile reportFile $ BS.concat [tm, ": pid = ", pid, ": ", msg, "\n"]
-
-----------------------------------------------------------------
-
-ignore :: SomeException -> IO ()
-ignore _ = return ()
 
 printStdout :: SomeException -> IO ()
 printStdout = print
