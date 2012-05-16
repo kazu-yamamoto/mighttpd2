@@ -11,7 +11,8 @@ commandDB :: [(String, Signal)]
 commandDB = [
     ("stop",   sigTERM)
   , ("reload", sigHUP)
-  , ("quit",   sigQUIT) -- Some Linux cannot handle sigUSR1 correctly, sigh
+  , ("retire", sigQUIT)
+  , ("status", sigUSR1)
   ]
 
 usage :: IO a

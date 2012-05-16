@@ -37,6 +37,7 @@ Executable mighty
                       , transformers
                       , unix
                       , unix-bytestring
+                      , unix-time
                       , unordered-containers
                       , wai >= 1.1
                       , wai-app-file-cgi

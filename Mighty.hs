@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, BangPatterns #-}
 
 module Main where
 
@@ -7,8 +7,11 @@ import Control.Applicative
 import Control.Concurrent
 import Control.Exception (catch, handle, SomeException)
 import Control.Monad
+import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
 import Data.Conduit.Network
+import Data.IORef
+import Data.UnixTime
 import FileCGIApp
 import FileCache
 import Network
@@ -27,8 +30,8 @@ import System.IO
 import System.Posix
 import Types
 
-errorFile :: FilePath
-errorFile = "/tmp/mighty_error"
+reportFile :: FilePath
+reportFile = "/tmp/mighty_report"
 
 main :: IO ()
 main = do
@@ -38,7 +41,7 @@ main = do
       else do
         let port = opt_port opt
         putStrLn $ "Serving on port " ++ show port ++ " and detaching this terminal..."
-        putStrLn $ "(If errors occur, they will be written in \"" ++ errorFile ++ "\".)"
+        putStrLn $ "(If errors occur, they will be written in \"" ++ reportFile ++ "\".)"
         hFlush stdout
         daemonize $ server opt route
   where
@@ -65,6 +68,8 @@ main = do
 
 ----------------------------------------------------------------
 
+type ConnRef = IORef Int
+
 server :: Option -> RouteDB -> IO ()
 server opt route = handle handler $ do
     s <- sOpen
@@ -74,13 +79,14 @@ server opt route = handle handler $ do
       else
         writePidFile
     logCheck logtype
+    cref <- newIORef 0
     if workers == 1 then do
-        _ <- forkIO $ single opt route s logtype -- killed by signal
+        _ <- forkIO $ single opt route s logtype cref -- killed by signal
         -- main thread
         myid <- getProcessID
         logController logtype [myid]
       else do
-        cids <- multi opt route s logtype
+        cids <- multi opt route s logtype cref
         -- main thread
         logController logtype cids
   where
@@ -95,8 +101,8 @@ server opt route = handle handler $ do
         setFileMode pidfile 0o644
     handler :: SomeException -> IO ()
     handler e
-      | debug = hPrint stderr e
-      | otherwise = writeFile errorFile (show e)
+      | debug     = hPrint stderr e
+      | otherwise = report $ BS.pack (show e)
     logspec = FileLogSpec {
         log_file          = opt_log_file opt
       , log_file_size     = fromIntegral $ opt_log_file_size opt
@@ -109,14 +115,17 @@ server opt route = handle handler $ do
 
 ----------------------------------------------------------------
 
-single :: Option -> RouteDB -> Socket -> LogType -> IO ()
-single opt route s logtype = do
+single :: Option -> RouteDB -> Socket -> LogType -> ConnRef -> IO ()
+single opt route s logtype cref = do
     setGroupUser opt -- don't change the user of the master process
     _ <- ignoreSigChild
     _ <- initHandler sigTERM $ Catch (sClose s >> exitImmediately ExitSuccess)
     _ <- initHandler sigINT  $ Catch (sClose s >> exitImmediately ExitSuccess)
     myid <- myThreadId
     _ <- initHandler sigQUIT $ Catch (killThread myid >> sClose s)
+    _ <- initHandler sigUSR1 $ Catch $ do
+        i <- BS.pack . show <$> readIORef cref
+        report $ "# of connections = " `BS.append` i
     lgr <- logInit FromSocket logtype
     getInfo <- fileCacheInit
     mgr <- H.newManager H.def {
@@ -130,9 +139,17 @@ single opt route s logtype = do
     setting = defaultSettings {
         settingsPort        = opt_port opt
       , settingsOnException = if debug then printStdout else ignore
+      , settingsOnOpen      = opener
+      , settingsOnClose     = closer
       , settingsTimeout     = opt_connection_timeout opt
       , settingsHost        = HostAny
       }
+    opener = do
+        !_ <- atomicModifyIORef cref (\n -> let !n' = n+1 in (n',()))
+        return ()
+    closer = do
+        !_ <- atomicModifyIORef cref (\n -> let !n' = n-1 in (n',()))
+        return ()
     serverName = BS.pack $ opt_server_name opt
     cspec lgr = ClassicAppSpec {
         softwareName = serverName
@@ -151,17 +168,18 @@ single opt route s logtype = do
         revProxyManager = mgr
       }
 
-multi :: Option -> RouteDB -> Socket -> LogType -> IO [ProcessID]
-multi opt route s logtype = do
+multi :: Option -> RouteDB -> Socket -> LogType -> ConnRef -> IO [ProcessID]
+multi opt route s logtype cref = do
     _ <- ignoreSigChild
     cids <- replicateM workers $ forkProcess $ do
-        _ <- forkIO $ single opt route s logtype -- killed by signal
+        _ <- forkIO $ single opt route s logtype cref -- killed by signal
         -- main thread
         mainLoop
     sClose s
     _ <- initHandler sigTERM $ stopHandler cids
     _ <- initHandler sigINT  $ stopHandler cids
     _ <- initHandler sigQUIT $ quitHandler cids
+    _ <- initHandler sigUSR1 $ usr1Handler cids
     return cids
   where
     workers = opt_worker_processes opt
@@ -169,9 +187,10 @@ multi opt route s logtype = do
         mapM_ terminateChild cids
         exitImmediately ExitSuccess
     terminateChild cid = signalProcess sigTERM cid `catch` ignore
-    quitHandler cids = Catch $ do
-        mapM_ quitChild cids
+    quitHandler cids = Catch $ mapM_ quitChild cids
     quitChild cid = signalProcess sigQUIT cid `catch` ignore
+    usr1Handler cids = Catch $ mapM_ usr1Child cids
+    usr1Child cid = signalProcess sigUSR1 cid `catch` ignore
     mainLoop = threadDelay 1000000 >> mainLoop
 
 initHandler :: Signal -> Handler -> IO Handler
@@ -210,6 +229,14 @@ daemonize program = ensureDetachTerminalCanWork $ do
         _ <- forkProcess p
         exitImmediately ExitSuccess
     detachTerminal = createSession
+
+----------------------------------------------------------------
+
+report :: ByteString -> IO ()
+report msg = do
+    pid <- BS.pack . show <$> getProcessID
+    tm <- formatUnixTime mailDateFormat <$> getUnixTime
+    BS.appendFile reportFile $ BS.concat [tm, ": pid = ", pid, ": ", msg, "\n"]
 
 ----------------------------------------------------------------
 
