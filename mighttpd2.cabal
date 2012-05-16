@@ -22,6 +22,7 @@ Executable mighty
                       -- should be removed someday
                       , blaze-html >= 0.5
                       , bytestring
+                      , conduit
                       , deepseq
                       , directory
                       , filepath
@@ -33,6 +34,7 @@ Executable mighty
                       , network-conduit
                       , old-locale
                       , parsec >= 3
+                      , process-conduit
                       , time
                       , transformers
                       , unix
