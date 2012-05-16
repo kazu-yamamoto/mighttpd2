@@ -68,7 +68,19 @@ main = do
 
 ----------------------------------------------------------------
 
-type ConnRef = IORef Int
+data Status = Serving | Retiring deriving Eq
+
+data State = State {
+    connectionCounter :: !Int
+  , serverStatus :: !Status
+  }
+
+initialState :: State
+initialState = State 0 Serving
+
+type StateRef = IORef State
+
+----------------------------------------------------------------
 
 server :: Option -> RouteDB -> IO ()
 server opt route = handle handler $ do
@@ -79,14 +91,14 @@ server opt route = handle handler $ do
       else
         writePidFile
     logCheck logtype
-    cref <- newIORef 0
+    sref <- newIORef initialState
     if workers == 1 then do
-        _ <- forkIO $ single opt route s logtype cref -- killed by signal
+        _ <- forkIO $ single opt route s logtype sref -- killed by signal
         -- main thread
         myid <- getProcessID
         logController logtype [myid]
       else do
-        cids <- multi opt route s logtype cref
+        cids <- multi opt route s logtype sref
         -- main thread
         logController logtype cids
   where
@@ -115,16 +127,20 @@ server opt route = handle handler $ do
 
 ----------------------------------------------------------------
 
-single :: Option -> RouteDB -> Socket -> LogType -> ConnRef -> IO ()
-single opt route s logtype cref = do
+single :: Option -> RouteDB -> Socket -> LogType -> StateRef -> IO ()
+single opt route s logtype sref = do
     setGroupUser opt -- don't change the user of the master process
     _ <- ignoreSigChild
     _ <- initHandler sigTERM $ Catch (sClose s >> exitImmediately ExitSuccess)
     _ <- initHandler sigINT  $ Catch (sClose s >> exitImmediately ExitSuccess)
     myid <- myThreadId
-    _ <- initHandler sigQUIT $ Catch (killThread myid >> sClose s)
+    _ <- initHandler sigQUIT $ Catch $ do
+        killThread myid
+        sClose s
+        !_ <- atomicModifyIORef sref (\st -> (st {serverStatus = Retiring}, ()))
+        return ()
     _ <- initHandler sigUSR1 $ Catch $ do
-        i <- BS.pack . show <$> readIORef cref
+        i <- BS.pack . show . connectionCounter <$> readIORef sref
         report $ "# of connections = " `BS.append` i
     lgr <- logInit FromSocket logtype
     getInfo <- fileCacheInit
@@ -145,10 +161,10 @@ single opt route s logtype cref = do
       , settingsHost        = HostAny
       }
     opener = do
-        !_ <- atomicModifyIORef cref (\n -> let !n' = n+1 in (n',()))
+        !_ <- atomicModifyIORef sref (\st -> (st {connectionCounter = connectionCounter st + 1}, ()))
         return ()
     closer = do
-        !_ <- atomicModifyIORef cref (\n -> let !n' = n-1 in (n',()))
+        !_ <- atomicModifyIORef sref (\st -> (st {connectionCounter = connectionCounter st - 1}, ()))
         return ()
     serverName = BS.pack $ opt_server_name opt
     cspec lgr = ClassicAppSpec {
@@ -168,11 +184,11 @@ single opt route s logtype cref = do
         revProxyManager = mgr
       }
 
-multi :: Option -> RouteDB -> Socket -> LogType -> ConnRef -> IO [ProcessID]
-multi opt route s logtype cref = do
+multi :: Option -> RouteDB -> Socket -> LogType -> StateRef -> IO [ProcessID]
+multi opt route s logtype sref = do
     _ <- ignoreSigChild
     cids <- replicateM workers $ forkProcess $ do
-        _ <- forkIO $ single opt route s logtype cref -- killed by signal
+        _ <- forkIO $ single opt route s logtype sref -- killed by signal
         -- main thread
         mainLoop
     sClose s
@@ -187,11 +203,17 @@ multi opt route s logtype cref = do
         mapM_ terminateChild cids
         exitImmediately ExitSuccess
     terminateChild cid = signalProcess sigTERM cid `catch` ignore
-    quitHandler cids = Catch $ mapM_ quitChild cids
+    quitHandler cids = Catch $ do
+        !_ <- atomicModifyIORef sref (\st -> (st {serverStatus = Retiring}, ()))
+        mapM_ quitChild cids
     quitChild cid = signalProcess sigQUIT cid `catch` ignore
     usr1Handler cids = Catch $ mapM_ usr1Child cids
     usr1Child cid = signalProcess sigUSR1 cid `catch` ignore
-    mainLoop = threadDelay 1000000 >> mainLoop
+    mainLoop = do
+        threadDelay 1000000
+        st <- readIORef sref
+        unless (serverStatus st == Retiring && connectionCounter st == 0)
+            mainLoop
 
 initHandler :: Signal -> Handler -> IO Handler
 initHandler sig func = installHandler sig func Nothing

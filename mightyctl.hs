@@ -12,7 +12,7 @@ commandDB = [
     ("stop",   sigTERM)
   , ("reload", sigHUP)
   , ("retire", sigQUIT)
-  , ("status", sigUSR1)
+  , ("info",   sigUSR1)
   ]
 
 usage :: IO a
