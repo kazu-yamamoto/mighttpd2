@@ -2,6 +2,7 @@
 
 module State where
 
+import Control.Concurrent
 import Data.IORef
 
 data Status = Serving | Retiring deriving Eq
@@ -9,10 +10,11 @@ data Status = Serving | Retiring deriving Eq
 data State = State {
     connectionCounter :: !Int
   , serverStatus :: !Status
+  , warpThreadId :: !(Maybe ThreadId)
   }
 
 initialState :: State
-initialState = State 0 Serving
+initialState = State 0 Serving Nothing
 
 type StateRef = IORef State
 
@@ -24,7 +26,10 @@ getState = readIORef
 
 retireStatus :: StateRef -> IO ()
 retireStatus sref = do
-    !_ <- atomicModifyIORef sref (\st -> (st {serverStatus = Retiring}, ()))
+    !_ <- atomicModifyIORef sref (\st -> (st {
+              serverStatus = Retiring
+            , warpThreadId = Nothing
+            }, ()))
     return ()
 
 increment :: IORef State -> IO ()
@@ -37,3 +42,7 @@ decrement sref = do
     !_ <- atomicModifyIORef sref (\st -> (st {connectionCounter = connectionCounter st - 1}, ()))
     return ()
 
+setWarpThreadId :: IORef State -> ThreadId -> IO ()
+setWarpThreadId sref tid = do
+    !_ <- atomicModifyIORef sref (\st -> (st {warpThreadId = Just tid}, ()))
+    return ()

@@ -27,6 +27,7 @@ defaultOption = Option {
   , opt_connection_timeout = 30
   , opt_server_name = programName ++ "/" ++ programVersion
   , opt_worker_processes = 1
+  , opt_routing_file = Nothing
 }
 
 data Option = Option {
@@ -45,6 +46,7 @@ data Option = Option {
   , opt_connection_timeout :: !Int
   , opt_server_name :: !String
   , opt_worker_processes :: !Int
+  , opt_routing_file :: !(Maybe FilePath)
 } deriving (Eq,Show)
 
 ----------------------------------------------------------------
@@ -71,6 +73,7 @@ makeOpt def conf = Option {
   , opt_connection_timeout = get "Connection_Timeout" opt_connection_timeout
   , opt_server_name        = get "Server_Name" opt_server_name
   , opt_worker_processes   = get "Worker_Processes" opt_worker_processes
+  , opt_routing_file       = Nothing
   }
   where
     get k func = maybe (func def) fromConf $ lookup k conf

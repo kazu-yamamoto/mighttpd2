@@ -5,7 +5,7 @@ module Main where
 import Config
 import Control.Applicative
 import Control.Concurrent
-import Control.Exception (handle, SomeException)
+import Control.Exception (try, handle, SomeException)
 import Control.Monad
 import qualified Data.ByteString.Char8 as BS
 import Data.Conduit.Network
@@ -27,6 +27,7 @@ import System.Environment
 import System.Exit
 import System.FilePath
 import System.IO
+import System.IO.Error (ioeGetErrorString)
 import System.Posix
 import Types
 
@@ -55,9 +56,12 @@ main = do
               route = [Block ["*"] [RouteFile "/" dst]]
           return (opt, route)
       | n == 2 = do
-          opt   <- parseOption $ args !! 0
-          route <- parseRoute  $ args !! 1
-          return (opt,route)
+          let config_file = args !! 0
+              routing_file = args !! 1
+          opt   <- parseOption config_file
+          route <- parseRoute  routing_file
+          let opt' = opt {opt_routing_file = Just routing_file}
+          return (opt',route)
       | otherwise = do
           hPutStrLn stderr "Usage: mighty"
           hPutStrLn stderr "       mighty config_file routing_file"
@@ -135,10 +139,11 @@ slaveMainLoop sref = do
 single :: Option -> RouteDB -> Socket -> LogType -> StateRef -> IO ()
 single opt route s logtype sref = do
     setGroupUser opt -- don't change the user of the master process
-    myid <- myThreadId
+    myThreadId >>= setWarpThreadId sref
     ignoreSigChild
     setHandler sigStop   $ stopHandler
-    setHandler sigRetire $ retireHandler myid
+    setHandler sigRetire $ retireHandler
+    setHandler sigReload $ reloadHandler
     setHandler sigInfo   $ infoHandler
     lgr <- logInit FromSocket logtype
     getInfo <- fileCacheInit
@@ -178,10 +183,29 @@ single opt route s logtype sref = do
     stopHandler = Catch $ do
         sClose s
         exitImmediately ExitSuccess
-    retireHandler myid = Catch $ do
-        killThread myid
-        sClose s
-        retireStatus sref
+    retireHandler = Catch $ do
+        mtid <- warpThreadId <$> getState sref
+        case mtid of
+            Nothing -> return ()
+            Just tid -> do
+                killThread tid
+                sClose s
+                retireStatus sref
+    -- FIXME refactor
+    reloadHandler = Catch $ case opt_routing_file opt of
+        Nothing -> return ()
+        Just rfile -> do
+            mtid <- warpThreadId <$> getState sref
+            case mtid of
+                Nothing -> return ()
+                Just tid -> do
+                    eroute <- try $ parseRoute rfile
+                    case eroute of
+                        Left e -> report $ BS.pack (ioeGetErrorString e)
+                        Right route' -> do
+                            killThread tid
+                            _ <- forkIO $ single opt route' s logtype sref
+                            return ()
     infoHandler = Catch $ do
         i <- BS.pack . show . connectionCounter <$> getState sref
         report $ "# of connections = " `BS.append` i
@@ -197,23 +221,19 @@ multi opt route s logtype sref = do
     sClose s
     setHandler sigStop   $ stopHandler cids
     setHandler sigRetire $ retireHandler cids
+    setHandler sigReload $ reloadHandler cids
     setHandler sigInfo   $ infoHandler cids
     return cids
   where
     workers = opt_worker_processes opt
-    stopHandler cids = Catch $ do
-        mapM_ terminateChild cids
+    stopHandler cids   = Catch $ do
+        mapM_ (sendSignal sigStop) cids
         exitImmediately ExitSuccess
-      where
-        terminateChild cid = sendSignal sigStop cid
     retireHandler cids = Catch $ do
         retireStatus sref
-        mapM_ retireChild cids
-      where
-        retireChild cid = sendSignal sigRetire cid
-    infoHandler cids = Catch $ mapM_ infoChild cids
-      where
-        infoChild cid = sendSignal sigInfo cid
+        mapM_ (sendSignal sigRetire) cids
+    reloadHandler cids = Catch $ mapM_ (sendSignal sigReload) cids
+    infoHandler cids   = Catch $ mapM_ (sendSignal sigInfo) cids
 
 ----------------------------------------------------------------
 
