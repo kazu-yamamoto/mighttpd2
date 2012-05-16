@@ -23,9 +23,9 @@ fileCgiApp cspec filespec cgispec revproxyspec um req = case mmp of
             hdr = defaultHeader ++ redirectHeader req
         liftIO $ logger cspec req st Nothing
         fastResponse st hdr "Moved Permanently\r\n"
-    Found (RouteFile  src dst) -> do
+    Found (RouteFile  src dst) ->
         fileApp cspec filespec (FileRoute src dst) req
-    Found (RouteRedirect src dst) -> do
+    Found (RouteRedirect src dst) ->
         redirectApp cspec (RedirectRoute src dst) req
     Found (RouteCGI   src dst) ->
         cgiApp cspec cgispec (CgiRoute src dst) req
