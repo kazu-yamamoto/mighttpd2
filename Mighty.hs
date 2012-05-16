@@ -21,6 +21,7 @@ import Network.Wai.Handler.Warp
 import Network.Wai.Logger
 import Network.Wai.Logger.Prefork
 import Prelude hiding (catch)
+import Process
 import Route
 import System.Directory
 import System.Environment
@@ -92,15 +93,15 @@ server opt route = handle handler $ do
         writePidFile
     logCheck logtype
     sref <- newIORef initialState
+    myid <- getProcessID
     if workers == 1 then do
         _ <- forkIO $ single opt route s logtype sref -- killed by signal
-        -- main thread
-        myid <- getProcessID
-        logController logtype [myid]
+        _ <- forkIO $ logController logtype [myid]
+        slaveMainLoop sref
       else do
         cids <- multi opt route s logtype sref
-        -- main thread
-        logController logtype cids
+        _ <- forkIO $ logController logtype cids
+        masterMainLoop myid
   where
     debug = opt_debug_mode opt
     port = opt_port opt
@@ -124,6 +125,24 @@ server opt route = handle handler $ do
       | not (opt_logging opt) = LogNone
       | debug                 = LogStdout
       | otherwise             = LogFile logspec
+
+masterMainLoop :: ProcessID -> IO ()
+masterMainLoop myid = do
+    threadDelay 10000000
+    cs <- findChildren myid
+    if null cs then -- FIXME serverStatus st == Retiring
+        return () -- FIXME
+      else
+        masterMainLoop myid
+
+slaveMainLoop :: StateRef -> IO ()
+slaveMainLoop sref = do
+    threadDelay 1000000
+    st <- readIORef sref
+    if serverStatus st == Retiring && connectionCounter st == 0 then
+        return () -- FIXME
+      else
+        slaveMainLoop sref
 
 ----------------------------------------------------------------
 
@@ -189,8 +208,7 @@ multi opt route s logtype sref = do
     _ <- ignoreSigChild
     cids <- replicateM workers $ forkProcess $ do
         _ <- forkIO $ single opt route s logtype sref -- killed by signal
-        -- main thread
-        mainLoop
+        slaveMainLoop sref
     sClose s
     _ <- initHandler sigTERM $ stopHandler cids
     _ <- initHandler sigINT  $ stopHandler cids
@@ -209,12 +227,7 @@ multi opt route s logtype sref = do
     quitChild cid = signalProcess sigQUIT cid `catch` ignore
     usr1Handler cids = Catch $ mapM_ usr1Child cids
     usr1Child cid = signalProcess sigUSR1 cid `catch` ignore
-    mainLoop = do
-        threadDelay 1000000
-        st <- readIORef sref
-        unless (serverStatus st == Retiring && connectionCounter st == 0)
-            mainLoop
-
+    
 initHandler :: Signal -> Handler -> IO Handler
 initHandler sig func = installHandler sig func Nothing
 

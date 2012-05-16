@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Process (getMightyPid) where
+module Process (getMightyPid, findChildren) where
 
 import Control.Applicative
 import Data.ByteString.Char8 (ByteString)
@@ -45,7 +45,7 @@ runPS = runResourceT $
   where
     commandName = last . split '/' . command
     mighty ps = "mighty" `BS.isInfixOf` name
-             && (not $ "mightyctl" `BS.isInfixOf` name)
+             && not ("mightyctl" `BS.isInfixOf` name)
         where
           name = commandName ps
 
@@ -74,6 +74,11 @@ deleteAloneChild (p:ps) = p : deleteAloneChild (filter noParent ps)
 
 getMightyPid :: IO [ProcessID]
 getMightyPid = (map pid . findParent) <$> runPS
+
+----------------------------------------------------------------
+
+findChildren :: ProcessID -> IO [PsResult]
+findChildren parent = filter (\p -> ppid p == parent) <$> runPS
 
 ----------------------------------------------------------------
 
