@@ -12,6 +12,7 @@ import qualified Data.HashMap.Strict as M
 import Data.IORef
 import Network.HTTP.Date
 import Network.Wai.Application.Classic
+import State (strictAtomicModifyIORef)
 import System.Posix.Files
 
 data Entry = Negative | Positive FileInfo
@@ -37,7 +38,7 @@ fileInfo ref path = do
 
 positive :: IORef Cache -> FileStatus -> GetInfo
 positive ref fs path = do
-    !_ <- atomicModifyIORef ref modify
+    strictAtomicModifyIORef ref $ M.insert bpath entry
     return info
   where
     info = FileInfo {
@@ -49,26 +50,20 @@ positive ref fs path = do
     mtime = epochTimeToHTTPDate . modificationTime
     entry = Positive info
     bpath = pathByteString path
-    modify cache = (cache', ())
-      where
-        cache' = M.insert bpath entry cache
 
 negative :: IORef Cache -> GetInfo
 negative ref path = do
-    !_ <- atomicModifyIORef ref modify
+    strictAtomicModifyIORef ref $ M.insert bpath Negative
     throwIO (userError "fileInfo")
   where
     bpath = pathByteString path
-    modify cache = (cache', ())
-      where
-        cache' = M.insert bpath Negative cache
 
 ----------------------------------------------------------------
 
 fileCacheInit :: IO GetInfo
 fileCacheInit = do
     ref <- newIORef M.empty
-    _ <- forkIO (remover ref)
+    void . forkIO $ remover ref
     return $ fileInfo ref
 
 -- atomicModifyIORef is not necessary here.

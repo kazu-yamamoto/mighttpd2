@@ -24,25 +24,32 @@ initState = newIORef initialState
 getState :: IORef State -> IO State
 getState = readIORef
 
-retireStatus :: StateRef -> IO ()
-retireStatus sref = do
-    !_ <- atomicModifyIORef sref (\st -> (st {
-              serverStatus = Retiring
-            , warpThreadId = Nothing
-            }, ()))
+strictAtomicModifyIORef :: IORef a -> (a -> a) -> IO ()
+strictAtomicModifyIORef ref f = do
+    !_ <- atomicModifyIORef ref (\x -> let !r = f x in (r, ()))
     return ()
+
+retireStatus :: StateRef -> IO ()
+retireStatus sref =
+    strictAtomicModifyIORef sref $ \st -> st {
+        serverStatus = Retiring
+      , warpThreadId = Nothing
+      }
 
 increment :: IORef State -> IO ()
-increment sref = do
-    !_ <- atomicModifyIORef sref (\st -> (st {connectionCounter = connectionCounter st + 1}, ()))
-    return ()
+increment sref =
+    strictAtomicModifyIORef sref $ \st -> st {
+        connectionCounter = connectionCounter st + 1
+      }
 
 decrement :: IORef State -> IO ()
-decrement sref = do
-    !_ <- atomicModifyIORef sref (\st -> (st {connectionCounter = connectionCounter st - 1}, ()))
-    return ()
+decrement sref =
+    strictAtomicModifyIORef sref $ \st -> st {
+        connectionCounter = connectionCounter st - 1
+      }
 
 setWarpThreadId :: IORef State -> ThreadId -> IO ()
-setWarpThreadId sref tid = do
-    !_ <- atomicModifyIORef sref (\st -> (st {warpThreadId = Just tid}, ()))
-    return ()
+setWarpThreadId sref tid =
+    strictAtomicModifyIORef sref $ \st -> st {
+        warpThreadId = Just tid
+      }

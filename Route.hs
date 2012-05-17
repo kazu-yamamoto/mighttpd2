@@ -3,6 +3,7 @@
 module Route (parseRoute) where
 
 import Control.Applicative hiding (many,(<|>))
+import Control.Monad
 import qualified Data.ByteString.Char8 as BS
 import Network.Wai.Application.Classic
 import Parser
@@ -71,5 +72,5 @@ domPortDst = (defaultDomain,,) <$> port <*> path
   where
     domain = BS.pack <$> many1 (noneOf ":/[], \t\n")
     port = do
-        _ <- char ':'
+        void $ char ':'
         read <$> many1 (oneOf ['0'..'9'])
