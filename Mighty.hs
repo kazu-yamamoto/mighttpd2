@@ -30,6 +30,7 @@ import System.IO
 import System.IO.Error (ioeGetErrorString)
 import System.Posix
 import Types
+import Utils
 
 ----------------------------------------------------------------
 
@@ -195,31 +196,12 @@ single opt route s logtype sref = do
             retireStatus sref
     reloadHandler = Catch $
         warpThreadId <$> getState sref >>>= \tid ->
-        withRouteFile opt $ \newroute -> do
+        ifRouteFileIsValid opt $ \newroute -> do
             killThread tid
             void . forkIO $ single opt newroute s logtype sref
     infoHandler = Catch $ do
         i <- BS.pack . show . connectionCounter <$> getState sref
         report $ "# of connections = " `BS.append` i
-
-----------------------------------------------------------------
-
-infixr 0 >>>=, >>>>
-
-(>>>=) :: IO (Maybe a) -> (a -> IO ()) -> IO ()
-x >>>= f = x >>= maybe (return ()) f
-
-(>>>>) :: IO (Either IOError a) -> (a -> IO ()) -> IO ()
-x >>>> f = bind x reportError f
-  where
-    bind y handler g = y >>= either handler g
-    reportError = report . BS.pack . ioeGetErrorString
-
-withRouteFile :: Option -> (RouteDB -> IO ()) -> IO ()
-withRouteFile opt act =
-    return (opt_routing_file opt)  >>>= \rfile ->
-    try (parseRoute rfile)         >>>>
-    act
 
 ----------------------------------------------------------------
 
@@ -243,9 +225,18 @@ multi opt route s logtype sref = do
     retireHandler cids = Catch $ do
         retireStatus sref
         mapM_ (sendSignal sigRetire) cids
-    reloadHandler cids = Catch $ withRouteFile opt $ \_ ->
+    reloadHandler cids = Catch $ ifRouteFileIsValid opt $ \_ ->
         mapM_ (sendSignal sigReload) cids
     infoHandler cids   = Catch $ mapM_ (sendSignal sigInfo) cids
+
+----------------------------------------------------------------
+
+ifRouteFileIsValid :: Option -> (RouteDB -> IO ()) -> IO ()
+ifRouteFileIsValid opt act =
+    return (opt_routing_file opt) >>>= \rfile ->
+    try (parseRoute rfile) >>= either reportError act
+  where
+    reportError = report . BS.pack . ioeGetErrorString
 
 ----------------------------------------------------------------
 
@@ -277,8 +268,3 @@ daemonize program = ensureDetachTerminalCanWork $ do
         void $ forkProcess p
         exitImmediately ExitSuccess
     detachTerminal = void createSession
-
-----------------------------------------------------------------
-
-printStdout :: SomeException -> IO ()
-printStdout = print

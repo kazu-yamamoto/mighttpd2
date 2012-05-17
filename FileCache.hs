@@ -10,8 +10,8 @@ import qualified Data.HashMap.Strict as M
 import Data.IORef
 import Network.HTTP.Date
 import Network.Wai.Application.Classic
-import State (strictAtomicModifyIORef)
 import System.Posix.Files
+import Utils
 
 data Entry = Negative | Positive FileInfo
 type Cache = HashMap ByteString Entry

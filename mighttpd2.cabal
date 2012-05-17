@@ -57,6 +57,7 @@ Executable mighty
                         Signal
                         State
                         Types
+                        Utils
                         Paths_mighttpd2
 
 Executable mkindex

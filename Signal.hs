@@ -1,9 +1,10 @@
 module Signal where
 
-import Control.Exception (SomeException, catch)
+import Control.Exception (catch)
 import Control.Monad
 import Prelude hiding (catch)
 import System.Posix
+import Utils
 
 ----------------------------------------------------------------
 
@@ -29,8 +30,3 @@ setHandler sig func = void $ installHandler sig func Nothing
 
 ignoreSigChild :: IO ()
 ignoreSigChild = setHandler sigCHLD Ignore
-
-----------------------------------------------------------------
-
-ignore :: SomeException -> IO ()
-ignore _ = return ()

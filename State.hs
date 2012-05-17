@@ -1,9 +1,8 @@
-{-# LANGUAGE BangPatterns #-}
-
 module State where
 
 import Control.Concurrent
 import Data.IORef
+import Utils
 
 data Status = Serving | Retiring deriving Eq
 
@@ -23,11 +22,6 @@ initState = newIORef initialState
 
 getState :: IORef State -> IO State
 getState = readIORef
-
-strictAtomicModifyIORef :: IORef a -> (a -> a) -> IO ()
-strictAtomicModifyIORef ref f = do
-    !_ <- atomicModifyIORef ref (\x -> let !r = f x in (r, ()))
-    return ()
 
 retireStatus :: StateRef -> IO ()
 retireStatus sref =
