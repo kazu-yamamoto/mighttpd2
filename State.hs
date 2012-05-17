@@ -4,7 +4,7 @@ import Control.Concurrent
 import Data.IORef
 import Utils
 
-data Status = Serving | Retiring deriving Eq
+data Status = Serving | Retiring deriving (Eq, Show)
 
 data State = State {
     connectionCounter :: !Int

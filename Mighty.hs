@@ -13,7 +13,7 @@ import FileCGIApp
 import FileCache
 import Network
 import qualified Network.HTTP.Conduit as H
-import Network.Wai.Application.Classic hiding ((</>))
+import Network.Wai.Application.Classic hiding ((</>), (+++))
 import Network.Wai.Handler.Warp
 import Network.Wai.Logger
 import Network.Wai.Logger.Prefork
@@ -109,7 +109,7 @@ server opt route = handle handler $ do
     handler :: SomeException -> IO ()
     handler e
       | debug     = hPrint stderr e
-      | otherwise = report $ BS.pack (show e)
+      | otherwise = report $ bshow e
     logspec = FileLogSpec {
         log_file          = opt_log_file opt
       , log_file_size     = fromIntegral $ opt_log_file_size opt
@@ -127,7 +127,7 @@ masterMainLoop myid = do
     threadDelay 10000000
     cs <- findChildren myid
     if null cs then -- FIXME serverStatus st == Retiring
-        return () -- FIXME
+        report "Master Mighty retired"
       else
         masterMainLoop myid
 
@@ -136,7 +136,7 @@ slaveMainLoop sref = do
     threadDelay 1000000
     st <- getState sref
     if serverStatus st == Retiring && connectionCounter st == 0 then
-        return () -- FIXME
+        report "Worker Mighty retired"
       else
         slaveMainLoop sref
 
@@ -157,6 +157,7 @@ single opt route s logtype sref = do
             -- FIXME
             H.managerConnCount = 1024
           }
+    report "Worker Mighty started"
     runSettingsSocket setting s $ \req ->
         fileCgiApp (cspec lgr) (filespec getInfo) cgispec (revproxyspec mgr) route req
   where
@@ -187,26 +188,32 @@ single opt route s logtype sref = do
         revProxyManager = mgr
       }
     stopHandler = Catch $ do
+        report "Worker Mighty finished"
         sClose s
         exitImmediately ExitSuccess
     retireHandler = Catch $
         warpThreadId <$> getState sref >>>= \tid -> do
+            report "Worker Mighty retiring"
             killThread tid
             sClose s
             retireStatus sref
     reloadHandler = Catch $
         warpThreadId <$> getState sref >>>= \tid ->
         ifRouteFileIsValid opt $ \newroute -> do
+            report "Worker Mighty reloaded"
             killThread tid
             void . forkIO $ single opt newroute s logtype sref
     infoHandler = Catch $ do
-        i <- BS.pack . show . connectionCounter <$> getState sref
-        report $ "# of connections = " `BS.append` i
+        st <- getState sref
+        let i =  bshow $ connectionCounter st
+            status = bshow $ serverStatus st
+        report $ status +++ ": # of connections = " +++ i
 
 ----------------------------------------------------------------
 
 multi :: Option -> RouteDB -> Socket -> LogType -> StateRef -> IO [ProcessID]
 multi opt route s logtype sref = do
+    report "Master Mighty started"
     ignoreSigChild
     cids <- replicateM workers $ forkProcess $ do
         void . forkIO $ single opt route s logtype sref -- killed by signal
@@ -220,12 +227,15 @@ multi opt route s logtype sref = do
   where
     workers = opt_worker_processes opt
     stopHandler cids   = Catch $ do
+        report "Master Mighty finished"
         mapM_ (sendSignal sigStop) cids
         exitImmediately ExitSuccess
     retireHandler cids = Catch $ do
+        report "Master Mighty retiring"
         retireStatus sref
         mapM_ (sendSignal sigRetire) cids
-    reloadHandler cids = Catch $ ifRouteFileIsValid opt $ \_ ->
+    reloadHandler cids = Catch $ ifRouteFileIsValid opt $ \_ -> do
+        report "Master Mighty reloaded"
         mapM_ (sendSignal sigReload) cids
     infoHandler cids   = Catch $ mapM_ (sendSignal sigInfo) cids
 
