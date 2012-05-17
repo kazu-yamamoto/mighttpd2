@@ -203,19 +203,15 @@ single opt route s logtype sref = do
         i <- BS.pack . show . connectionCounter <$> getState sref
         report $ "# of connections = " `BS.append` i
 
-infixr 0 >>>=, >>>>
-
-(>>>=) :: IO (Maybe a) -> (a -> IO ()) -> IO ()
-x >>>= f = x >>= maybe (return ()) f
-
-(>>>>) :: IO (Either IOError a) -> (a -> IO ()) -> IO ()
-x >>>> f = bind x reportError f
-
-bind :: IO (Either e a) -> (e -> IO ()) -> (a -> IO ()) -> IO ()
-bind x handler f = x >>= either handler f
-
-reportError :: IOError -> IO ()
-reportError = report . BS.pack . ioeGetErrorString
+    infixr 0 >>>=, >>>>
+    (>>>=) :: IO (Maybe a) -> (a -> IO ()) -> IO ()
+    x >>>= f = x >>= maybe (return ()) f
+    (>>>>) :: IO (Either IOError a) -> (a -> IO ()) -> IO ()
+    x >>>> f = bind x reportError f
+    bind :: IO (Either e a) -> (e -> IO ()) -> (a -> IO ()) -> IO ()
+    bind x handler f = x >>= either handler f
+    reportError :: IOError -> IO ()
+    reportError = report . BS.pack . ioeGetErrorString
 
 ----------------------------------------------------------------
 
