@@ -13,7 +13,7 @@ import FileCGIApp
 import FileCache
 import Network
 import qualified Network.HTTP.Conduit as H
-import Network.Wai.Application.Classic
+import Network.Wai.Application.Classic hiding ((</>))
 import Network.Wai.Handler.Warp
 import Network.Wai.Logger
 import Network.Wai.Logger.Prefork
@@ -57,7 +57,7 @@ main = do
           return (opt, route)
       | n == 2 = do
           let config_file = args !! 0
-              routing_file = args !! 1
+          routing_file <- getAbsoluteFile (args !! 1)
           opt   <- parseOption config_file
           route <- parseRoute  routing_file
           let opt' = opt {opt_routing_file = Just routing_file}
@@ -68,6 +68,11 @@ main = do
           exitFailure
       where
         n = length args
+    getAbsoluteFile file
+        | isAbsolute file = return file
+        | otherwise       = do
+            dir <- getCurrentDirectory
+            return $ dir </> normalise file
 
 ----------------------------------------------------------------
 
@@ -83,12 +88,12 @@ server opt route = handle handler $ do
     sref <- initState
     myid <- getProcessID
     if workers == 1 then do
-        _ <- forkIO $ single opt route s logtype sref -- killed by signal
-        _ <- forkIO $ logController logtype [myid]
+        void . forkIO $ single opt route s logtype sref -- killed by signal
+        void . forkIO $ logController logtype [myid]
         slaveMainLoop sref
       else do
         cids <- multi opt route s logtype sref
-        _ <- forkIO $ logController logtype cids
+        void . forkIO $ logController logtype cids
         masterMainLoop myid
   where
     debug = opt_debug_mode opt
@@ -183,32 +188,34 @@ single opt route s logtype sref = do
     stopHandler = Catch $ do
         sClose s
         exitImmediately ExitSuccess
-    retireHandler = Catch $ do
-        mtid <- warpThreadId <$> getState sref
-        case mtid of
-            Nothing -> return ()
-            Just tid -> do
-                killThread tid
-                sClose s
-                retireStatus sref
-    -- FIXME refactor
-    reloadHandler = Catch $ case opt_routing_file opt of
-        Nothing -> return ()
-        Just rfile -> do
-            mtid <- warpThreadId <$> getState sref
-            case mtid of
-                Nothing -> return ()
-                Just tid -> do
-                    eroute <- try $ parseRoute rfile
-                    case eroute of
-                        Left e -> report $ BS.pack (ioeGetErrorString e)
-                        Right route' -> do
-                            killThread tid
-                            _ <- forkIO $ single opt route' s logtype sref
-                            return ()
+    retireHandler = Catch $
+        warpThreadId <$> getState sref >>>= \tid -> do
+            killThread tid
+            sClose s
+            retireStatus sref
+    reloadHandler = Catch $
+        return (opt_routing_file opt)  >>>= \rfile  ->
+        warpThreadId <$> getState sref >>>= \tid    ->
+        try (parseRoute rfile)         >>>> \route' -> do
+            killThread tid
+            void . forkIO $ single opt route' s logtype sref
     infoHandler = Catch $ do
         i <- BS.pack . show . connectionCounter <$> getState sref
         report $ "# of connections = " `BS.append` i
+
+infixr 0 >>>=, >>>>
+
+(>>>=) :: IO (Maybe a) -> (a -> IO ()) -> IO ()
+x >>>= f = x >>= maybe (return ()) f
+
+(>>>>) :: IO (Either IOError a) -> (a -> IO ()) -> IO ()
+x >>>> f = bind x reportError f
+
+bind :: IO (Either e a) -> (e -> IO ()) -> (a -> IO ()) -> IO ()
+bind x handler f = x >>= either handler f
+
+reportError :: IOError -> IO ()
+reportError = report . BS.pack . ioeGetErrorString
 
 ----------------------------------------------------------------
 
@@ -216,7 +223,7 @@ multi :: Option -> RouteDB -> Socket -> LogType -> StateRef -> IO [ProcessID]
 multi opt route s logtype sref = do
     ignoreSigChild
     cids <- replicateM workers $ forkProcess $ do
-        _ <- forkIO $ single opt route s logtype sref -- killed by signal
+        void . forkIO $ single opt route s logtype sref -- killed by signal
         slaveMainLoop sref
     sClose s
     setHandler sigStop   $ stopHandler cids
@@ -254,17 +261,17 @@ daemonize program = ensureDetachTerminalCanWork $ do
     detachTerminal
     ensureNeverAttachTerminal $ do
         changeWorkingDirectory "/"
-        _ <- setFileCreationMask 0
+        void $ setFileCreationMask 0
         mapM_ closeFd [stdInput, stdOutput, stdError]
         program
   where
     ensureDetachTerminalCanWork p = do
-        _ <- forkProcess p
+        void $ forkProcess p
         exitImmediately ExitSuccess
     ensureNeverAttachTerminal p = do
-        _ <- forkProcess p
+        void $ forkProcess p
         exitImmediately ExitSuccess
-    detachTerminal = createSession >> return ()
+    detachTerminal = void createSession
 
 ----------------------------------------------------------------
 
