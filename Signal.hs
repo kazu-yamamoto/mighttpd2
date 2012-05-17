@@ -1,9 +1,9 @@
 module Signal where
 
 import Control.Exception (SomeException, catch)
-import System.Posix.Signals
-import System.Posix
+import Control.Monad
 import Prelude hiding (catch)
+import System.Posix
 
 ----------------------------------------------------------------
 
@@ -25,7 +25,7 @@ sendSignal :: Signal -> ProcessID -> IO ()
 sendSignal sig cid = signalProcess sig cid `catch` ignore
 
 setHandler :: Signal -> Handler -> IO ()
-setHandler sig func = installHandler sig func Nothing >> return ()
+setHandler sig func = void $ installHandler sig func Nothing
 
 ignoreSigChild :: IO ()
 ignoreSigChild = setHandler sigCHLD Ignore

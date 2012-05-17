@@ -146,10 +146,10 @@ single opt route s logtype sref = do
     setGroupUser opt -- don't change the user of the master process
     myThreadId >>= setWarpThreadId sref
     ignoreSigChild
-    setHandler sigStop   $ stopHandler
-    setHandler sigRetire $ retireHandler
-    setHandler sigReload $ reloadHandler
-    setHandler sigInfo   $ infoHandler
+    setHandler sigStop   stopHandler
+    setHandler sigRetire retireHandler
+    setHandler sigReload reloadHandler
+    setHandler sigInfo   infoHandler
     lgr <- logInit FromSocket logtype
     getInfo <- fileCacheInit
     mgr <- H.newManager H.def {
@@ -194,24 +194,32 @@ single opt route s logtype sref = do
             sClose s
             retireStatus sref
     reloadHandler = Catch $
-        return (opt_routing_file opt)  >>>= \rfile  ->
-        warpThreadId <$> getState sref >>>= \tid    ->
-        try (parseRoute rfile)         >>>> \route' -> do
+        warpThreadId <$> getState sref >>>= \tid ->
+        withRouteFile opt $ \newroute -> do
             killThread tid
-            void . forkIO $ single opt route' s logtype sref
+            void . forkIO $ single opt newroute s logtype sref
     infoHandler = Catch $ do
         i <- BS.pack . show . connectionCounter <$> getState sref
         report $ "# of connections = " `BS.append` i
 
-    infixr 0 >>>=, >>>>
-    (>>>=) :: IO (Maybe a) -> (a -> IO ()) -> IO ()
-    x >>>= f = x >>= maybe (return ()) f
-    (>>>>) :: IO (Either IOError a) -> (a -> IO ()) -> IO ()
-    x >>>> f = bind x reportError f
-    bind :: IO (Either e a) -> (e -> IO ()) -> (a -> IO ()) -> IO ()
-    bind x handler f = x >>= either handler f
-    reportError :: IOError -> IO ()
+----------------------------------------------------------------
+
+infixr 0 >>>=, >>>>
+
+(>>>=) :: IO (Maybe a) -> (a -> IO ()) -> IO ()
+x >>>= f = x >>= maybe (return ()) f
+
+(>>>>) :: IO (Either IOError a) -> (a -> IO ()) -> IO ()
+x >>>> f = bind x reportError f
+  where
+    bind y handler g = y >>= either handler g
     reportError = report . BS.pack . ioeGetErrorString
+
+withRouteFile :: Option -> (RouteDB -> IO ()) -> IO ()
+withRouteFile opt act =
+    return (opt_routing_file opt)  >>>= \rfile ->
+    try (parseRoute rfile)         >>>>
+    act
 
 ----------------------------------------------------------------
 
@@ -235,7 +243,8 @@ multi opt route s logtype sref = do
     retireHandler cids = Catch $ do
         retireStatus sref
         mapM_ (sendSignal sigRetire) cids
-    reloadHandler cids = Catch $ mapM_ (sendSignal sigReload) cids
+    reloadHandler cids = Catch $ withRouteFile opt $ \_ ->
+        mapM_ (sendSignal sigReload) cids
     infoHandler cids   = Catch $ mapM_ (sendSignal sigInfo) cids
 
 ----------------------------------------------------------------

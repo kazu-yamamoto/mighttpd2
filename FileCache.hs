@@ -1,5 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
-
 module FileCache (fileCacheInit) where
 
 import Control.Concurrent
