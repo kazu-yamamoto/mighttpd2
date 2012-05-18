@@ -78,7 +78,7 @@ main = do
 ----------------------------------------------------------------
 
 server :: Option -> RouteDB -> IO ()
-server opt route = handle handler $ do
+server opt route = handle (handler debug) $ do
     s <- sOpen
     if debug then do
         putStrLn $ "Serving on port " ++ show port ++ "."
@@ -106,10 +106,6 @@ server opt route = handle handler $ do
         pid <- getProcessID
         writeFile pidfile $ show pid ++ "\n"
         setFileMode pidfile 0o644
-    handler :: SomeException -> IO ()
-    handler e
-      | debug     = hPrint stderr e
-      | otherwise = report $ bshow e
     logspec = FileLogSpec {
         log_file          = opt_log_file opt
       , log_file_size     = fromIntegral $ opt_log_file_size opt
@@ -143,23 +139,52 @@ slaveMainLoop sref = do
 ----------------------------------------------------------------
 
 single :: Option -> RouteDB -> Socket -> LogType -> StateRef -> IO ()
-single opt route s logtype sref = do
+single opt route s logtype sref = handle (handler debug) $ do
     setGroupUser opt -- don't change the user of the master process
-    myThreadId >>= setWarpThreadId sref
     ignoreSigChild
-    setHandler sigStop   stopHandler
-    setHandler sigRetire retireHandler
-    setHandler sigReload reloadHandler
-    setHandler sigInfo   infoHandler
     lgr <- logInit FromSocket logtype
     getInfo <- fileCacheInit
     mgr <- H.newManager H.def {
             -- FIXME
             H.managerConnCount = 1024
           }
+    setHandler sigStop   stopHandler
+    setHandler sigRetire retireHandler
+    setHandler sigReload (reloadHandler lgr getInfo mgr)
+    setHandler sigInfo   infoHandler
     report "Worker Mighty started"
+    single' opt route s sref lgr getInfo mgr
+  where
+    debug = opt_debug_mode opt
+    stopHandler = Catch $ do
+        report "Worker Mighty finished"
+        sClose s
+        exitImmediately ExitSuccess
+    retireHandler = Catch $
+        warpThreadId <$> getState sref >>>= \tid -> do
+            report "Worker Mighty retiring"
+            killThread tid
+            sClose s
+            retireStatus sref
+    reloadHandler lgr getInfo mgr = Catch $
+        warpThreadId <$> getState sref >>>= \tid ->
+        ifRouteFileIsValid opt $ \newroute -> do
+            report "Worker Mighty reloaded"
+            killThread tid
+            void . forkIO $ single' opt newroute s sref lgr getInfo mgr
+    infoHandler = Catch $ do
+        st <- getState sref
+        let i =  bshow $ connectionCounter st
+            status = bshow $ serverStatus st
+        report $ status +++ ": # of connections = " +++ i
+
+single' :: Option -> RouteDB -> Socket
+        -> StateRef -> ApacheLogger -> (Path -> IO FileInfo) -> H.Manager
+        -> IO ()
+single' opt route s sref lgr getInfo mgr = handle (handler debug) $ do
+    myThreadId >>= setWarpThreadId sref
     runSettingsSocket setting s $ \req ->
-        fileCgiApp (cspec lgr) (filespec getInfo) cgispec (revproxyspec mgr) route req
+        fileCgiApp cspec filespec cgispec revproxyspec route req
   where
     debug = opt_debug_mode opt
     setting = defaultSettings {
@@ -171,12 +196,12 @@ single opt route s logtype sref = do
       , settingsHost        = HostAny
       }
     serverName = BS.pack $ opt_server_name opt
-    cspec lgr = ClassicAppSpec {
+    cspec = ClassicAppSpec {
         softwareName = serverName
       , logger = lgr
       , statusFileDir = fromString $ opt_status_file_dir opt
       }
-    filespec getInfo = FileAppSpec {
+    filespec = FileAppSpec {
         indexFile = fromString $ opt_index_file opt
       , isHTML = \x -> ".html" `isSuffixOf` x || ".htm" `isSuffixOf` x
       , getFileInfo = getInfo
@@ -184,30 +209,9 @@ single opt route s logtype sref = do
     cgispec = CgiAppSpec {
         indexCgi = "index.cgi"
       }
-    revproxyspec mgr = RevProxyAppSpec {
+    revproxyspec = RevProxyAppSpec {
         revProxyManager = mgr
       }
-    stopHandler = Catch $ do
-        report "Worker Mighty finished"
-        sClose s
-        exitImmediately ExitSuccess
-    retireHandler = Catch $
-        warpThreadId <$> getState sref >>>= \tid -> do
-            report "Worker Mighty retiring"
-            killThread tid
-            sClose s
-            retireStatus sref
-    reloadHandler = Catch $
-        warpThreadId <$> getState sref >>>= \tid ->
-        ifRouteFileIsValid opt $ \newroute -> do
-            report "Worker Mighty reloaded"
-            killThread tid
-            void . forkIO $ single opt newroute s logtype sref
-    infoHandler = Catch $ do
-        st <- getState sref
-        let i =  bshow $ connectionCounter st
-            status = bshow $ serverStatus st
-        report $ status +++ ": # of connections = " +++ i
 
 ----------------------------------------------------------------
 
@@ -241,6 +245,11 @@ multi opt route s logtype sref = do
     infoHandler cids   = Catch $ mapM_ (sendSignal sigInfo) cids
 
 ----------------------------------------------------------------
+
+handler :: Bool -> SomeException -> IO ()
+handler debug e
+    | debug     = hPrint stderr e
+    | otherwise = report $ bshow e
 
 ifRouteFileIsValid :: Option -> (RouteDB -> IO ()) -> IO ()
 ifRouteFileIsValid opt act =
