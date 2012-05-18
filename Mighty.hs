@@ -5,7 +5,7 @@ module Main where
 import Config
 import Control.Applicative
 import Control.Concurrent
-import Control.Exception (try, handle, SomeException)
+import Control.Exception
 import Control.Monad
 import qualified Data.ByteString.Char8 as BS
 import Data.Conduit.Network
@@ -78,7 +78,7 @@ main = do
 ----------------------------------------------------------------
 
 server :: Option -> RouteDB -> IO ()
-server opt route = handle (handler debug) $ do
+server opt route = safeDo $ do
     s <- sOpen
     if debug then do
         putStrLn $ "Serving on port " ++ show port ++ "."
@@ -138,8 +138,21 @@ slaveMainLoop sref = do
 
 ----------------------------------------------------------------
 
+safeDo :: IO () -> IO ()
+safeDo act = act `catches` [Handler asynHandler, Handler someHandler]
+
+asynHandler :: AsyncException -> IO ()
+asynHandler e
+  | e == ThreadKilled = return ()
+  | otherwise         = report $ bshow e
+
+someHandler :: SomeException -> IO ()
+someHandler e = report $ bshow e
+
+----------------------------------------------------------------
+
 single :: Option -> RouteDB -> Socket -> LogType -> StateRef -> IO ()
-single opt route s logtype sref = handle (handler debug) $ do
+single opt route s logtype sref = safeDo $ do
     setGroupUser opt -- don't change the user of the master process
     ignoreSigChild
     lgr <- logInit FromSocket logtype
@@ -155,7 +168,6 @@ single opt route s logtype sref = handle (handler debug) $ do
     report "Worker Mighty started"
     single' opt route s sref lgr getInfo mgr
   where
-    debug = opt_debug_mode opt
     stopHandler = Catch $ do
         report "Worker Mighty finished"
         sClose s
@@ -181,7 +193,7 @@ single opt route s logtype sref = handle (handler debug) $ do
 single' :: Option -> RouteDB -> Socket
         -> StateRef -> ApacheLogger -> (Path -> IO FileInfo) -> H.Manager
         -> IO ()
-single' opt route s sref lgr getInfo mgr = handle (handler debug) $ do
+single' opt route s sref lgr getInfo mgr = safeDo $ do
     myThreadId >>= setWarpThreadId sref
     runSettingsSocket setting s $ \req ->
         fileCgiApp cspec filespec cgispec revproxyspec route req
@@ -245,11 +257,6 @@ multi opt route s logtype sref = do
     infoHandler cids   = Catch $ mapM_ (sendSignal sigInfo) cids
 
 ----------------------------------------------------------------
-
-handler :: Bool -> SomeException -> IO ()
-handler debug e
-    | debug     = hPrint stderr e
-    | otherwise = report $ bshow e
 
 ifRouteFileIsValid :: Option -> (RouteDB -> IO ()) -> IO ()
 ifRouteFileIsValid opt act =
