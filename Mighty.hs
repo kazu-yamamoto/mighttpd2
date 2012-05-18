@@ -220,6 +220,7 @@ multi opt route s logtype sref = do
         slaveMainLoop sref
     sClose s
     setHandler sigStop   $ stopHandler cids
+    setHandler sigINT    $ stopHandler cids -- C-c from keyboard when debugging
     setHandler sigRetire $ retireHandler cids
     setHandler sigReload $ reloadHandler cids
     setHandler sigInfo   $ infoHandler cids

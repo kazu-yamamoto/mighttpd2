@@ -18,7 +18,7 @@ sigRetire :: Signal
 sigRetire = sigQUIT
 
 sigInfo :: Signal
-sigInfo   = sigINT
+sigInfo   = sigUSR2 -- sigUSR1 does not work on Linux
 
 ----------------------------------------------------------------
 
