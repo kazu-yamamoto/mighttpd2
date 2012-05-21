@@ -52,6 +52,7 @@ Executable mighty
                         FileCache
                         Mighty
                         Parser
+                        Process
                         Report
                         Route
                         Signal
