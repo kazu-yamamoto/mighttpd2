@@ -6,6 +6,7 @@ import Control.Exception
 import Data.IORef
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
+import System.IO
 
 ----------------------------------------------------------------
 
@@ -13,7 +14,7 @@ ignore :: SomeException -> IO ()
 ignore _ = return ()
 
 printStdout :: SomeException -> IO ()
-printStdout = print
+printStdout x = print x >> hFlush stdout
 
 ----------------------------------------------------------------
 
