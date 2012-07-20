@@ -9,6 +9,7 @@ import Control.Exception
 import Control.Monad
 import qualified Data.ByteString.Char8 as BS
 import Data.Conduit.Network
+import Data.Typeable
 import FileCGIApp
 import FileCache
 import Network
@@ -149,6 +150,13 @@ asynHandler e
 someHandler :: SomeException -> IO ()
 someHandler e = report $ bshow e
 
+warpHandler :: SomeException -> IO ()
+warpHandler e
+  | typ == "IOException" = someHandler e
+  | otherwise            = return ()
+  where
+    typ = show (typeOf e)
+
 ----------------------------------------------------------------
 
 single :: Option -> RouteDB -> Socket -> LogType -> StateRef -> IO ()
@@ -201,7 +209,7 @@ single' opt route s sref lgr getInfo mgr = safeDo $ do
     debug = opt_debug_mode opt
     setting = defaultSettings {
         settingsPort        = opt_port opt
-      , settingsOnException = if debug then printStdout else reportException
+      , settingsOnException = if debug then printStdout else warpHandler
       , settingsOnOpen      = increment sref
       , settingsOnClose     = decrement sref
       , settingsTimeout     = opt_connection_timeout opt

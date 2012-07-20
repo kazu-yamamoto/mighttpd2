@@ -18,6 +18,3 @@ report msg = handle ignore $ do
     pid <- BS.pack . show <$> getProcessID
     tm <- formatUnixTime "%d %b %Y %H:%M:%S" <$> getUnixTime
     BS.appendFile reportFile $ BS.concat [tm, ": pid = ", pid, ": ", msg, "\n"]
-
-reportException :: SomeException -> IO ()
-reportException e = report. BS.pack . show $ e
