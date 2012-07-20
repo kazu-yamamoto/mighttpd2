@@ -80,6 +80,7 @@ main = do
 
 server :: Option -> RouteDB -> IO ()
 server opt route = safeDo $ do
+    unlimit
     s <- sOpen
     if debug then do
         putStrLn $ "Serving on port " ++ show port ++ "."
@@ -284,6 +285,17 @@ setGroupUser opt = do
     when root $ do
         getGroupEntryForName (opt_group opt) >>= setGroupID . groupID
         getUserEntryForName (opt_user opt) >>= setUserID . userID
+
+----------------------------------------------------------------
+
+unlimit :: IO ()
+unlimit = handle ignore $ do
+    hard <- hardLimit <$> getResourceLimit ResourceOpenFiles
+    let lim = if hard == ResourceLimitInfinity then
+                  ResourceLimits (ResourceLimit 10000) hard
+                else
+                  ResourceLimits hard hard
+    setResourceLimit ResourceOpenFiles lim
 
 ----------------------------------------------------------------
 
