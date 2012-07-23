@@ -9,7 +9,6 @@ import Control.Exception
 import Control.Monad
 import qualified Data.ByteString.Char8 as BS
 import Data.Conduit.Network
-import Data.Typeable
 import FileCGIApp
 import FileCache
 import Network
@@ -18,6 +17,7 @@ import Network.Wai.Application.Classic hiding ((</>), (+++))
 import Network.Wai.Handler.Warp
 import Network.Wai.Logger
 import Network.Wai.Logger.Prefork
+import Prelude hiding (catch)
 import Process
 import Report
 import Route
@@ -141,22 +141,16 @@ slaveMainLoop sref = do
 ----------------------------------------------------------------
 
 safeDo :: IO () -> IO ()
-safeDo act = act `catches` [Handler asynHandler, Handler someHandler]
-
-asynHandler :: AsyncException -> IO ()
-asynHandler e
-  | e == ThreadKilled = return ()
-  | otherwise         = report $ bshow e
-
-someHandler :: SomeException -> IO ()
-someHandler e = report $ bshow e
+safeDo act = act `catch` warpHandler
 
 warpHandler :: SomeException -> IO ()
-warpHandler e
-  | typ == "IOException" = someHandler e
-  | otherwise            = return ()
-  where
-    typ = show (typeOf e)
+warpHandler e = case fromException e :: Maybe AsyncException of
+    Just x
+      | x == ThreadKilled -> return ()
+      | otherwise         -> report $ bshow e
+    Nothing -> case fromException e :: Maybe InvalidRequest of
+        Just _            -> return ()
+        Nothing           -> report $ bshow e
 
 ----------------------------------------------------------------
 
@@ -310,8 +304,8 @@ daemonize program = ensureDetachTerminalCanWork $ do
   where
     ensureDetachTerminalCanWork p = do
         void $ forkProcess p
-        exitImmediately ExitSuccess
+        exitSuccess
     ensureNeverAttachTerminal p = do
         void $ forkProcess p
-        exitImmediately ExitSuccess
+        exitSuccess
     detachTerminal = void createSession
