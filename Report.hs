@@ -1,6 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Report where
+module Report (
+    Reporter
+  , mkReporter
+  , closeReporter
+  , report
+  , reportFile
+  ) where
 
 import Control.Applicative
 import Control.Exception
@@ -14,8 +20,16 @@ import Utils
 reportFile :: FilePath
 reportFile = "/tmp/mighty_report"
 
-report :: Handle -> ByteString -> IO ()
-report rpthdl msg = handle ignore $ do
+data Reporter = Reporter !Handle
+
+mkReporter :: IO (Either SomeException Reporter)
+mkReporter = try $ Reporter <$> openFile reportFile AppendMode
+
+closeReporter :: Reporter -> IO ()
+closeReporter (Reporter rpthdl) = hClose rpthdl
+
+report :: Reporter -> ByteString -> IO ()
+report (Reporter rpthdl) msg = handle ignore $ do
     pid <- BS.pack . show <$> getProcessID
     tm <- formatUnixTime "%d %b %Y %H:%M:%S" <$> getUnixTime
     let logmsg = BS.concat [tm, ": pid = ", pid, ": ", msg, "\n"]
