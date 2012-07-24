@@ -38,14 +38,11 @@ import Utils
 main :: IO ()
 main = do
     (opt,route) <- getOptRoute
+    rpthdl <- getReportHandle
     if opt_debug_mode opt then
-        server opt route
-      else do
-        let port = opt_port opt
-        putStrLn $ "Serving on port " ++ show port ++ " and detaching this terminal..."
-        putStrLn $ "(If errors occur, they will be written in \"" ++ reportFile ++ "\".)"
-        hFlush stdout
-        daemonize $ server opt route
+        server opt route rpthdl
+      else
+        background opt $ server opt route rpthdl
   where
     getOptRoute = getArgs >>= eachCase
     eachCase args
@@ -75,29 +72,36 @@ main = do
         | otherwise       = do
             dir <- getCurrentDirectory
             return $ dir </> normalise file
+    getReportHandle = openFile reportFile AppendMode `catch` handler
+    handler :: SomeException -> IO a
+    handler e = do
+        hPutStrLn stderr $ reportFile ++ " is not writable"
+        hPrint stderr e
+        exitFailure
 
 ----------------------------------------------------------------
 
-server :: Option -> RouteDB -> IO ()
-server opt route = safeDo $ do
-    unlimit
-    s <- sOpen
-    if debug then do
-        putStrLn $ "Serving on port " ++ show port ++ "."
-        hFlush stdout
-      else
-        writePidFile
-    logCheck logtype
-    sref <- initState
-    myid <- getProcessID
-    if workers == 1 then do
-        void . forkIO $ single opt route s logtype sref -- killed by signal
-        void . forkIO $ logController logtype [myid]
-        slaveMainLoop sref
-      else do
-        cids <- multi opt route s logtype sref
-        void . forkIO $ logController logtype cids
-        masterMainLoop myid
+server :: Option -> RouteDB -> Handle -> IO ()
+server opt route rpthdl = do
+    sref <- initState rpthdl
+    reportDo sref $ do
+        unlimit
+        s <- sOpen
+        if debug then do
+            putStrLn $ "Serving on port " ++ show port ++ "."
+            hFlush stdout
+            else
+            writePidFile
+        logCheck logtype
+        myid <- getProcessID
+        if workers == 1 then do
+            void . forkIO $ single opt route s logtype sref -- killed by signal
+            void . forkIO $ logController logtype [myid]
+            slaveMainLoop sref
+          else do
+            cids <- multi opt route s logtype sref
+            void . forkIO $ logController logtype cids
+            masterMainLoop rpthdl myid
   where
     debug = opt_debug_mode opt
     port = opt_port opt
@@ -120,42 +124,46 @@ server opt route = safeDo $ do
 
 ----------------------------------------------------------------
 
-masterMainLoop :: ProcessID -> IO ()
-masterMainLoop myid = do
+masterMainLoop :: Handle -> ProcessID -> IO ()
+masterMainLoop rpthdl myid = do
     threadDelay 10000000
     cs <- findChildren myid
     if null cs then -- FIXME serverStatus st == Retiring
-        report "Master Mighty retired"
+        report rpthdl "Master Mighty retired"
       else
-        masterMainLoop myid
+        masterMainLoop rpthdl myid
 
 slaveMainLoop :: StateRef -> IO ()
 slaveMainLoop sref = do
     threadDelay 1000000
     st <- getState sref
+    let rpthdl = reportHandle st
     if serverStatus st == Retiring && connectionCounter st == 0 then
-        report "Worker Mighty retired"
+        report rpthdl "Worker Mighty retired"
       else
         slaveMainLoop sref
 
 ----------------------------------------------------------------
 
-safeDo :: IO () -> IO ()
-safeDo act = act `catch` warpHandler
+reportDo :: StateRef -> IO () -> IO ()
+reportDo sref act = act `catch` warpHandler sref
 
-warpHandler :: SomeException -> IO ()
-warpHandler e = case fromException e :: Maybe AsyncException of
-    Just x
-      | x == ThreadKilled -> return ()
-      | otherwise         -> report $ bshow e
-    Nothing -> case fromException e :: Maybe InvalidRequest of
-        Just _            -> return ()
-        Nothing           -> report $ bshow e
+warpHandler :: StateRef -> SomeException -> IO ()
+warpHandler sref e = do
+    rpthdl <- reportHandle <$> getState sref
+    let ah :: AsyncException -> IO ()
+        ah ThreadKilled = return ()
+        ah x            = report rpthdl $ bshow x
+        ih :: InvalidRequest -> IO ()
+        ih _            = return ()
+        sh :: SomeException -> IO ()
+        sh x            = report rpthdl $ bshow x
+    throwIO e `catches` [Handler ah, Handler ih, Handler sh]
 
 ----------------------------------------------------------------
 
 single :: Option -> RouteDB -> Socket -> LogType -> StateRef -> IO ()
-single opt route s logtype sref = safeDo $ do
+single opt route s logtype sref = reportDo sref $ do
     setGroupUser opt -- don't change the user of the master process
     ignoreSigChild
     lgr <- logInit FromSocket logtype
@@ -164,39 +172,40 @@ single opt route s logtype sref = safeDo $ do
             -- FIXME
             H.managerConnCount = 1024
           }
-    setHandler sigStop   stopHandler
-    setHandler sigRetire retireHandler
-    setHandler sigReload (reloadHandler lgr getInfo mgr)
-    setHandler sigInfo   infoHandler
-    report "Worker Mighty started"
+    rpthdl <- reportHandle <$> getState sref
+    setHandler sigStop   $ stopHandler rpthdl
+    setHandler sigRetire $ retireHandler rpthdl
+    setHandler sigReload $ reloadHandler rpthdl lgr getInfo mgr
+    setHandler sigInfo   $ infoHandler rpthdl
+    report rpthdl "Worker Mighty started"
     single' opt route s sref lgr getInfo mgr
   where
-    stopHandler = Catch $ do
-        report "Worker Mighty finished"
+    stopHandler rpthdl = Catch $ do
+        report rpthdl "Worker Mighty finished"
         sClose s
         exitImmediately ExitSuccess
-    retireHandler = Catch $
+    retireHandler rpthdl = Catch $
         warpThreadId <$> getState sref >>>= \tid -> do
-            report "Worker Mighty retiring"
+            report rpthdl "Worker Mighty retiring"
             killThread tid
             sClose s
             retireStatus sref
-    reloadHandler lgr getInfo mgr = Catch $
+    reloadHandler rpthdl lgr getInfo mgr = Catch $
         warpThreadId <$> getState sref >>>= \tid ->
-        ifRouteFileIsValid opt $ \newroute -> do
-            report "Worker Mighty reloaded"
+        ifRouteFileIsValid rpthdl opt $ \newroute -> do
+            report rpthdl "Worker Mighty reloaded"
             killThread tid
             void . forkIO $ single' opt newroute s sref lgr getInfo mgr
-    infoHandler = Catch $ do
+    infoHandler rpthdl = Catch $ do
         st <- getState sref
         let i =  bshow $ connectionCounter st
             status = bshow $ serverStatus st
-        report $ status +++ ": # of connections = " +++ i
+        report rpthdl $ status +++ ": # of connections = " +++ i
 
 single' :: Option -> RouteDB -> Socket
         -> StateRef -> ApacheLogger -> (Path -> IO FileInfo) -> H.Manager
         -> IO ()
-single' opt route s sref lgr getInfo mgr = safeDo $ do
+single' opt route s sref lgr getInfo mgr = reportDo sref $ do
     myThreadId >>= setWarpThreadId sref
     runSettingsSocket setting s $ \req ->
         fileCgiApp cspec filespec cgispec revproxyspec route req
@@ -204,7 +213,7 @@ single' opt route s sref lgr getInfo mgr = safeDo $ do
     debug = opt_debug_mode opt
     setting = defaultSettings {
         settingsPort        = opt_port opt
-      , settingsOnException = if debug then printStdout else warpHandler
+      , settingsOnException = if debug then printStdout else warpHandler sref
       , settingsOnOpen      = increment sref
       , settingsOnClose     = decrement sref
       , settingsTimeout     = opt_connection_timeout opt
@@ -232,41 +241,42 @@ single' opt route s sref lgr getInfo mgr = safeDo $ do
 
 multi :: Option -> RouteDB -> Socket -> LogType -> StateRef -> IO [ProcessID]
 multi opt route s logtype sref = do
-    report "Master Mighty started"
+    rpthdl <- reportHandle <$> getState sref
+    report rpthdl "Master Mighty started"
     ignoreSigChild
     cids <- replicateM workers $ forkProcess $ do
         void . forkIO $ single opt route s logtype sref -- killed by signal
         slaveMainLoop sref
     sClose s
-    setHandler sigStop   $ stopHandler cids
-    setHandler sigINT    $ stopHandler cids -- C-c from keyboard when debugging
-    setHandler sigRetire $ retireHandler cids
-    setHandler sigReload $ reloadHandler cids
+    setHandler sigStop   $ stopHandler rpthdl cids
+    setHandler sigINT    $ stopHandler rpthdl cids -- C-c from keyboard when debugging
+    setHandler sigRetire $ retireHandler rpthdl cids
+    setHandler sigReload $ reloadHandler rpthdl cids
     setHandler sigInfo   $ infoHandler cids
     return cids
   where
     workers = opt_worker_processes opt
-    stopHandler cids   = Catch $ do
-        report "Master Mighty finished"
+    stopHandler rpthdl cids   = Catch $ do
+        report rpthdl "Master Mighty finished"
         mapM_ (sendSignal sigStop) cids
         exitImmediately ExitSuccess
-    retireHandler cids = Catch $ do
-        report "Master Mighty retiring"
+    retireHandler rpthdl cids = Catch $ do
+        report rpthdl "Master Mighty retiring"
         retireStatus sref
         mapM_ (sendSignal sigRetire) cids
-    reloadHandler cids = Catch $ ifRouteFileIsValid opt $ \_ -> do
-        report "Master Mighty reloaded"
+    reloadHandler rpthdl cids = Catch $ ifRouteFileIsValid rpthdl opt $ \_ -> do
+        report rpthdl "Master Mighty reloaded"
         mapM_ (sendSignal sigReload) cids
     infoHandler cids   = Catch $ mapM_ (sendSignal sigInfo) cids
 
 ----------------------------------------------------------------
 
-ifRouteFileIsValid :: Option -> (RouteDB -> IO ()) -> IO ()
-ifRouteFileIsValid opt act =
+ifRouteFileIsValid :: Handle -> Option -> (RouteDB -> IO ()) -> IO ()
+ifRouteFileIsValid rpthdl opt act =
     return (opt_routing_file opt) >>>= \rfile ->
     try (parseRoute rfile) >>= either reportError act
   where
-    reportError = report . BS.pack . ioeGetErrorString
+    reportError = report rpthdl . BS.pack . ioeGetErrorString
 
 ----------------------------------------------------------------
 
@@ -292,6 +302,15 @@ unlimit = handle ignore $ do
     setResourceLimit ResourceOpenFiles lim
 
 ----------------------------------------------------------------
+
+background :: Option -> IO () -> IO ()
+background opt svr = do
+    putStrLn $ "Serving on port " ++ show port ++ " and detaching this terminal..."
+    putStrLn $ "(If errors occur, they will be written in \"" ++ reportFile ++ "\".)"
+    hFlush stdout
+    daemonize svr
+  where
+    port = opt_port opt
 
 daemonize :: IO () -> IO ()
 daemonize program = ensureDetachTerminalCanWork $ do

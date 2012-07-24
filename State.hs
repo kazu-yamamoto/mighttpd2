@@ -2,23 +2,25 @@ module State where
 
 import Control.Concurrent
 import Data.IORef
+import System.IO
 import Utils
 
 data Status = Serving | Retiring deriving (Eq, Show)
 
 data State = State {
     connectionCounter :: !Int
-  , serverStatus :: !Status
-  , warpThreadId :: !(Maybe ThreadId)
+  , serverStatus      :: !Status
+  , warpThreadId      :: !(Maybe ThreadId)
+  , reportHandle      :: !Handle
   }
 
-initialState :: State
+initialState :: Handle -> State
 initialState = State 0 Serving Nothing
 
 type StateRef = IORef State
 
-initState :: IO (IORef State)
-initState = newIORef initialState
+initState :: Handle -> IO (IORef State)
+initState rpthdl = newIORef $ initialState rpthdl
 
 getState :: IORef State -> IO State
 getState = readIORef
