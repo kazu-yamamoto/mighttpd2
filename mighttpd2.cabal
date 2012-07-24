@@ -50,6 +50,7 @@ Executable mighty
                         Config.Internal
                         FileCGIApp
                         FileCache
+                        Log
                         Mighty
                         Parser
                         Process

@@ -11,6 +11,7 @@ import qualified Data.ByteString.Char8 as BS
 import Data.Conduit.Network
 import FileCGIApp
 import FileCache
+import Log
 import Network
 import qualified Network.HTTP.Conduit as H
 import Network.Wai.Application.Classic hiding ((</>), (+++))
@@ -93,9 +94,11 @@ server opt route rpt = reportDo rpt $ do
     myid <- getProcessID
     stt <- initStater
     if workers == 1 then do
-        void . forkIO $ single opt route s logtype stt rpt -- killed by signal
+        lgr <- initLogger FromSocket logtype
+         -- killed by signal
+        void . forkIO $ single opt route s rpt stt lgr
         void . forkIO $ logController logtype [myid]
-        slaveMainLoop rpt stt
+        slaveMainLoop rpt stt lgr
       else do
         cids <- multi opt route s logtype stt rpt
         void . forkIO $ logController logtype cids
@@ -127,25 +130,25 @@ masterMainLoop rpt myid = do
     threadDelay 10000000
     cs <- findChildren myid
     if null cs then do -- FIXME serverStatus st == Retiring
-        -- FIXME
         report rpt "Master Mighty retired"
         finReporter rpt
+        -- No logging
         exitSuccess
       else
         masterMainLoop rpt myid
 
-slaveMainLoop :: Reporter -> Stater -> IO ()
-slaveMainLoop rpt stt = do
+slaveMainLoop :: Reporter -> Stater -> Logger -> IO ()
+slaveMainLoop rpt stt lgr = do
     threadDelay 1000000
     retiring <- isRetiring stt
     counter <- getConnectionCounter stt
     if retiring && counter == 0 then do
-        -- FIXME
         report rpt "Worker Mighty retired"
         finReporter rpt
+        finLogger lgr
         exitSuccess
       else
-        slaveMainLoop rpt stt
+        slaveMainLoop rpt stt lgr
 
 ----------------------------------------------------------------
 
@@ -165,11 +168,10 @@ warpHandler rpt e = do
 
 ----------------------------------------------------------------
 
-single :: Option -> RouteDB -> Socket -> LogType -> Stater -> Reporter -> IO ()
-single opt route s logtype stt rpt = reportDo rpt $ do
+single :: Option -> RouteDB -> Socket -> Reporter -> Stater -> Logger -> IO ()
+single opt route s rpt stt lgr = reportDo rpt $ do
     setGroupUser opt -- don't change the user of the master process
     ignoreSigChild
-    lgr <- logInit FromSocket logtype
     getInfo <- fileCacheInit
     mgr <- H.newManager H.def {
             -- FIXME
@@ -180,12 +182,12 @@ single opt route s logtype stt rpt = reportDo rpt $ do
     setHandler sigReload (reloadHandler lgr getInfo mgr)
     setHandler sigInfo   infoHandler
     report rpt "Worker Mighty started"
-    single' opt route s stt rpt lgr getInfo mgr
+    single' opt route s rpt stt lgr getInfo mgr
   where
     stopHandler = Catch $ do
         report rpt "Worker Mighty finished"
         finReporter rpt
-        -- FIXME
+        finLogger lgr
         sClose s
         exitImmediately ExitSuccess
     retireHandler = Catch $
@@ -194,22 +196,22 @@ single opt route s logtype stt rpt = reportDo rpt $ do
             killThread tid
             sClose s
             goRetiring stt
-    reloadHandler lgr getInfo mgr = Catch $
+    reloadHandler lggr getInfo mgr = Catch $
         getWarpThreadId stt >>>= \tid ->
         ifRouteFileIsValid rpt opt $ \newroute -> do
             report rpt "Worker Mighty reloaded"
             killThread tid
-            void . forkIO $ single' opt newroute s stt rpt lgr getInfo mgr
+            void . forkIO $ single' opt newroute s rpt stt lggr getInfo mgr
     infoHandler = Catch $ do
         i <- bshow <$> getConnectionCounter stt
         status <- bshow <$> getServerStatus stt
         report rpt $ status +++ ": # of connections = " +++ i
 
 single' :: Option -> RouteDB -> Socket
-        -> Stater -> Reporter -> ApacheLogger
+        -> Reporter -> Stater -> Logger
         -> (Path -> IO FileInfo) -> H.Manager
         -> IO ()
-single' opt route s stt rpt lgr getInfo mgr = reportDo rpt $ do
+single' opt route s rpt stt lgr getInfo mgr = reportDo rpt $ do
     myThreadId >>= setWarpThreadId stt
     runSettingsSocket setting s $ \req ->
         fileCgiApp cspec filespec cgispec revproxyspec route req
@@ -226,7 +228,7 @@ single' opt route s stt rpt lgr getInfo mgr = reportDo rpt $ do
     serverName = BS.pack $ opt_server_name opt
     cspec = ClassicAppSpec {
         softwareName = serverName
-      , logger = lgr
+      , logger = apatcheLogger lgr
       , statusFileDir = fromString $ opt_status_file_dir opt
       }
     filespec = FileAppSpec {
@@ -248,8 +250,10 @@ multi opt route s logtype stt rpt = do
     report rpt "Master Mighty started"
     ignoreSigChild
     cids <- replicateM workers $ forkProcess $ do
-        void . forkIO $ single opt route s logtype stt rpt -- killed by signal
-        slaveMainLoop rpt stt
+        lgr <- initLogger FromSocket logtype
+        -- killed by signal
+        void . forkIO $ single opt route s rpt stt lgr
+        slaveMainLoop rpt stt lgr
     sClose s
     setHandler sigStop   $ stopHandler cids
     setHandler sigINT    $ stopHandler cids -- C-c from keyboard when debugging
@@ -262,8 +266,8 @@ multi opt route s logtype stt rpt = do
     stopHandler cids   = Catch $ do
         report rpt "Master Mighty finished"
         finReporter rpt
+        -- No logging
         mapM_ (sendSignal sigStop) cids
-        -- FIXME
         exitImmediately ExitSuccess
     retireHandler cids = Catch $ do
         report rpt "Master Mighty retiring"
