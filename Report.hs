@@ -2,8 +2,8 @@
 
 module Report (
     Reporter
-  , mkReporter
-  , closeReporter
+  , initReporter
+  , finReporter
   , report
   , reportFile
   ) where
@@ -20,13 +20,13 @@ import Utils
 reportFile :: FilePath
 reportFile = "/tmp/mighty_report"
 
-data Reporter = Reporter !Handle
+newtype Reporter = Reporter Handle
 
-mkReporter :: IO (Either SomeException Reporter)
-mkReporter = try $ Reporter <$> openFile reportFile AppendMode
+initReporter :: IO (Either SomeException Reporter)
+initReporter = try $ Reporter <$> openFile reportFile AppendMode
 
-closeReporter :: Reporter -> IO ()
-closeReporter (Reporter rpthdl) = hClose rpthdl
+finReporter :: Reporter -> IO ()
+finReporter (Reporter rpthdl) = hClose rpthdl
 
 report :: Reporter -> ByteString -> IO ()
 report (Reporter rpthdl) msg = handle ignore $ do

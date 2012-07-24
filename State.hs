@@ -1,8 +1,23 @@
-module State where
+module State (
+    Status(..)
+  , Stater
+  , initStater
+  , getConnectionCounter
+  , increment
+  , decrement
+  , isRetiring
+  , goRetiring
+  , getServerStatus
+  , getWarpThreadId
+  , setWarpThreadId
+  ) where
 
+import Control.Applicative
 import Control.Concurrent
 import Data.IORef
 import Utils
+
+----------------------------------------------------------------
 
 data Status = Serving | Retiring deriving (Eq, Show)
 
@@ -15,35 +30,52 @@ data State = State {
 initialState :: State
 initialState = State 0 Serving Nothing
 
-type StateRef = IORef State
+----------------------------------------------------------------
 
-initState :: IO (IORef State)
-initState = newIORef initialState
+newtype Stater = Stater (IORef State)
 
-getState :: IORef State -> IO State
-getState = readIORef
+initStater :: IO Stater
+initStater = Stater <$> newIORef initialState
 
-retireStatus :: StateRef -> IO ()
-retireStatus sref =
+----------------------------------------------------------------
+
+getConnectionCounter :: Stater -> IO Int
+getConnectionCounter (Stater sref) = connectionCounter <$> readIORef sref
+
+increment :: Stater -> IO ()
+increment (Stater sref) =
+    strictAtomicModifyIORef sref $ \st -> st {
+        connectionCounter = connectionCounter st + 1
+      }
+
+decrement :: Stater -> IO ()
+decrement (Stater sref) =
+    strictAtomicModifyIORef sref $ \st -> st {
+        connectionCounter = connectionCounter st - 1
+      }
+
+----------------------------------------------------------------
+
+getServerStatus :: Stater -> IO Status
+getServerStatus (Stater sref) = serverStatus <$> readIORef sref
+
+isRetiring :: Stater -> IO Bool
+isRetiring stt = (== Retiring) <$> getServerStatus stt
+
+goRetiring :: Stater -> IO ()
+goRetiring (Stater sref) =
     strictAtomicModifyIORef sref $ \st -> st {
         serverStatus = Retiring
       , warpThreadId = Nothing
       }
 
-increment :: IORef State -> IO ()
-increment sref =
-    strictAtomicModifyIORef sref $ \st -> st {
-        connectionCounter = connectionCounter st + 1
-      }
+----------------------------------------------------------------
 
-decrement :: IORef State -> IO ()
-decrement sref =
-    strictAtomicModifyIORef sref $ \st -> st {
-        connectionCounter = connectionCounter st - 1
-      }
+getWarpThreadId :: Stater -> IO (Maybe ThreadId)
+getWarpThreadId (Stater sref) = warpThreadId <$> readIORef sref
 
-setWarpThreadId :: IORef State -> ThreadId -> IO ()
-setWarpThreadId sref tid =
+setWarpThreadId :: Stater -> ThreadId -> IO ()
+setWarpThreadId (Stater sref) tid =
     strictAtomicModifyIORef sref $ \st -> st {
         warpThreadId = Just tid
       }

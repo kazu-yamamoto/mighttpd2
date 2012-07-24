@@ -38,7 +38,7 @@ import Utils
 main :: IO ()
 main = do
     (opt,route) <- getOptRoute
-    rpt <- mkReporter >>= checkReporter
+    rpt <- initReporter >>= checkReporter
     if opt_debug_mode opt then
         server opt route rpt
       else
@@ -91,13 +91,13 @@ server opt route rpt = reportDo rpt $ do
         writePidFile
     logCheck logtype
     myid <- getProcessID
-    sref <- initState
+    stt <- initStater
     if workers == 1 then do
-        void . forkIO $ single opt route s logtype sref rpt -- killed by signal
+        void . forkIO $ single opt route s logtype stt rpt -- killed by signal
         void . forkIO $ logController logtype [myid]
-        slaveMainLoop rpt sref
+        slaveMainLoop rpt stt
       else do
-        cids <- multi opt route s logtype sref rpt
+        cids <- multi opt route s logtype stt rpt
         void . forkIO $ logController logtype cids
         masterMainLoop rpt myid
   where
@@ -129,22 +129,23 @@ masterMainLoop rpt myid = do
     if null cs then do -- FIXME serverStatus st == Retiring
         -- FIXME
         report rpt "Master Mighty retired"
-        closeReporter rpt
+        finReporter rpt
         exitSuccess
       else
         masterMainLoop rpt myid
 
-slaveMainLoop :: Reporter -> StateRef -> IO ()
-slaveMainLoop rpt sref = do
+slaveMainLoop :: Reporter -> Stater -> IO ()
+slaveMainLoop rpt stt = do
     threadDelay 1000000
-    st <- getState sref
-    if serverStatus st == Retiring && connectionCounter st == 0 then do
+    retiring <- isRetiring stt
+    counter <- getConnectionCounter stt
+    if retiring && counter == 0 then do
         -- FIXME
         report rpt "Worker Mighty retired"
-        closeReporter rpt
+        finReporter rpt
         exitSuccess
       else
-        slaveMainLoop rpt sref
+        slaveMainLoop rpt stt
 
 ----------------------------------------------------------------
 
@@ -164,8 +165,8 @@ warpHandler rpt e = do
 
 ----------------------------------------------------------------
 
-single :: Option -> RouteDB -> Socket -> LogType -> StateRef -> Reporter -> IO ()
-single opt route s logtype sref rpt = reportDo rpt $ do
+single :: Option -> RouteDB -> Socket -> LogType -> Stater -> Reporter -> IO ()
+single opt route s logtype stt rpt = reportDo rpt $ do
     setGroupUser opt -- don't change the user of the master process
     ignoreSigChild
     lgr <- logInit FromSocket logtype
@@ -179,38 +180,37 @@ single opt route s logtype sref rpt = reportDo rpt $ do
     setHandler sigReload (reloadHandler lgr getInfo mgr)
     setHandler sigInfo   infoHandler
     report rpt "Worker Mighty started"
-    single' opt route s sref rpt lgr getInfo mgr
+    single' opt route s stt rpt lgr getInfo mgr
   where
     stopHandler = Catch $ do
         report rpt "Worker Mighty finished"
-        closeReporter rpt
+        finReporter rpt
         -- FIXME
         sClose s
         exitImmediately ExitSuccess
     retireHandler = Catch $
-        warpThreadId <$> getState sref >>>= \tid -> do
+        getWarpThreadId stt >>>= \tid -> do
             report rpt "Worker Mighty retiring"
             killThread tid
             sClose s
-            retireStatus sref
+            goRetiring stt
     reloadHandler lgr getInfo mgr = Catch $
-        warpThreadId <$> getState sref >>>= \tid ->
+        getWarpThreadId stt >>>= \tid ->
         ifRouteFileIsValid rpt opt $ \newroute -> do
             report rpt "Worker Mighty reloaded"
             killThread tid
-            void . forkIO $ single' opt newroute s sref rpt lgr getInfo mgr
+            void . forkIO $ single' opt newroute s stt rpt lgr getInfo mgr
     infoHandler = Catch $ do
-        st <- getState sref
-        let i =  bshow $ connectionCounter st
-            status = bshow $ serverStatus st
+        i <- bshow <$> getConnectionCounter stt
+        status <- bshow <$> getServerStatus stt
         report rpt $ status +++ ": # of connections = " +++ i
 
 single' :: Option -> RouteDB -> Socket
-        -> StateRef -> Reporter -> ApacheLogger 
+        -> Stater -> Reporter -> ApacheLogger
         -> (Path -> IO FileInfo) -> H.Manager
         -> IO ()
-single' opt route s sref rpt lgr getInfo mgr = reportDo rpt $ do
-    myThreadId >>= setWarpThreadId sref
+single' opt route s stt rpt lgr getInfo mgr = reportDo rpt $ do
+    myThreadId >>= setWarpThreadId stt
     runSettingsSocket setting s $ \req ->
         fileCgiApp cspec filespec cgispec revproxyspec route req
   where
@@ -218,8 +218,8 @@ single' opt route s sref rpt lgr getInfo mgr = reportDo rpt $ do
     setting = defaultSettings {
         settingsPort        = opt_port opt
       , settingsOnException = if debug then printStdout else warpHandler rpt
-      , settingsOnOpen      = increment sref
-      , settingsOnClose     = decrement sref
+      , settingsOnOpen      = increment stt
+      , settingsOnClose     = decrement stt
       , settingsTimeout     = opt_connection_timeout opt
       , settingsHost        = HostAny
       }
@@ -243,13 +243,13 @@ single' opt route s sref rpt lgr getInfo mgr = reportDo rpt $ do
 
 ----------------------------------------------------------------
 
-multi :: Option -> RouteDB -> Socket -> LogType -> StateRef -> Reporter -> IO [ProcessID]
-multi opt route s logtype sref rpt = do
+multi :: Option -> RouteDB -> Socket -> LogType -> Stater -> Reporter -> IO [ProcessID]
+multi opt route s logtype stt rpt = do
     report rpt "Master Mighty started"
     ignoreSigChild
     cids <- replicateM workers $ forkProcess $ do
-        void . forkIO $ single opt route s logtype sref rpt -- killed by signal
-        slaveMainLoop rpt sref
+        void . forkIO $ single opt route s logtype stt rpt -- killed by signal
+        slaveMainLoop rpt stt
     sClose s
     setHandler sigStop   $ stopHandler cids
     setHandler sigINT    $ stopHandler cids -- C-c from keyboard when debugging
@@ -261,13 +261,13 @@ multi opt route s logtype sref rpt = do
     workers = opt_worker_processes opt
     stopHandler cids   = Catch $ do
         report rpt "Master Mighty finished"
-        closeReporter rpt
+        finReporter rpt
         mapM_ (sendSignal sigStop) cids
         -- FIXME
         exitImmediately ExitSuccess
     retireHandler cids = Catch $ do
         report rpt "Master Mighty retiring"
-        retireStatus sref
+        goRetiring stt
         mapM_ (sendSignal sigRetire) cids
     reloadHandler cids = Catch $ ifRouteFileIsValid rpt opt $ \_ -> do
         report rpt "Master Mighty reloaded"
