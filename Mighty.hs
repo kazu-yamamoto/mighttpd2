@@ -11,6 +11,7 @@ import qualified Data.ByteString.Char8 as BS
 import Data.Conduit.Network
 import FileCGIApp
 import FileCache
+import GHC.IO.Exception (IOErrorType(ResourceVanished))
 import Log
 import Network
 import qualified Network.HTTP.Conduit as H
@@ -29,7 +30,7 @@ import System.Environment
 import System.Exit
 import System.FilePath
 import System.IO
-import System.IO.Error (ioeGetErrorString)
+import System.IO.Error (ioeGetErrorString, ioeGetErrorType)
 import System.Posix
 import Types
 import Utils
@@ -156,15 +157,23 @@ reportDo :: Reporter -> IO () -> IO ()
 reportDo rpt act = act `catch` warpHandler rpt
 
 warpHandler :: Reporter -> SomeException -> IO ()
-warpHandler rpt e = do
-    let ah :: AsyncException -> IO ()
-        ah ThreadKilled = return ()
-        ah x            = report rpt $ bshow x
-        ih :: InvalidRequest -> IO ()
-        ih _            = return ()
-        sh :: SomeException -> IO ()
-        sh x            = report rpt $ bshow x
-    throwIO e `catches` [Handler ah, Handler ih, Handler sh]
+warpHandler rpt e = throwIO e `catches` handlers
+  where
+    handlers = [Handler ah, Handler ih, Handler oh, Handler sh]
+    ah :: AsyncException -> IO ()
+    ah ThreadKilled = norecode
+    ah x            = recode x
+    ih :: InvalidRequest -> IO ()
+    ih _ = norecode
+    oh :: IOException -> IO ()
+    oh x
+      | ioeGetErrorType x == ResourceVanished = norecode
+      | otherwise                             = recode x
+    sh :: SomeException -> IO ()
+    sh x = recode x
+    norecode = return ()
+    recode :: Exception e => e -> IO ()
+    recode   = report rpt . bshow
 
 ----------------------------------------------------------------
 
