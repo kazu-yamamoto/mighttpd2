@@ -42,10 +42,11 @@ positive ref fs path = do
     info = FileInfo {
         fileInfoName = path
         , fileInfoSize = size fs
-        , fileInfoTime = mtime fs
+        , fileInfoTime = time
+        , fileInfoDate = formatHTTPDate time
         }
     size = fromIntegral . fileSize
-    mtime = epochTimeToHTTPDate . modificationTime
+    time = epochTimeToHTTPDate (modificationTime fs)
     entry = Positive info
     bpath = pathByteString path
 
