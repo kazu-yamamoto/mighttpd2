@@ -34,6 +34,8 @@ import System.IO.Error (ioeGetErrorString, ioeGetErrorType)
 import System.Posix
 import Types
 import Utils
+import System.Date.Cache
+import Network.HTTP.Date
 
 ----------------------------------------------------------------
 
@@ -222,8 +224,9 @@ single' :: Option -> RouteDB -> Socket
         -> IO ()
 single' opt route s rpt stt lgr getInfo mgr = reportDo rpt $ do
     myThreadId >>= setWarpThreadId stt
+    zdater <- initZoneDater
     runSettingsSocket setting s $ \req ->
-        fileCgiApp cspec filespec cgispec revproxyspec route req
+        fileCgiApp (cspec zdater) filespec cgispec revproxyspec route req
   where
     debug = opt_debug_mode opt
     setting = defaultSettings {
@@ -235,9 +238,10 @@ single' opt route s rpt stt lgr getInfo mgr = reportDo rpt $ do
       , settingsHost        = HostAny
       }
     serverName = BS.pack $ opt_server_name opt
-    cspec = ClassicAppSpec {
+    cspec zdater = ClassicAppSpec {
         softwareName = serverName
       , logger = apatcheLogger lgr
+      , dater = zdater
       , statusFileDir = fromString $ opt_status_file_dir opt
       }
     filespec = FileAppSpec {
@@ -250,6 +254,10 @@ single' opt route s rpt stt lgr getInfo mgr = reportDo rpt $ do
       }
     revproxyspec = RevProxyAppSpec {
         revProxyManager = mgr
+      }
+    initZoneDater = fst <$> clockDateCacher DateCacheConf {
+        getTime = epochTime
+      , formatDate = return . formatHTTPDate . epochTimeToHTTPDate
       }
 
 ----------------------------------------------------------------
