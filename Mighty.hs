@@ -230,12 +230,13 @@ single' opt route s rpt stt lgr getInfo mgr = reportDo rpt $ do
   where
     debug = opt_debug_mode opt
     setting = defaultSettings {
-        settingsPort        = opt_port opt
-      , settingsOnException = if debug then printStdout else warpHandler rpt
-      , settingsOnOpen      = increment stt
-      , settingsOnClose     = decrement stt
-      , settingsTimeout     = opt_connection_timeout opt
-      , settingsHost        = HostAny
+        settingsPort            = opt_port opt
+      , settingsOnException     = if debug then printStdout else warpHandler rpt
+      , settingsOnOpen          = increment stt
+      , settingsOnClose         = decrement stt
+      , settingsTimeout         = opt_connection_timeout opt
+      , settingsFdCacheDuration = opt_fd_cache_duration opt
+      , settingsHost            = HostAny
       }
     serverName = BS.pack $ opt_server_name opt
     cspec zdater = ClassicAppSpec {
