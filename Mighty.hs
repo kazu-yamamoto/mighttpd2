@@ -14,7 +14,10 @@ import FileCache
 import GHC.IO.Exception (IOErrorType(ResourceVanished))
 import Log
 import Network
+import Network.BSD
 import qualified Network.HTTP.Conduit as H
+import Network.HTTP.Date
+import Network.Socket
 import Network.Wai.Application.Classic hiding ((</>), (+++))
 import Network.Wai.Handler.Warp
 import Network.Wai.Logger
@@ -25,6 +28,7 @@ import Report
 import Route
 import Signal
 import State
+import System.Date.Cache
 import System.Directory
 import System.Environment
 import System.Exit
@@ -34,8 +38,6 @@ import System.IO.Error (ioeGetErrorString, ioeGetErrorType)
 import System.Posix
 import Types
 import Utils
-import System.Date.Cache
-import Network.HTTP.Date
 
 ----------------------------------------------------------------
 
@@ -109,7 +111,7 @@ server opt route rpt = reportDo rpt $ do
   where
     debug = opt_debug_mode opt
     port = opt_port opt
-    sOpen = listenOn (PortNumber . fromIntegral $ port)
+    sOpen = listenSocket (show port)
     pidfile = opt_pid_file opt
     workers = opt_worker_processes opt
     writePidFile = do
@@ -356,3 +358,24 @@ daemonize program = ensureDetachTerminalCanWork $ do
         void $ forkProcess p
         exitSuccess
     detachTerminal = void createSession
+
+listenSocket :: String -> IO Socket
+listenSocket serv = do
+    proto <- getProtocolNumber "tcp"
+    let hints = defaultHints { addrFlags = [AI_ADDRCONFIG, AI_PASSIVE]
+                             , addrSocketType = Stream
+                             , addrProtocol = proto }
+    addrs <- getAddrInfo (Just hints) Nothing (Just serv)
+    let addrs' = filter (\x -> addrFamily x == AF_INET6) addrs
+        addr = if null addrs' then head addrs else head addrs'
+    listenSocket' addr
+
+listenSocket' :: AddrInfo -> IO Socket
+listenSocket' addr = bracketOnError setup cleanup $ \sock -> do
+    setSocketOption sock ReuseAddr 1
+    bindSocket sock (addrAddress addr)
+    listen sock 2048
+    return sock
+ where
+   setup = socket (addrFamily addr) (addrSocketType addr) (addrProtocol addr)
+   cleanup = sClose
