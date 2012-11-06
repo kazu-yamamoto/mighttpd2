@@ -3,6 +3,7 @@
 module Process (getMightyPid, findChildren) where
 
 import Control.Applicative
+import Control.Exception as E
 import Data.ByteString.Char8 (ByteString)
 import qualified Data.ByteString.Char8 as BS
 import Data.Conduit
@@ -77,8 +78,13 @@ getMightyPid = (map pid . findParent) <$> runPS
 
 ----------------------------------------------------------------
 
-findChildren :: ProcessID -> IO [PsResult]
-findChildren parent = filter (\p -> ppid p == parent) <$> runPS
+findChildren :: ProcessID -> IO (Maybe [PsResult])
+findChildren parent = findCld `E.catch` handler
+  where
+    isParent p = ppid p == parent
+    findCld = (Just . filter isParent) <$> runPS
+    handler :: E.SomeException -> IO (Maybe [PsResult])
+    handler _ = return Nothing
 
 ----------------------------------------------------------------
 
