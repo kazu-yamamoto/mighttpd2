@@ -374,6 +374,7 @@ listenSocket serv = do
 listenSocket' :: AddrInfo -> IO Socket
 listenSocket' addr = bracketOnError setup cleanup $ \sock -> do
     setSocketOption sock ReuseAddr 1
+    setSocketOption sock NoDelay 1
     bindSocket sock (addrAddress addr)
     listen sock 2048
     return sock
