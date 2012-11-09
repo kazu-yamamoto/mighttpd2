@@ -1,5 +1,5 @@
 Name:                   mighttpd2
-Version:                2.8.2
+Version:                2.8.3
 Author:                 Kazu Yamamoto <kazu@iij.ad.jp>
 Maintainer:             Kazu Yamamoto <kazu@iij.ad.jp>
 License:                BSD3
@@ -27,7 +27,7 @@ Executable mighty
                       , deepseq
                       , directory
                       , filepath
-                      , http-conduit
+                      , http-conduit >= 1.8.2.1
                       , http-date
                       , http-types
                       , io-choice
