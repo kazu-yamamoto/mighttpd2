@@ -133,15 +133,14 @@ server opt route rpt = reportDo rpt $ do
 masterMainLoop :: Reporter -> ProcessID -> IO ()
 masterMainLoop rpt myid = do
     threadDelay 10000000
-    mcs <- findChildren myid
-    case mcs of
-        Just [] -> do
-            -- FIXME serverStatus st == Retiring
-            report rpt "Master Mighty retired"
-            finReporter rpt
-            -- No logging
-            exitSuccess
-        _       -> masterMainLoop rpt myid
+    cs <- findChildren myid
+    if null cs then do -- FIXME serverStatus st == Retiring
+        report rpt "Master Mighty retired"
+        finReporter rpt
+        -- No logging
+        exitSuccess
+      else
+        masterMainLoop rpt myid
 
 slaveMainLoop :: Reporter -> Stater -> Logger -> IO ()
 slaveMainLoop rpt stt lgr = do
