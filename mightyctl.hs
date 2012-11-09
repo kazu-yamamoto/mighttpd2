@@ -1,7 +1,7 @@
 module Main where
 
 import Data.List
-import Process
+import Process (getMightyPid)
 import Signal
 import System.Environment
 import System.Exit

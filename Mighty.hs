@@ -23,7 +23,7 @@ import Network.Wai.Application.Classic hiding ((</>), (+++))
 import Network.Wai.Handler.Warp
 import Network.Wai.Logger
 import Network.Wai.Logger.Prefork
-import Process
+import Process (findChildren, PsResult, dummyResult)
 import Report
 import Route
 import Signal
