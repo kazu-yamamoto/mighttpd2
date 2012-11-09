@@ -6,6 +6,7 @@ import Config
 import Control.Applicative
 import Control.Concurrent
 import Control.Exception
+import qualified Control.Exception as E (catch)
 import Control.Monad
 import qualified Data.ByteString.Char8 as BS
 import Data.Conduit.Network
@@ -22,7 +23,6 @@ import Network.Wai.Application.Classic hiding ((</>), (+++))
 import Network.Wai.Handler.Warp
 import Network.Wai.Logger
 import Network.Wai.Logger.Prefork
-import Prelude hiding (catch)
 import Process
 import Report
 import Route
@@ -133,7 +133,7 @@ server opt route rpt = reportDo rpt $ do
 masterMainLoop :: Reporter -> ProcessID -> IO ()
 masterMainLoop rpt myid = do
     threadDelay 10000000
-    cs <- findChildren myid
+    cs <- findChildren myid `E.catch` handler
     if null cs then do -- FIXME serverStatus st == Retiring
         report rpt "Master Mighty retired"
         finReporter rpt
@@ -141,6 +141,9 @@ masterMainLoop rpt myid = do
         exitSuccess
       else
         masterMainLoop rpt myid
+  where
+    handler :: SomeException -> IO [PsResult]
+    handler _ = return [dummyResult]
 
 slaveMainLoop :: Reporter -> Stater -> Logger -> IO ()
 slaveMainLoop rpt stt lgr = do
@@ -158,7 +161,7 @@ slaveMainLoop rpt stt lgr = do
 ----------------------------------------------------------------
 
 reportDo :: Reporter -> IO () -> IO ()
-reportDo rpt act = act `catch` warpHandler rpt
+reportDo rpt act = act `E.catch` warpHandler rpt
 
 warpHandler :: Reporter -> SomeException -> IO ()
 warpHandler rpt e = throwIO e `catches` handlers

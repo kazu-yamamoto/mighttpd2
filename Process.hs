@@ -1,6 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Process (getMightyPid, findChildren) where
+module Process (
+    getMightyPid
+  , findChildren
+  , dummyResult
+  , PsResult(..)
+  ) where
 
 import Control.Applicative
 import Data.ByteString.Char8 (ByteString)
@@ -22,6 +27,9 @@ data PsResult = PsResult {
   , ppid :: ProcessID
   , command :: ByteString
   } deriving (Eq, Show)
+
+dummyResult :: PsResult
+dummyResult = PsResult "" 0 0 ""
 
 toPsResult :: [ByteString] -> PsResult
 toPsResult (a:b:c:_:_:_:_:h:_) = PsResult {
