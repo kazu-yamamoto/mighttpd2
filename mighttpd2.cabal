@@ -81,10 +81,12 @@ Executable mightyctl
                       , process-conduit
                       , unix
 
-Test-Suite test
-  Main-Is:              Test.hs
+Test-Suite spec
+  Main-Is:              Spec.hs
   Hs-Source-Dirs:       test, .
   Type:                 exitcode-stdio-1.0
+  Other-Modules:        ConfigSpec
+                        RouteSpec
   Build-Depends:        base >= 4 && < 5
                       , bytestring
                       , deepseq
@@ -107,9 +109,7 @@ Test-Suite test
                       , wai-logger
                       , wai-logger-prefork
                       , warp
-                      , HUnit
-                      , test-framework-hunit
-                      , test-framework-th-prime
+                      , hspec >= 1.3
 
 Source-Repository head
   Type:                 git
