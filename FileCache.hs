@@ -41,10 +41,10 @@ positive ref fs path = do
   where
     info = FileInfo {
         fileInfoName = path
-        , fileInfoSize = size fs
-        , fileInfoTime = time
-        , fileInfoDate = formatHTTPDate time
-        }
+      , fileInfoSize = size fs
+      , fileInfoTime = time
+      , fileInfoDate = formatHTTPDate time
+      }
     size = fromIntegral . fileSize
     time = epochTimeToHTTPDate (modificationTime fs)
     entry = Positive info
