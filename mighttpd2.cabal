@@ -39,7 +39,6 @@ Executable mighty
                       , time
                       , transformers
                       , unix
-                      , unix-bytestring
                       , unix-time
                       , unordered-containers
                       , wai >= 1.3
@@ -102,7 +101,6 @@ Test-Suite spec
                       , time
                       , transformers
                       , unix
-                      , unix-bytestring
                       , unordered-containers
                       , wai >= 1.1
                       , wai-app-file-cgi
