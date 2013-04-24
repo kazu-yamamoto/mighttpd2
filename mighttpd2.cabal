@@ -17,7 +17,7 @@ Data-Files:             example.conf example.route
 
 Executable mighty
   Main-Is:              Mighty.hs
-  GHC-Options:          -Wall -threaded
+  GHC-Options:          -Wall -threaded -rtsopts
   Build-Depends:        base >= 4.0 && < 5
                       -- should be removed someday
                       , blaze-html >= 0.5
