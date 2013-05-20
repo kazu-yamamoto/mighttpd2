@@ -370,7 +370,7 @@ listenSocket serv = do
                              , addrProtocol = proto }
     addrs <- getAddrInfo (Just hints) Nothing (Just serv)
     let addrs' = filter (\x -> addrFamily x == AF_INET6) addrs
-        addr = if null addrs' then head addrs else head addrs'
+        addr = head $ if null addrs' then addrs else addrs'
     listenSocket' addr
 
 listenSocket' :: AddrInfo -> IO Socket
