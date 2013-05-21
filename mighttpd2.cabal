@@ -46,6 +46,8 @@ Executable mighty
                       , wai-logger
                       , wai-logger-prefork
                       , warp >= 1.3
+                      , warp-tls
+                      , tls
   Other-Modules:        Config
                         Config.Internal
                         Daemon

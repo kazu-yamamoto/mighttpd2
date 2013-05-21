@@ -77,29 +77,23 @@ main = do
 server :: Option -> RouteDB -> Reporter -> IO ()
 server opt route rpt = reportDo rpt $ do
     unlimit
-    s <- sOpen
-    if debug then do
-        putStrLn $ "Serving on port " ++ show port ++ "."
-        hFlush stdout
-      else
-        writePidFile
+    service <- openService opt
+    unless debug writePidFile
     logCheck logtype
     myid <- getProcessID
     stt <- initStater
     if workers == 1 then do
         lgr <- initLogger FromSocket logtype
          -- killed by signal
-        void . forkIO $ single opt route s rpt stt lgr
+        void . forkIO $ single opt route service rpt stt lgr
         void . forkIO $ logController logtype [myid]
         mainLoop rpt stt lgr
       else do
-        cids <- multi opt route s logtype stt rpt
+        cids <- multi opt route service logtype stt rpt
         void . forkIO $ logController logtype cids
         masterMainLoop rpt myid
   where
     debug = opt_debug_mode opt
-    port = opt_port opt
-    sOpen = listenSocket (show port)
     pidfile = opt_pid_file opt
     workers = opt_worker_processes opt
     writePidFile = do
@@ -115,3 +109,28 @@ server opt route rpt = reportDo rpt $ do
       | not (opt_logging opt) = LogNone
       | debug                 = LogStdout
       | otherwise             = LogFile logspec sigLogCtl
+
+openService :: Option -> IO Service
+openService opt
+  | service == 1 = do
+      s <- listenSocket httpsPort
+      debugMessage $ "HTTP/TLS service on port " ++ httpsPort ++ "."
+      return $ HttpsOnly s
+  | service == 2 = do
+      s1 <- listenSocket httpPort
+      s2 <- listenSocket httpsPort
+      debugMessage $ "HTTP service on port " ++ httpPort ++ " and "
+                  ++ "HTTP/TLS service on port " ++ httpsPort ++ "."
+      return $ HttpAndHttps s1 s2
+  | otherwise = do
+      s <- listenSocket httpPort
+      debugMessage $ "HTTP service on port " ++ httpPort ++ "."
+      return $ HttpOnly s
+  where
+    httpPort  = show $ opt_port opt
+    httpsPort = show $ opt_tls_port opt
+    service = opt_service opt
+    debug = opt_debug_mode opt
+    debugMessage msg = when debug $ do
+        putStrLn msg
+        hFlush stdout

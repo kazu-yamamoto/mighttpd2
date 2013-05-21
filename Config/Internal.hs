@@ -29,6 +29,10 @@ defaultOption = Option {
   , opt_server_name = programName ++ "/" ++ programVersion
   , opt_worker_processes = 1
   , opt_routing_file = Nothing
+  , opt_tls_port = 443
+  , opt_tls_cert_file = "certificate.pem"
+  , opt_tls_key_file = "key.pem"
+  , opt_service = 0
 }
 
 data Option = Option {
@@ -36,19 +40,23 @@ data Option = Option {
   , opt_debug_mode :: !Bool
   , opt_user :: !String
   , opt_group :: !String
-  , opt_pid_file :: !String
+  , opt_pid_file :: !FilePath
   , opt_logging :: !Bool
-  , opt_log_file :: !String
+  , opt_log_file :: !FilePath
   , opt_log_file_size :: !Int
   , opt_log_backup_number :: !Int
-  , opt_index_file :: !String
-  , opt_index_cgi  :: !String
-  , opt_status_file_dir :: !String
+  , opt_index_file :: !FilePath
+  , opt_index_cgi  :: !FilePath
+  , opt_status_file_dir :: !FilePath
   , opt_connection_timeout :: !Int
   , opt_fd_cache_duration :: !Int
   , opt_server_name :: !String
   , opt_worker_processes :: !Int
   , opt_routing_file :: !(Maybe FilePath)
+  , opt_tls_port :: !Int
+  , opt_tls_cert_file :: !FilePath
+  , opt_tls_key_file :: !FilePath
+  , opt_service :: !Int
 } deriving (Eq,Show)
 
 ----------------------------------------------------------------
@@ -77,6 +85,10 @@ makeOpt def conf = Option {
   , opt_server_name        = get "Server_Name" opt_server_name
   , opt_worker_processes   = get "Worker_Processes" opt_worker_processes
   , opt_routing_file       = Nothing
+  , opt_tls_port           = get "Tls_Port" opt_tls_port
+  , opt_tls_cert_file      = get "Tls_Cert_File" opt_tls_cert_file
+  , opt_tls_key_file       = get "Tls_Key_File" opt_tls_key_file
+  , opt_service            = get "Service" opt_service
   }
   where
     get k func = maybe (func def) fromConf $ lookup k conf

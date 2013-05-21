@@ -5,7 +5,9 @@ module Types where
 import Data.ByteString
 import Data.ByteString.Char8 ()
 import Data.Version
+import Network (Socket)
 import Network.Wai.Application.Classic
+
 import Paths_mighttpd2
 
 type Src      = Path
@@ -32,3 +34,5 @@ defaultDomain = "localhost"
 
 defaultPort :: Int
 defaultPort = 80
+
+data Service = HttpOnly Socket | HttpsOnly Socket | HttpAndHttps Socket Socket

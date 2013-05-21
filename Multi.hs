@@ -6,7 +6,6 @@ import Control.Concurrent
 import Control.Exception
 import qualified Control.Exception as E (catch)
 import Control.Monad
-import Network
 import Network.Wai.Logger
 import Network.Wai.Logger.Prefork
 import Process (findChildren, PsResult, dummyResult)
@@ -23,16 +22,16 @@ import Types
 
 ----------------------------------------------------------------
 
-multi :: Option -> RouteDB -> Socket -> LogType -> Stater -> Reporter -> IO [ProcessID]
-multi opt route s logtype stt rpt = do
+multi :: Option -> RouteDB -> Service -> LogType -> Stater -> Reporter -> IO [ProcessID]
+multi opt route service logtype stt rpt = do
     report rpt "Master Mighty started"
     ignoreSigChild
     cids <- replicateM workers $ forkProcess $ do
         lgr <- initLogger FromSocket logtype
         -- killed by signal
-        void . forkIO $ single opt route s rpt stt lgr
+        void . forkIO $ single opt route service rpt stt lgr
         mainLoop rpt stt lgr
-    sClose s
+    closeService service
     setHandler sigStop   $ stopHandler cids
     setHandler sigINT    $ stopHandler cids -- C-c from keyboard when debugging
     setHandler sigRetire $ retireHandler cids
