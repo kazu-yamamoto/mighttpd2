@@ -17,7 +17,7 @@ import qualified Control.Exception as E (catch)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
 import Data.UnixTime
-import GHC.IO.Exception (IOErrorType(ResourceVanished))
+import GHC.IO.Exception (IOErrorType(..))
 import Network.Wai.Handler.Warp (InvalidRequest)
 import System.IO
 import System.IO.Error (ioeGetErrorType, ioeGetErrorString)
@@ -65,8 +65,11 @@ warpHandler rpt e = throwIO e `catches` handlers
     ih _ = norecode
     oh :: IOException -> IO ()
     oh x
-      | ioeGetErrorType x == ResourceVanished = norecode
-      | otherwise                             = recode x
+      | et `elem` ignEts = norecode
+      | otherwise        = recode x
+      where
+        et = ioeGetErrorType x
+        ignEts = [ResourceVanished, InvalidArgument]
     sh :: SomeException -> IO ()
     sh x = recode x
     norecode = return ()
