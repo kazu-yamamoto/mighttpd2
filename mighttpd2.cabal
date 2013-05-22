@@ -13,9 +13,11 @@ Homepage:               http://www.mew.org/~kazu/proj/mighttpd/
 Category:               Network, Web
 Cabal-Version:          >= 1.8
 Build-Type:             Simple
+Data-Dir:               conf
 Data-Files:             example.conf example.route
 
 Executable mighty
+  HS-Source-Dirs:       src
   Main-Is:              Mighty.hs
   GHC-Options:          -Wall -threaded -rtsopts
   Build-Depends:        base >= 4.0 && < 5
@@ -70,6 +72,7 @@ Executable mighty
                         Paths_mighttpd2
 
 Executable mkindex
+  HS-Source-Dirs:       utils, src
   Main-Is:              mkindex.hs
   GHC-Options:          -Wall
   Build-Depends:        base >= 4 && < 5
@@ -79,6 +82,7 @@ Executable mkindex
                       , time
 
 Executable mightyctl
+  HS-Source-Dirs:       utils, src
   Main-Is:              mightyctl.hs
   GHC-Options:          -Wall
   Build-Depends:        base >= 4 && < 5
@@ -89,7 +93,7 @@ Executable mightyctl
 
 Test-Suite spec
   Main-Is:              Spec.hs
-  Hs-Source-Dirs:       test, .
+  Hs-Source-Dirs:       test, src
   Type:                 exitcode-stdio-1.0
   Other-Modules:        ConfigSpec
                         RouteSpec
