@@ -1,12 +1,13 @@
 module Main where
 
 import Data.List
-import Process (getMightyPid)
-import Signal
 import System.Environment
 import System.Exit
 import System.Posix.Signals
 import System.Posix.Types
+
+import Process (getMightyPid)
+import Signal
 
 commandDB :: [(String, Signal)]
 commandDB = [
