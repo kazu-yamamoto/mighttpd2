@@ -10,7 +10,7 @@ spec :: Spec
 spec = do
     describe "parseRoute" $ do
         it "parses example.route correctly" $ do
-            res <- parseRoute "example.route"
+            res <- parseRoute "conf/example.route"
             res `shouldBe` ans
 
 ans :: [Block]
