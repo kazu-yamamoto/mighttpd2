@@ -5,7 +5,6 @@ module Report (
   , initReporter
   , finReporter
   , report
-  , reportFile
   , reportDo
   , warpHandler
   ) where
@@ -24,13 +23,10 @@ import System.Posix (getProcessID)
 
 import Utils
 
-reportFile :: FilePath
-reportFile = "/tmp/mighty_report"
-
 newtype Reporter = Reporter Handle
 
-initReporter :: IO (Either SomeException Reporter)
-initReporter = try $ Reporter <$> openFile reportFile AppendMode
+initReporter :: FilePath -> IO (Either SomeException Reporter)
+initReporter reportFile = try $ Reporter <$> openFile reportFile AppendMode
 
 finReporter :: Reporter -> IO ()
 finReporter (Reporter rpthdl) = hClose rpthdl

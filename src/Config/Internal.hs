@@ -33,6 +33,7 @@ defaultOption = Option {
   , opt_tls_cert_file = "certificate.pem"
   , opt_tls_key_file = "key.pem"
   , opt_service = 0
+  , opt_report_file = "/tmp/mighty_report"
 }
 
 data Option = Option {
@@ -57,6 +58,7 @@ data Option = Option {
   , opt_tls_cert_file :: !FilePath
   , opt_tls_key_file :: !FilePath
   , opt_service :: !Int
+  , opt_report_file :: !FilePath
 } deriving (Eq,Show)
 
 ----------------------------------------------------------------
@@ -89,6 +91,7 @@ makeOpt def conf = Option {
   , opt_tls_cert_file      = get "Tls_Cert_File" opt_tls_cert_file
   , opt_tls_key_file       = get "Tls_Key_File" opt_tls_key_file
   , opt_service            = get "Service" opt_service
+  , opt_report_file        = get "ReportFile" opt_report_file
   }
   where
     get k func = maybe (func def) fromConf $ lookup k conf

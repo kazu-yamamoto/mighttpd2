@@ -32,7 +32,8 @@ import Types
 main :: IO ()
 main = do
     (opt,route) <- getOptRoute
-    rpt <- initReporter >>= checkReporter
+    let reportFile = opt_report_file opt
+    rpt <- initReporter reportFile >>= checkReporter reportFile
     if opt_debug_mode opt then
         server opt route rpt
       else
@@ -66,8 +67,8 @@ main = do
         | otherwise       = do
             dir <- getCurrentDirectory
             return $ dir </> normalise file
-    checkReporter (Right rpt) = return rpt
-    checkReporter (Left e)    = do
+    checkReporter _          (Right rpt) = return rpt
+    checkReporter reportFile (Left e)    = do
         hPutStrLn stderr $ reportFile ++ " is not writable"
         hPrint stderr e
         exitFailure
