@@ -8,8 +8,9 @@ module State (
   , isRetiring
   , goRetiring
   , getServerStatus
-  , getWarpThreadId
-  , setWarpThreadId
+  , setMyWarpThreadId
+  , addAnotherWarpThreadId
+  , ifWarpThreadsAreActive
   ) where
 
 import Control.Applicative
@@ -21,14 +22,16 @@ import Utils
 
 data Status = Serving | Retiring deriving (Eq, Show)
 
+data Two a = Zero | One a | Two a a
+
 data State = State {
     connectionCounter :: !Int
   , serverStatus      :: !Status
-  , warpThreadId      :: !(Maybe ThreadId)
+  , warpThreadId      :: !(Two ThreadId)
   }
 
 initialState :: State
-initialState = State 0 Serving Nothing
+initialState = State 0 Serving Zero
 
 ----------------------------------------------------------------
 
@@ -66,16 +69,41 @@ goRetiring :: Stater -> IO ()
 goRetiring (Stater sref) =
     strictAtomicModifyIORef sref $ \st -> st {
         serverStatus = Retiring
-      , warpThreadId = Nothing
+      , warpThreadId = Zero
       }
 
 ----------------------------------------------------------------
 
-getWarpThreadId :: Stater -> IO (Maybe ThreadId)
+getWarpThreadId :: Stater -> IO (Two ThreadId)
 getWarpThreadId (Stater sref) = warpThreadId <$> readIORef sref
 
-setWarpThreadId :: Stater -> ThreadId -> IO ()
-setWarpThreadId (Stater sref) tid =
+setWarpThreadId :: Stater -> Two ThreadId -> IO ()
+setWarpThreadId (Stater sref) ttids =
     strictAtomicModifyIORef sref $ \st -> st {
-        warpThreadId = Just tid
+        warpThreadId = ttids
       }
+
+setMyWarpThreadId :: Stater -> IO ()
+setMyWarpThreadId stt = do
+    myid <- myThreadId
+    setWarpThreadId stt (One myid)
+
+addAnotherWarpThreadId :: Stater -> ThreadId -> IO ()
+addAnotherWarpThreadId stt aid = do
+    ttids <- getWarpThreadId stt
+    case ttids of
+        One tid -> setWarpThreadId stt (Two tid aid)
+        _       -> undefined -- FIXME
+
+ifWarpThreadsAreActive :: Stater -> IO () -> IO ()
+ifWarpThreadsAreActive stt act = do
+    ttids <- getWarpThreadId stt
+    case ttids of
+        Zero -> return ()
+        One tid -> do
+            killThread tid
+            act
+        Two tid1 tid2 -> do
+            killThread tid1
+            killThread tid2
+            act

@@ -58,17 +58,13 @@ single opt route service rpt stt lgr = reportDo rpt $ do
         finLogger lgr
         closeService service
         exitImmediately ExitSuccess
-    retireHandler = Catch $
-        getWarpThreadId stt >>>= \tid -> do
-            report rpt "Worker Mighty retiring"
-            killThread tid
-            closeService service
-            goRetiring stt
-    reloadHandler lggr getInfo mgr = Catch $
-        getWarpThreadId stt >>>= \tid ->
+    retireHandler = Catch $ ifWarpThreadsAreActive stt $ do
+        report rpt "Worker Mighty retiring"
+        closeService service
+        goRetiring stt
+    reloadHandler lggr getInfo mgr = Catch $ ifWarpThreadsAreActive stt $
         ifRouteFileIsValid rpt opt $ \newroute -> do
             report rpt "Worker Mighty reloaded"
-            killThread tid
             void . forkIO $ reload opt newroute service rpt stt lggr getInfo mgr
     infoHandler = Catch $ do
         i <- bshow <$> getConnectionCounter stt
@@ -76,9 +72,9 @@ single opt route service rpt stt lgr = reportDo rpt $ do
         report rpt $ status +++ ": # of connections = " +++ i
 
 ifRouteFileIsValid :: Reporter -> Option -> (RouteDB -> IO ()) -> IO ()
-ifRouteFileIsValid rpt opt act =
-    return (opt_routing_file opt) >>>= \rfile ->
-    try (parseRoute rfile) >>= either reportError act
+ifRouteFileIsValid rpt opt act = case opt_routing_file opt of
+    Nothing    -> return ()
+    Just rfile -> try (parseRoute rfile) >>= either reportError act
   where
     reportError = report rpt . BS.pack . ioeGetErrorString
 
@@ -89,14 +85,15 @@ reload :: Option -> RouteDB -> Service
        -> (Path -> IO FileInfo) -> H.Manager
        -> IO ()
 reload opt route service rpt stt lgr getInfo mgr = reportDo rpt $ do
-    myThreadId >>= setWarpThreadId stt
+    setMyWarpThreadId stt
     zdater <- initZoneDater
     let app req = fileCgiApp (cspec zdater) filespec cgispec revproxyspec route req
     case service of
         HttpOnly s  -> runSettingsSocket setting s app
         HttpsOnly s -> runTLSSocket tlsSetting setting s app
         HttpAndHttps s1 s2 -> do
-            void . forkIO $ runSettingsSocket setting s1 app
+            tid <- forkIO $ runSettingsSocket setting s1 app
+            addAnotherWarpThreadId stt tid
             runTLSSocket tlsSetting setting s2 app
   where
     debug = opt_debug_mode opt

@@ -32,10 +32,3 @@ infixr 5 +++
 
 (+++) :: ByteString -> ByteString -> ByteString
 (+++) = BS.append
-    
-----------------------------------------------------------------
-
-infixr 0 >>>=
-
-(>>>=) :: IO (Maybe a) -> (a -> IO ()) -> IO ()
-x >>>= f = x >>= maybe (return ()) f
