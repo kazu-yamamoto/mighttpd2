@@ -1,8 +1,7 @@
 module Signal where
 
-import Control.Exception (catch)
+import qualified Control.Exception as E
 import Control.Monad
-import Prelude hiding (catch)
 import System.Posix
 import Utils
 
@@ -26,7 +25,7 @@ sigLogCtl = sigUSR1
 ----------------------------------------------------------------
 
 sendSignal :: Signal -> ProcessID -> IO ()
-sendSignal sig cid = signalProcess sig cid `catch` ignore
+sendSignal sig cid = signalProcess sig cid `E.catch` ignore
 
 setHandler :: Signal -> Handler -> IO ()
 setHandler sig func = void $ installHandler sig func Nothing
