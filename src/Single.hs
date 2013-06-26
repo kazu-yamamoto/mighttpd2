@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, CPP#-}
+{-# LANGUAGE OverloadedStrings, CPP #-}
 
 module Single (single, mainLoop, closeService, ifRouteFileIsValid) where
 
@@ -11,18 +11,19 @@ import Control.Monad
 import qualified Data.ByteString.Char8 as BS
 import Data.Conduit.Network
 import Network
-import qualified Network.HTTP.Conduit as H
 import Network.HTTP.Date
-#if DEBUG
-import Network.TLS
-#endif
 import Network.Wai.Application.Classic hiding ((</>), (+++))
 import Network.Wai.Handler.Warp
-import Network.Wai.Handler.WarpTLS
 import System.Date.Cache
 import System.Exit
 import System.Posix
 import System.IO.Error (ioeGetErrorString)
+#ifdef REV_PROXY
+import qualified Network.HTTP.Conduit as H
+#endif
+#ifdef TLS
+import Network.Wai.Handler.WarpTLS
+#endif
 
 import FileCGIApp
 import FileCache
@@ -36,19 +37,28 @@ import Utils
 
 ----------------------------------------------------------------
 
+#ifdef REV_PROXY
+type ConnPool = H.Manager
+#else
+type ConnPool = ()
+#endif
+
+----------------------------------------------------------------
+
 single :: Option -> RouteDB -> Service -> Reporter -> Stater -> Logger -> IO ()
 single opt route service rpt stt lgr = reportDo rpt $ do
     setGroupUser opt -- don't change the user of the master process
     ignoreSigChild
     getInfo <- fileCacheInit
-    mgr <- H.newManager H.def {
-            -- FIXME
-            H.managerConnCount = 1024
-          }
     setHandler sigStop   stopHandler
     setHandler sigRetire retireHandler
-    setHandler sigReload (reloadHandler lgr getInfo mgr)
     setHandler sigInfo   infoHandler
+#ifdef REV_PROXY
+    mgr <- H.newManager H.def { H.managerConnCount = 1024 } -- FIXME
+#else
+    let mgr = ()
+#endif
+    setHandler sigReload (reloadHandler lgr getInfo mgr)
     report rpt "Worker Mighty started"
     reload opt route service rpt stt lgr getInfo mgr
   where
@@ -82,19 +92,27 @@ ifRouteFileIsValid rpt opt act = case opt_routing_file opt of
 
 reload :: Option -> RouteDB -> Service
        -> Reporter -> Stater -> Logger
-       -> (Path -> IO FileInfo) -> H.Manager
+       -> (Path -> IO FileInfo) -> ConnPool
        -> IO ()
-reload opt route service rpt stt lgr getInfo mgr = reportDo rpt $ do
+reload opt route service rpt stt lgr getInfo _mgr = reportDo rpt $ do
     setMyWarpThreadId stt
     zdater <- initZoneDater
+#ifdef REV_PROXY
     let app req = fileCgiApp (cspec zdater) filespec cgispec revproxyspec route req
+#else
+    let app req = fileCgiApp (cspec zdater) filespec cgispec route req
+#endif
     case service of
         HttpOnly s  -> runSettingsSocket setting s app
+#ifdef TLS
         HttpsOnly s -> runTLSSocket tlsSetting setting s app
         HttpAndHttps s1 s2 -> do
             tid <- forkIO $ runSettingsSocket setting s1 app
             addAnotherWarpThreadId stt tid
             runTLSSocket tlsSetting setting s2 app
+#else
+        _ -> error "never reach"
+#endif
   where
     debug = opt_debug_mode opt
     setting = defaultSettings {
@@ -106,13 +124,6 @@ reload opt route service rpt stt lgr getInfo mgr = reportDo rpt $ do
       , settingsHost        = HostAny
       , settingsFdCacheDuration     = opt_fd_cache_duration opt
       , settingsResourceTPerRequest = False
-      }
-    tlsSetting = defaultTlsSettings {
-        certFile = opt_tls_cert_file opt
-      , keyFile  = opt_tls_key_file opt
-#if DEBUG
-      , tlsLogging = tlsLogger
-#endif
       }
     serverName = BS.pack $ opt_server_name opt
     cspec zdater = ClassicAppSpec {
@@ -129,13 +140,21 @@ reload opt route service rpt stt lgr getInfo mgr = reportDo rpt $ do
     cgispec = CgiAppSpec {
         indexCgi = "index.cgi"
       }
-    revproxyspec = RevProxyAppSpec {
-        revProxyManager = mgr
-      }
     initZoneDater = fst <$> clockDateCacher DateCacheConf {
         getTime = epochTime
       , formatDate = return . formatHTTPDate . epochTimeToHTTPDate
       }
+#ifdef REV_PROXY
+    revproxyspec = RevProxyAppSpec {
+        revProxyManager = _mgr
+      }
+#endif
+#ifdef TLS
+    tlsSetting = defaultTlsSettings {
+        certFile = opt_tls_cert_file opt
+      , keyFile  = opt_tls_key_file opt
+      }
+#endif
 
 ----------------------------------------------------------------
 
@@ -158,13 +177,3 @@ closeService :: Service -> IO ()
 closeService (HttpOnly s) = sClose s
 closeService (HttpsOnly s) = sClose s
 closeService (HttpAndHttps s1 s2) = sClose s1 >> sClose s2
-
-#if DEBUG
-tlsLogger :: Logging
-tlsLogger = Logging	{
-    loggingPacketSent = putStrLn
-  , loggingPacketRecv = putStrLn
-  , loggingIOSent = BS.putStrLn
-  , loggingIORecv = \_ s -> BS.putStrLn s
-  }
-#endif

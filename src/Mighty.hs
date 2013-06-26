@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, CPP #-}
 
 module Main where
 
@@ -32,6 +32,7 @@ import Types
 main :: IO ()
 main = do
     (opt,route) <- getOptRoute
+    checkTLS opt
     let reportFile = opt_report_file opt
     rpt <- initReporter reportFile >>= checkReporter reportFile
     if opt_debug_mode opt then
@@ -72,6 +73,13 @@ main = do
         hPutStrLn stderr $ reportFile ++ " is not writable"
         hPrint stderr e
         exitFailure
+#ifdef TLS
+    checkTLS _ = return ()
+#else
+    checkTLS opt = when (opt_service opt > 1) $ do
+        hPutStrLn stderr "This mighty does not support TLS"
+        exitFailure
+#endif
 
 ----------------------------------------------------------------
 
