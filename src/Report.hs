@@ -34,7 +34,7 @@ finReporter (Reporter rpthdl) = hClose rpthdl
 report :: Reporter -> ByteString -> IO ()
 report (Reporter rpthdl) msg = handle ignore $ do
     pid <- BS.pack . show <$> getProcessID
-    tm <- formatUnixTime "%d %b %Y %H:%M:%S" <$> getUnixTime
+    tm <- getUnixTime >>= formatUnixTime "%d %b %Y %H:%M:%S"
     let logmsg = BS.concat [tm, ": pid = ", pid, ": ", msg, "\n"]
     BS.hPutStr rpthdl logmsg
     hFlush rpthdl
