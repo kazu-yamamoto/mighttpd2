@@ -33,7 +33,7 @@ main :: IO ()
 main = do
     (opt,route) <- getOptRoute
     checkTLS opt
-    let reportFile = opt_report_file opt
+    let reportFile = reportFileName opt
     rpt <- initReporter reportFile >>= checkReporter reportFile
     if opt_debug_mode opt then
         server opt route rpt
@@ -64,10 +64,16 @@ main = do
       where
         n = length args
     getAbsoluteFile file
-        | isAbsolute file = return file
-        | otherwise       = do
-            dir <- getCurrentDirectory
-            return $ dir </> normalise file
+      | isAbsolute file = return file
+      | otherwise       = do
+          dir <- getCurrentDirectory
+          return $ dir </> normalise file
+    reportFileName opt
+      | port == 80 = rfile
+      | otherwise  = rfile ++ show port
+      where
+        rfile = opt_report_file opt
+        port = opt_port opt
     checkReporter _          (Right rpt) = return rpt
     checkReporter reportFile (Left e)    = do
         hPutStrLn stderr $ reportFile ++ " is not writable"
