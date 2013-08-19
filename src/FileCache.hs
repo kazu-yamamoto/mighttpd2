@@ -29,7 +29,9 @@ fileInfo ref path = do
     sfile = pathString path
     register = do
         fs <- getFileStatus sfile
-        if not (isDirectory fs) then
+        let regular = not (isDirectory fs)
+            readable = fileMode fs `intersectFileModes` ownerReadMode /= 0
+        if regular && readable then
             positive ref fs path
           else
             goNext
