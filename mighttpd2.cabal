@@ -17,7 +17,7 @@ Data-Dir:               conf
 Data-Files:             example.conf example.route
 
 Flag rev-proxy
-  Description:          Support reverse proxy wish http-conduit.
+  Description:          Support reverse proxy with http-conduit.
                         This requires unnecessary crypt libraries.
   Default:              True
 
