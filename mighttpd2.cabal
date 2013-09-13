@@ -61,7 +61,7 @@ Executable mighty
                       , wai-logger-prefork
                       , warp >= 1.3
   if flag(rev-proxy)
-    Build-Depends:      http-conduit >= 1.8.2.1
+    Build-Depends:      http-conduit >= 1.9.3
   if flag(tls)
     Build-Depends:      tls
                       , warp-tls >= 1.4.1
@@ -134,7 +134,7 @@ Test-Suite spec
                       , warp
                       , hspec >= 1.3
   if flag(rev-proxy)
-    Build-Depends:      http-conduit >= 1.8.2.1
+    Build-Depends:      http-conduit >= 1.9.3
   if flag(tls)
     Build-Depends:      tls
                       , warp-tls >= 1.4.1
