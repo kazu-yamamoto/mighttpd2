@@ -31,7 +31,6 @@ import FileCGIApp
 import FileCache
 import Log
 import Report
-import Signal
 import State
 import Types
 import Utils

@@ -12,10 +12,11 @@ import Process (findChildren, PsResult, dummyResult)
 import System.Exit
 import System.Posix
 
+import Program.Mighty
+
 import Config
 import Log
 import Report
-import Signal
 import Single
 import State
 import Types

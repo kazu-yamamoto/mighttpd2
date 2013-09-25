@@ -21,6 +21,8 @@ import System.IO
 import System.IO.Error (ioeGetErrorType)
 import System.Posix (getProcessID)
 
+import Program.Mighty
+
 import Utils
 
 newtype Reporter = Reporter Handle

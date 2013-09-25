@@ -10,9 +10,6 @@ import System.IO
 
 ----------------------------------------------------------------
 
-ignore :: SomeException -> IO ()
-ignore _ = return ()
-
 printStdout :: SomeException -> IO ()
 printStdout x = print x >> hFlush stdout
 

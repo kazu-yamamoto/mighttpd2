@@ -7,6 +7,7 @@ module Program.Mighty.Resource (
 import Control.Applicative
 import Control.Exception
 import Control.Monad
+import Program.Mighty.Exception
 import System.Posix
 
 ----------------------------------------------------------------
@@ -31,6 +32,3 @@ unlimit = handle ignore $ do
                 else
                   ResourceLimits hard hard
     setResourceLimit ResourceOpenFiles lim
-
-ignore :: SomeException -> IO ()
-ignore _ = return ()

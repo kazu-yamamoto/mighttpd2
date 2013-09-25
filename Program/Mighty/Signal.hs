@@ -1,9 +1,9 @@
-module Signal where
+module Program.Mighty.Signal where
 
 import qualified Control.Exception as E
 import Control.Monad
+import Program.Mighty.Exception
 import System.Posix
-import Utils
 
 ----------------------------------------------------------------
 

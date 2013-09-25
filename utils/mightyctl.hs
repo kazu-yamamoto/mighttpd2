@@ -6,8 +6,9 @@ import System.Exit
 import System.Posix.Signals
 import System.Posix.Types
 
+import Program.Mighty
+
 import Process (getMightyPid)
-import Signal
 
 commandDB :: [(String, Signal)]
 commandDB = [

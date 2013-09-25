@@ -22,7 +22,6 @@ import Log
 import Multi
 import Report
 import Route
-import Signal
 import Single
 import State
 import Types
