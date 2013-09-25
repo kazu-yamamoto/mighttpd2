@@ -1,27 +1,25 @@
-module Resource (
+module Program.Mighty.Resource (
     amIrootUser
   , setGroupUser
   , unlimit
   ) where
 
-import Config
 import Control.Applicative
 import Control.Exception
 import Control.Monad
 import System.Posix
-import Utils
 
 ----------------------------------------------------------------
 
 amIrootUser :: IO Bool
 amIrootUser = (== 0) <$> getRealUserID
 
-setGroupUser :: Option -> IO ()
-setGroupUser opt = do
+setGroupUser :: String -> String -> IO ()
+setGroupUser user group = do
     root <- amIrootUser
     when root $ do
-        getGroupEntryForName (opt_group opt) >>= setGroupID . groupID
-        getUserEntryForName (opt_user opt) >>= setUserID . userID
+        getGroupEntryForName group >>= setGroupID . groupID
+        getUserEntryForName user >>= setUserID . userID
 
 ----------------------------------------------------------------
 
@@ -33,3 +31,6 @@ unlimit = handle ignore $ do
                 else
                   ResourceLimits hard hard
     setResourceLimit ResourceOpenFiles lim
+
+ignore :: SomeException -> IO ()
+ignore _ = return ()

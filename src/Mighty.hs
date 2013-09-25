@@ -14,13 +14,13 @@ import System.FilePath
 import System.IO
 import System.Posix
 
+import Program.Mighty
+
 import Config
 import Daemon (background)
 import Log
 import Multi
-import Net (listenSocket)
 import Report
-import Resource (amIrootUser, unlimit)
 import Route
 import Signal
 import Single

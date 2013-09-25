@@ -25,11 +25,12 @@ import qualified Network.HTTP.Conduit as H
 import Network.Wai.Handler.WarpTLS
 #endif
 
+import Program.Mighty
+
 import FileCGIApp
 import FileCache
 import Log
 import Report
-import Resource (setGroupUser)
 import Signal
 import State
 import Types
@@ -47,7 +48,7 @@ type ConnPool = ()
 
 single :: Option -> RouteDB -> Service -> Reporter -> Stater -> Logger -> IO ()
 single opt route service rpt stt lgr = reportDo rpt $ do
-    setGroupUser opt -- don't change the user of the master process
+    setGroupUser (opt_user opt) (opt_group opt) -- don't change the user of the master process
     ignoreSigChild
     getInfo <- fileCacheInit
     setHandler sigStop   stopHandler

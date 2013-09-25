@@ -31,7 +31,8 @@ Library
   if flag(rev-proxy)
     Cpp-Options:        -DREV_PROXY
   Exposed-Modules:      Program.Mighty
-  Other-Modules:        Program.Mighty.Network
+                        Program.Mighty.Network
+                        Program.Mighty.Resource
   Build-Depends:        base >= 4.0 && < 5
                       , unix
                       , network
@@ -90,7 +91,6 @@ Executable mighty
                         Parser
                         Process
                         Report
-                        Resource
                         Route
                         Signal
                         Single
