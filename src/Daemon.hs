@@ -1,10 +1,8 @@
 module Daemon (background) where
 
+import Program.Mighty
 import Config
-import Control.Monad
-import System.Exit
 import System.IO
-import System.Posix
 
 background :: Option -> IO () -> IO ()
 background opt svr = do
@@ -14,20 +12,3 @@ background opt svr = do
     daemonize svr
   where
     port = opt_port opt
-
-daemonize :: IO () -> IO ()
-daemonize program = ensureDetachTerminalCanWork $ do
-    detachTerminal
-    ensureNeverAttachTerminal $ do
-        changeWorkingDirectory "/"
-        void $ setFileCreationMask 0
-        mapM_ closeFd [stdInput, stdOutput, stdError]
-        program
-  where
-    ensureDetachTerminalCanWork p = do
-        void $ forkProcess p
-        exitSuccess
-    ensureNeverAttachTerminal p = do
-        void $ forkProcess p
-        exitSuccess
-    detachTerminal = void createSession

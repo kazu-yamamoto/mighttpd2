@@ -11,7 +11,7 @@ Description:            High performance web server to handle static
                         to connect web applications behind.
 Homepage:               http://www.mew.org/~kazu/proj/mighttpd/
 Category:               Network, Web
-Cabal-Version:          >= 1.8
+Cabal-Version:          >= 1.10
 Build-Type:             Simple
 Data-Dir:               conf
 Data-Files:             example.conf example.route
@@ -25,7 +25,19 @@ Flag tls
   Description:          Support http over tls (https).
   Default:              False
 
+Library
+  Default-Language:     Haskell2010
+  GHC-Options:          -Wall
+  if flag(rev-proxy)
+    Cpp-Options:        -DREV_PROXY
+  Exposed-Modules:      Program.Mighty
+  Other-Modules:        Program.Mighty.Network
+  Build-Depends:        base >= 4.0 && < 5
+                      , unix
+                      , network
+
 Executable mighty
+  Default-Language:     Haskell2010
   HS-Source-Dirs:       src
   Main-Is:              Mighty.hs
   GHC-Options:          -Wall -threaded -rtsopts
@@ -60,6 +72,7 @@ Executable mighty
                       , wai-logger
                       , wai-logger-prefork
                       , warp >= 1.3
+                      , mighttpd2
   if flag(rev-proxy)
     Build-Depends:      http-conduit >= 1.8.2.1
   if flag(tls)
@@ -87,6 +100,7 @@ Executable mighty
                         Paths_mighttpd2
 
 Executable mkindex
+  Default-Language:     Haskell2010
   HS-Source-Dirs:       utils, src
   Main-Is:              mkindex.hs
   GHC-Options:          -Wall
@@ -97,6 +111,7 @@ Executable mkindex
                       , time
 
 Executable mightyctl
+  Default-Language:     Haskell2010
   HS-Source-Dirs:       utils, src
   Main-Is:              mightyctl.hs
   GHC-Options:          -Wall
@@ -107,6 +122,7 @@ Executable mightyctl
                       , unix
 
 Test-Suite spec
+  Default-Language:     Haskell2010
   Main-Is:              Spec.hs
   Hs-Source-Dirs:       test, src
   Type:                 exitcode-stdio-1.0
