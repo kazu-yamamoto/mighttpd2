@@ -20,7 +20,6 @@ import Config
 import Daemon (background)
 import Log
 import Multi
-import Report
 import Route
 import Single
 import State

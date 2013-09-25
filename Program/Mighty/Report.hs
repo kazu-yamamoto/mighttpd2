@@ -1,12 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Report (
+module Program.Mighty.Report (
     Reporter
   , initReporter
   , finReporter
   , report
   , reportDo
   , warpHandler
+  , printStdout
   ) where
 
 import Control.Applicative
@@ -21,9 +22,8 @@ import System.IO
 import System.IO.Error (ioeGetErrorType)
 import System.Posix (getProcessID)
 
-import Program.Mighty
-
-import Utils
+import Program.Mighty.ByteString
+import Program.Mighty.Exception
 
 newtype Reporter = Reporter Handle
 
@@ -69,3 +69,8 @@ warpHandler rpt e = throwIO e `catches` handlers
     norecode = return ()
     recode :: Exception e => e -> IO ()
     recode   = report rpt . bshow
+
+----------------------------------------------------------------
+
+printStdout :: SomeException -> IO ()
+printStdout x = print x >> hFlush stdout

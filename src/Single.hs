@@ -30,10 +30,8 @@ import Program.Mighty
 import FileCGIApp
 import FileCache
 import Log
-import Report
 import State
 import Types
-import Utils
 
 ----------------------------------------------------------------
 

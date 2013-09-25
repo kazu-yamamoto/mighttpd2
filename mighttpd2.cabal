@@ -31,13 +31,18 @@ Library
   if flag(rev-proxy)
     Cpp-Options:        -DREV_PROXY
   Exposed-Modules:      Program.Mighty
+                        Program.Mighty.ByteString
                         Program.Mighty.Exception
                         Program.Mighty.Network
+                        Program.Mighty.Report
                         Program.Mighty.Resource
                         Program.Mighty.Signal
   Build-Depends:        base >= 4.0 && < 5
-                      , unix
+                      , bytestring
                       , network
+                      , unix
+                      , warp
+                      , unix-time
 
 Executable mighty
   Default-Language:     Haskell2010
@@ -91,7 +96,6 @@ Executable mighty
                         Multi
                         Parser
                         Process
-                        Report
                         Route
                         Single
                         State
