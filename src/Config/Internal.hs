@@ -27,7 +27,6 @@ defaultOption = Option {
   , opt_connection_timeout = 30
   , opt_fd_cache_duration = 10
   , opt_server_name = programName ++ "/" ++ programVersion
-  , opt_worker_processes = 1
   , opt_routing_file = Nothing
   , opt_tls_port = 443
   , opt_tls_cert_file = "certificate.pem"
@@ -52,7 +51,6 @@ data Option = Option {
   , opt_connection_timeout :: !Int
   , opt_fd_cache_duration :: !Int
   , opt_server_name :: !String
-  , opt_worker_processes :: !Int
   , opt_routing_file :: !(Maybe FilePath)
   , opt_tls_port :: !Int
   , opt_tls_cert_file :: !FilePath
@@ -85,7 +83,6 @@ makeOpt def conf = Option {
   , opt_connection_timeout = get "Connection_Timeout" opt_connection_timeout
   , opt_fd_cache_duration  = get "Fd_Cache_Duration" opt_fd_cache_duration
   , opt_server_name        = get "Server_Name" opt_server_name
-  , opt_worker_processes   = get "Worker_Processes" opt_worker_processes
   , opt_routing_file       = Nothing
   , opt_tls_port           = get "Tls_Port" opt_tls_port
   , opt_tls_cert_file      = get "Tls_Cert_File" opt_tls_cert_file

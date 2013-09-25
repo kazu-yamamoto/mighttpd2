@@ -18,7 +18,6 @@ import Program.Mighty
 
 import Config
 import Log
-import Multi
 import Route
 import Single
 import Types
@@ -93,20 +92,14 @@ server opt route rpt = reportDo rpt $ do
     logCheck logtype
     myid <- getProcessID
     stt <- initStater
-    if workers == 1 then do
-        lgr <- initLogger FromSocket logtype
-         -- killed by signal
-        void . forkIO $ single opt route service rpt stt lgr
-        void . forkIO $ logController logtype [myid]
-        mainLoop rpt stt lgr
-      else do
-        cids <- multi opt route service logtype stt rpt
-        void . forkIO $ logController logtype cids
-        masterMainLoop rpt myid
+    lgr <- initLogger FromSocket logtype
+    -- killed by signal
+    void . forkIO $ single opt route service rpt stt lgr
+    void . forkIO $ logController logtype [myid]
+    mainLoop rpt stt lgr
   where
     debug = opt_debug_mode opt
     pidfile = opt_pid_file opt
-    workers = opt_worker_processes opt
     writePidFile = do
         pid <- getProcessID
         writeFile pidfile $ show pid ++ "\n"

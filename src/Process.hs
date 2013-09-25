@@ -2,8 +2,6 @@
 
 module Process (
     getMightyPid
-  , findChildren
-  , dummyResult
   , PsResult(..)
   ) where
 
@@ -27,9 +25,6 @@ data PsResult = PsResult {
   , ppid :: ProcessID
   , command :: ByteString
   } deriving (Eq, Show)
-
-dummyResult :: PsResult
-dummyResult = PsResult "" 0 0 ""
 
 toPsResult :: [ByteString] -> PsResult
 toPsResult (a:b:c:_:_:_:_:h:_) = PsResult {
@@ -82,11 +77,6 @@ deleteAloneChild (p:ps) = p : deleteAloneChild (filter noParent ps)
 
 getMightyPid :: IO [ProcessID]
 getMightyPid = (map pid . findParent) <$> runPS
-
-----------------------------------------------------------------
-
-findChildren :: ProcessID -> IO [PsResult]
-findChildren parent = filter (\p -> ppid p == parent) <$> runPS
 
 ----------------------------------------------------------------
 

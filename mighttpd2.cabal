@@ -98,7 +98,6 @@ Executable mighty
                         FileCGIApp
                         Log
                         Mighty
-                        Multi
                         Parser
                         Process
                         Route
