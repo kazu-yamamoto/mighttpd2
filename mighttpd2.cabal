@@ -36,15 +36,18 @@ Library
                         Program.Mighty.FileCache
                         Program.Mighty.IORef
                         Program.Mighty.Network
+                        Program.Mighty.Process
                         Program.Mighty.Report
                         Program.Mighty.Resource
                         Program.Mighty.Signal
                         Program.Mighty.State
   Build-Depends:        base >= 4.0 && < 5
                       , bytestring
+                      , conduit
                       , http-date
                       , io-choice
                       , network
+                      , process-conduit
                       , unix
                       , unix-time
                       , unordered-containers
@@ -64,7 +67,6 @@ Executable mighty
                       -- should be removed someday
                       , blaze-html >= 0.5
                       , bytestring
-                      , conduit
                       , date-cache
                       , deepseq
                       , directory
@@ -76,7 +78,6 @@ Executable mighty
                       , network-conduit
                       , old-locale
                       , parsec >= 3
-                      , process-conduit
                       , time
                       , transformers
                       , unix
@@ -99,7 +100,6 @@ Executable mighty
                         Log
                         Mighty
                         Parser
-                        Process
                         Route
                         Single
                         Types

@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Process (
+module Program.Mighty.Process (
     getMightyPid
   , PsResult(..)
   ) where

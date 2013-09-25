@@ -4,6 +4,7 @@ module Program.Mighty (
   , module Program.Mighty.FileCache
   , module Program.Mighty.IORef
   , module Program.Mighty.Network
+  , module Program.Mighty.Process
   , module Program.Mighty.Report
   , module Program.Mighty.Resource
   , module Program.Mighty.Signal
@@ -15,8 +16,8 @@ import Program.Mighty.Exception
 import Program.Mighty.FileCache
 import Program.Mighty.IORef
 import Program.Mighty.Network
+import Program.Mighty.Process
 import Program.Mighty.Report
 import Program.Mighty.Resource
 import Program.Mighty.Signal
 import Program.Mighty.State
-
