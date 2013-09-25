@@ -1,4 +1,4 @@
-module State (
+module Program.Mighty.State (
     Status(..)
   , Stater
   , initStater
@@ -16,7 +16,7 @@ module State (
 import Control.Applicative
 import Control.Concurrent
 import Data.IORef
-import Utils
+import Program.Mighty.IORef
 
 ----------------------------------------------------------------
 

@@ -28,9 +28,7 @@ import Network.Wai.Handler.WarpTLS
 import Program.Mighty
 
 import FileCGIApp
-import FileCache
 import Log
-import State
 import Types
 
 ----------------------------------------------------------------

@@ -17,7 +17,6 @@ import Program.Mighty
 import Config
 import Log
 import Single
-import State
 import Types
 
 ----------------------------------------------------------------

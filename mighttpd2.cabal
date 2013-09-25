@@ -33,16 +33,23 @@ Library
   Exposed-Modules:      Program.Mighty
                         Program.Mighty.ByteString
                         Program.Mighty.Exception
+                        Program.Mighty.FileCache
+                        Program.Mighty.IORef
                         Program.Mighty.Network
                         Program.Mighty.Report
                         Program.Mighty.Resource
                         Program.Mighty.Signal
+                        Program.Mighty.State
   Build-Depends:        base >= 4.0 && < 5
                       , bytestring
+                      , http-date
+                      , io-choice
                       , network
                       , unix
-                      , warp
                       , unix-time
+                      , unordered-containers
+                      , wai-app-file-cgi
+                      , warp
 
 Executable mighty
   Default-Language:     Haskell2010
@@ -89,7 +96,6 @@ Executable mighty
   Other-Modules:        Config
                         Config.Internal
                         FileCGIApp
-                        FileCache
                         Log
                         Mighty
                         Multi
@@ -97,9 +103,7 @@ Executable mighty
                         Process
                         Route
                         Single
-                        State
                         Types
-                        Utils
                         Paths_mighttpd2
 
 Executable mkindex

@@ -1,6 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 
-module Utils where
+module Program.Mighty.IORef where
 
 import Data.IORef
 
