@@ -28,6 +28,9 @@ programName = "Mighttpd"
 programVersion :: String
 programVersion = showVersion P.version
 
+backlogNumber :: Int
+backlogNumber = 2048
+
 ----------------------------------------------------------------
 
 main :: IO ()
@@ -124,17 +127,17 @@ run opt route rpt = reportDo rpt $ do
 openService :: Option -> IO Service
 openService opt
   | service == 1 = do
-      s <- listenSocket httpsPort
+      s <- listenSocket httpsPort backlogNumber
       debugMessage $ "HTTP/TLS service on port " ++ httpsPort ++ "."
       return $ HttpsOnly s
   | service == 2 = do
-      s1 <- listenSocket httpPort
-      s2 <- listenSocket httpsPort
+      s1 <- listenSocket httpPort backlogNumber
+      s2 <- listenSocket httpsPort backlogNumber
       debugMessage $ "HTTP service on port " ++ httpPort ++ " and "
                   ++ "HTTP/TLS service on port " ++ httpsPort ++ "."
       return $ HttpAndHttps s1 s2
   | otherwise = do
-      s <- listenSocket httpPort
+      s <- listenSocket httpPort backlogNumber
       debugMessage $ "HTTP service on port " ++ httpPort ++ "."
       return $ HttpOnly s
   where

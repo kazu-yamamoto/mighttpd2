@@ -13,11 +13,11 @@ import System.Posix
 
 ----------------------------------------------------------------
 
--- | Open an 'Socket' for the service name in 'String'.
---   'ReuseAddr' and 'NoDelay' are set.
---   Backlog is set to 2,048.
-listenSocket :: String -> IO Socket
-listenSocket serv = do
+-- | Open an 'Socket' with 'ReuseAddr' and 'NoDelay' set.
+listenSocket :: String -- ^ Service name
+             -> Int    -- ^ A number of backlogs.
+             -> IO Socket
+listenSocket serv backlog = do
     proto <- getProtocolNumber "tcp"
     let hints = defaultHints { addrFlags = [AI_ADDRCONFIG, AI_PASSIVE]
                              , addrSocketType = Stream
@@ -25,14 +25,14 @@ listenSocket serv = do
     addrs <- getAddrInfo (Just hints) Nothing (Just serv)
     let addrs' = filter (\x -> addrFamily x == AF_INET6) addrs
         addr = head $ if null addrs' then addrs else addrs'
-    listenSocket' addr
+    listenSocket' addr backlog
 
-listenSocket' :: AddrInfo -> IO Socket
-listenSocket' addr = bracketOnError setup cleanup $ \sock -> do
+listenSocket' :: AddrInfo -> Int -> IO Socket
+listenSocket' addr backlog = bracketOnError setup cleanup $ \sock -> do
     setSocketOption sock ReuseAddr 1
     setSocketOption sock NoDelay 1
     bindSocket sock (addrAddress addr)
-    listen sock 2048
+    listen sock backlog
     return sock
  where
    setup = socket (addrFamily addr) (addrSocketType addr) (addrProtocol addr)
