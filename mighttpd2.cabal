@@ -100,7 +100,7 @@ Executable mighty
   Other-Modules:        FileCGIApp
                         Log
                         Mighty
-                        Single
+                        Server
                         Types
                         Paths_mighttpd2
 

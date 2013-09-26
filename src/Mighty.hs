@@ -18,7 +18,7 @@ import Data.Version
 import Program.Mighty
 
 import Log
-import Single
+import Server
 import Types
 import Paths_mighttpd2 as P
 
@@ -39,9 +39,9 @@ main = do
     let reportFile = reportFileName opt
     rpt <- initReporter reportFile >>= checkReporter reportFile
     if opt_debug_mode opt then
-        server opt route rpt
+        run opt route rpt
       else
-        background opt $ server opt route rpt
+        background opt $ run opt route rpt
   where
     getOptRoute = getArgs >>= eachCase
     svrnm = programName ++ "/" ++ programVersion
@@ -93,8 +93,8 @@ main = do
 
 ----------------------------------------------------------------
 
-server :: Option -> RouteDB -> Reporter -> IO ()
-server opt route rpt = reportDo rpt $ do
+run :: Option -> RouteDB -> Reporter -> IO ()
+run opt route rpt = reportDo rpt $ do
     unlimit
     service <- openService opt
     unless debug writePidFile
@@ -103,7 +103,7 @@ server opt route rpt = reportDo rpt $ do
     stt <- initStater
     lgr <- initLogger FromSocket logtype
     -- killed by signal
-    void . forkIO $ single opt route service rpt stt lgr
+    void . forkIO $ server opt route service rpt stt lgr
     void . forkIO $ logController logtype [myid]
     mainLoop rpt stt lgr
   where
