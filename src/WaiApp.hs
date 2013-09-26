@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings, CPP #-}
 
-module FileCGIApp (fileCgiApp) where
+module WaiApp (fileCgiApp) where
 
 import Control.Monad.IO.Class (liftIO)
 import Data.ByteString (ByteString)

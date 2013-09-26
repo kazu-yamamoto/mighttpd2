@@ -1,6 +1,13 @@
 {-# LANGUAGE OverloadedStrings, CPP #-}
 
-module Server (server, mainLoop, ifRouteFileIsValid, defaultDomain, defaultPort) where
+module Server (
+    server
+  , mainLoop
+  , ifRouteFileIsValid
+  , defaultDomain
+  , defaultPort
+  , Service(..)
+  ) where
 
 import Control.Applicative
 import Control.Concurrent
@@ -25,8 +32,11 @@ import Network.Wai.Handler.WarpTLS
 
 import Program.Mighty
 
-import FileCGIApp
-import Types
+import WaiApp
+
+----------------------------------------------------------------
+
+data Service = HttpOnly Socket | HttpsOnly Socket | HttpAndHttps Socket Socket
 
 ----------------------------------------------------------------
 

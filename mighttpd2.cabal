@@ -92,10 +92,9 @@ Executable mighty
   if flag(tls)
     Build-Depends:      tls
                       , warp-tls >= 1.4.1
-  Other-Modules:        FileCGIApp
-                        Mighty
+  Other-Modules:        Mighty
                         Server
-                        Types
+                        WaiApp
                         Paths_mighttpd2
 
 Executable mkindex
