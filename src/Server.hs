@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings, CPP #-}
 
-module Server (server, mainLoop, closeService, ifRouteFileIsValid, defaultDomain, defaultPort) where
+module Server (server, mainLoop, ifRouteFileIsValid, defaultDomain, defaultPort) where
 
 import Control.Applicative
 import Control.Concurrent
