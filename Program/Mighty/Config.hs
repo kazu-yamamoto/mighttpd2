@@ -1,9 +1,12 @@
 {-# LANGUAGE FlexibleInstances, TypeSynonymInstances, OverloadedStrings #-}
 
 module Program.Mighty.Config (
-    Option(..), parseOption, defaultOption
-  , ConfValue(..)
-  , parseConfig
+  -- * Parsing a configuration file.
+    parseOption
+  -- * Creating 'Option'.
+  , defaultOption
+  -- * Types
+  , Option(..)
   ) where
 
 import Control.Applicative hiding (many,optional,(<|>))
@@ -13,7 +16,9 @@ import Text.Parsec.ByteString.Lazy
 
 ----------------------------------------------------------------
 
-defaultOption :: String -> Option
+-- | Getting a default 'Option'.
+defaultOption :: String -- ^ A default server name (e.g. \"Mighttpd/3.0.0\")
+              -> Option
 defaultOption svrnm = Option {
     opt_port = 8080
   , opt_debug_mode = True
@@ -64,6 +69,7 @@ data Option = Option {
 
 ----------------------------------------------------------------
 
+-- | Parsing a configuration file to get an 'Option'.
 parseOption :: FilePath -> String -> IO Option
 parseOption file svrnm = makeOpt (defaultOption svrnm) <$> parseConfig file
 

@@ -1,14 +1,16 @@
 {-# LANGUAGE OverloadedStrings, TupleSections #-}
 
 module Program.Mighty.Route (
-    RouteDB
+  -- * Paring a routing file
+    parseRoute
+  -- * Types
+  , RouteDB
   , Route(..)
   , Block(..)
   , Src
   , Dst
   , Domain
   , Port
-  , parseRoute
   ) where
 
 import Control.Applicative hiding (many,(<|>))
@@ -23,7 +25,9 @@ import Program.Mighty.Parser
 
 ----------------------------------------------------------------
 
+-- | A logical path specified in URL.
 type Src      = Path
+-- | A physical path in a file system.
 type Dst      = Path
 type Domain   = ByteString
 type Port     = Int
@@ -37,7 +41,11 @@ type RouteDB  = [Block]
 
 ----------------------------------------------------------------
 
-parseRoute :: FilePath -> Domain -> Port -> IO RouteDB
+-- | Parsing a route file.
+parseRoute :: FilePath
+           -> Domain -- ^ A default domain, typically \"localhost\"
+           -> Port   -- ^ A default port, typically 80.
+           -> IO RouteDB
 parseRoute file ddom dport = parseFile (routeDB ddom dport) file
 
 routeDB :: Domain -> Port -> Parser RouteDB
