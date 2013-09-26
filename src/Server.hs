@@ -9,20 +9,19 @@ module Server (
   , Service(..)
   ) where
 
-import Control.Applicative
-import Control.Concurrent
-import Control.Exception
-import Control.Monad
-import qualified Data.ByteString.Char8 as BS
-import Data.Conduit.Network
-import Network
-import Network.HTTP.Date
+import Control.Applicative ((<$>))
+import Control.Concurrent (forkIO, threadDelay)
+import Control.Exception (try)
+import Control.Monad (void)
+import qualified Data.ByteString.Char8 as BS (pack)
+import Network (Socket, sClose)
+import Network.HTTP.Date (formatHTTPDate, epochTimeToHTTPDate)
 import Network.Wai.Application.Classic hiding ((</>), (+++))
 import Network.Wai.Handler.Warp
-import System.Date.Cache
-import System.Exit
-import System.Posix
+import System.Date.Cache (DateCacheConf(..), clockDateCacher)
+import System.Exit (ExitCode(..), exitSuccess)
 import System.IO.Error (ioeGetErrorString)
+import System.Posix (exitImmediately, Handler(..), epochTime)
 #ifdef REV_PROXY
 import qualified Network.HTTP.Conduit as H
 #endif
