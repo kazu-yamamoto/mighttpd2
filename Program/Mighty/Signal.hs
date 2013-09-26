@@ -7,8 +7,6 @@ module Program.Mighty.Signal (
   , sigLogCtl
   -- * Signal handling
   , setHandler
-  -- * Misc
-  , ignoreSigChild
   ) where
 
 import Control.Monad
