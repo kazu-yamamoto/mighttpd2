@@ -6,41 +6,42 @@ module Program.Mighty.Signal (
   , sigInfo
   , sigLogCtl
   -- * Signal handling
-  , sendSignal
   , setHandler
   -- * Misc
   , ignoreSigChild
   ) where
 
-import qualified Control.Exception as E
 import Control.Monad
-import Program.Mighty.Exception
 import System.Posix
 
 ----------------------------------------------------------------
 
+-- | The signal to stop Mighty.
 sigStop :: Signal
 sigStop   = sigTERM
 
+-- | The signal to reload a configration file.
 sigReload :: Signal
 sigReload = sigHUP
 
+-- | The signal to top accepting new connections and to finish current connections.
 sigRetire :: Signal
 sigRetire = sigQUIT
 
+-- | The signal to get information from Mighty.
 sigInfo :: Signal
 sigInfo   = sigUSR2
 
+-- | FIXME
 sigLogCtl :: Signal
 sigLogCtl = sigUSR1
 
 ----------------------------------------------------------------
 
-sendSignal :: Signal -> ProcessID -> IO ()
-sendSignal sig cid = signalProcess sig cid `E.catch` ignore
-
+-- | Setting 'Handler' for 'Signal'.
 setHandler :: Signal -> Handler -> IO ()
 setHandler sig func = void $ installHandler sig func Nothing
 
+-- | Ignoring 'SigChild'. FIXME
 ignoreSigChild :: IO ()
 ignoreSigChild = setHandler sigCHLD Ignore
