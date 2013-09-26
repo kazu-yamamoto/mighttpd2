@@ -12,10 +12,16 @@ import System.Posix
 
 ----------------------------------------------------------------
 
+-- | Checking if this process has the root privilege.
 amIrootUser :: IO Bool
 amIrootUser = (== 0) <$> getRealUserID
 
-setGroupUser :: String -> String -> IO ()
+----------------------------------------------------------------
+
+-- | Setting user and group.
+setGroupUser :: String -- ^ User
+             -> String -- ^ Group
+             -> IO ()
 setGroupUser user group = do
     root <- amIrootUser
     when root $ do
@@ -24,6 +30,7 @@ setGroupUser user group = do
 
 ----------------------------------------------------------------
 
+-- | Set the limit of open files to 10,000.
 unlimit :: IO ()
 unlimit = handle ignore $ do
     hard <- hardLimit <$> getResourceLimit ResourceOpenFiles

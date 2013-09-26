@@ -1,4 +1,16 @@
-module Program.Mighty.Signal where
+module Program.Mighty.Signal (
+  -- * Signals
+    sigStop
+  , sigReload
+  , sigRetire
+  , sigInfo
+  , sigLogCtl
+  -- * Signal handling
+  , sendSignal
+  , setHandler
+  -- * Misc
+  , ignoreSigChild
+  ) where
 
 import qualified Control.Exception as E
 import Control.Monad

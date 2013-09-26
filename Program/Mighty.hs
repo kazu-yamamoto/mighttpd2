@@ -1,17 +1,22 @@
+-- | Special library for Mighty.
 module Program.Mighty (
-    module Program.Mighty.ByteString
-  , module Program.Mighty.Config
-  , module Program.Mighty.Exception
-  , module Program.Mighty.FileCache
-  , module Program.Mighty.IORef
-  , module Program.Mighty.Network
-  , module Program.Mighty.Parser
-  , module Program.Mighty.Process
-  , module Program.Mighty.Report
-  , module Program.Mighty.Resource
+  -- * Parsers
+    module Program.Mighty.Config
   , module Program.Mighty.Route
-  , module Program.Mighty.Signal
+  -- * State
+  , module Program.Mighty.FileCache
+  , module Program.Mighty.Report
   , module Program.Mighty.State
+  -- * Utilities
+  , module Program.Mighty.ByteString
+  , module Program.Mighty.Network
+  , module Program.Mighty.Process
+  , module Program.Mighty.Resource
+  , module Program.Mighty.Signal
+  -- * Internal modules
+  , module Program.Mighty.Exception
+  , module Program.Mighty.IORef
+  , module Program.Mighty.Parser
   ) where
 
 import Program.Mighty.ByteString

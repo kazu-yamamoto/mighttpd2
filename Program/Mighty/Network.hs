@@ -13,6 +13,9 @@ import System.Posix
 
 ----------------------------------------------------------------
 
+-- | Open an 'Socket' for the service name in 'String'.
+--   'ReuseAddr' and 'NoDelay' are set.
+--   Backlog is set to 2,048.
 listenSocket :: String -> IO Socket
 listenSocket serv = do
     proto <- getProtocolNumber "tcp"
@@ -37,6 +40,7 @@ listenSocket' addr = bracketOnError setup cleanup $ \sock -> do
 
 ----------------------------------------------------------------
 
+-- | Run a program detaching its terminal.
 daemonize :: IO () -> IO ()
 daemonize program = ensureDetachTerminalCanWork $ do
     detachTerminal
