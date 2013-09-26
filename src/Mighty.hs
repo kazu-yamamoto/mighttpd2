@@ -13,6 +13,7 @@ import System.Exit
 import System.FilePath
 import System.IO
 import System.Posix
+import Data.Version
 
 import Program.Mighty
 
@@ -21,6 +22,15 @@ import Log
 import Route
 import Single
 import Types
+import Paths_mighttpd2 as P
+
+----------------------------------------------------------------
+
+programName :: String
+programName = "Mighttpd"
+
+programVersion :: String
+programVersion = showVersion P.version
 
 ----------------------------------------------------------------
 
@@ -36,11 +46,12 @@ main = do
         background opt $ server opt route rpt
   where
     getOptRoute = getArgs >>= eachCase
+    svrnm = programName ++ "/" ++ programVersion
     eachCase args
       | n == 0 = do
           root <- amIrootUser
-          let opt | root      = defaultOption { opt_port = 80 }
-                  | otherwise = defaultOption
+          let opt | root      = (defaultOption svrnm) { opt_port = 80 }
+                  | otherwise = defaultOption svrnm
           dir <- getCurrentDirectory
           let dst = fromString . addTrailingPathSeparator $ dir
               route = [Block ["*"] [RouteFile "/" dst]]
@@ -48,7 +59,7 @@ main = do
       | n == 2 = do
           let config_file = args !! 0
           routing_file <- getAbsoluteFile (args !! 1)
-          opt   <- parseOption config_file
+          opt   <- parseOption config_file svrnm
           route <- parseRoute  routing_file
           let opt' = opt {opt_routing_file = Just routing_file}
           return (opt',route)

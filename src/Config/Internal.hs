@@ -6,12 +6,11 @@ import Control.Applicative hiding (many,optional,(<|>))
 import Parser
 import Text.Parsec
 import Text.Parsec.ByteString.Lazy
-import Types
 
 ----------------------------------------------------------------
 
-defaultOption :: Option
-defaultOption = Option {
+defaultOption :: String -> Option
+defaultOption svrnm = Option {
     opt_port = 8080
   , opt_debug_mode = True
   , opt_user = "root"
@@ -26,7 +25,7 @@ defaultOption = Option {
   , opt_status_file_dir = "/usr/local/share/mighty/status"
   , opt_connection_timeout = 30
   , opt_fd_cache_duration = 10
-  , opt_server_name = programName ++ "/" ++ programVersion
+  , opt_server_name = svrnm
   , opt_routing_file = Nothing
   , opt_tls_port = 443
   , opt_tls_cert_file = "certificate.pem"
@@ -61,8 +60,8 @@ data Option = Option {
 
 ----------------------------------------------------------------
 
-parseOption :: String -> IO Option
-parseOption file = makeOpt defaultOption <$> parseConfig file
+parseOption :: FilePath -> String -> IO Option
+parseOption file svrnm = makeOpt (defaultOption svrnm) <$> parseConfig file
 
 ----------------------------------------------------------------
 
