@@ -3,6 +3,7 @@ module Program.Mighty (
   -- * Parsers
     module Program.Mighty.Config
   , module Program.Mighty.Route
+  , module Program.Mighty.Parser
   -- * State
   , module Program.Mighty.FileCache
   , module Program.Mighty.Report
@@ -17,7 +18,6 @@ module Program.Mighty (
   -- * Internal modules
   , module Program.Mighty.Exception
   , module Program.Mighty.IORef
-  , module Program.Mighty.Parser
   ) where
 
 import Program.Mighty.ByteString

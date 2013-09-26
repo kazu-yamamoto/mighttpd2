@@ -1,4 +1,4 @@
-module Program.Mighty.FileCache (fileCacheInit) where
+module Program.Mighty.FileCache (fileCacheInit, GetInfo) where
 
 import Control.Concurrent
 import Control.Exception
