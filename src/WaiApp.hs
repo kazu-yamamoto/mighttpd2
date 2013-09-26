@@ -4,9 +4,9 @@ module WaiApp (fileCgiApp) where
 
 import Control.Monad.IO.Class (liftIO)
 import Data.ByteString (ByteString)
-import qualified Data.ByteString.Char8 as BS
-import Network.HTTP.Types
-import Network.Wai
+import qualified Data.ByteString.Char8 as BS (isPrefixOf, length)
+import Network.HTTP.Types (preconditionFailed412, movedPermanently301)
+import Network.Wai (Application, serverName, rawPathInfo, responseLBS)
 import Network.Wai.Application.Classic
 
 import Program.Mighty
