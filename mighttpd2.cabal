@@ -36,6 +36,7 @@ Library
                         Program.Mighty.Exception
                         Program.Mighty.FileCache
                         Program.Mighty.IORef
+                        Program.Mighty.Logger
                         Program.Mighty.Network
                         Program.Mighty.Parser
                         Program.Mighty.Process
@@ -56,6 +57,8 @@ Library
                       , unix-time
                       , unordered-containers
                       , wai-app-file-cgi
+                      , wai-logger
+                      , wai-logger-prefork
                       , warp
 
 Executable mighty
@@ -90,7 +93,6 @@ Executable mighty
     Build-Depends:      tls
                       , warp-tls >= 1.4.1
   Other-Modules:        FileCGIApp
-                        Log
                         Mighty
                         Server
                         Types

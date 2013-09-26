@@ -7,6 +7,7 @@ module Program.Mighty (
   , module Program.Mighty.FileCache
   , module Program.Mighty.Report
   , module Program.Mighty.State
+  , module Program.Mighty.Logger
   -- * Utilities
   , module Program.Mighty.ByteString
   , module Program.Mighty.Network
@@ -24,6 +25,7 @@ import Program.Mighty.Config
 import Program.Mighty.Exception
 import Program.Mighty.FileCache
 import Program.Mighty.IORef
+import Program.Mighty.Logger
 import Program.Mighty.Network
 import Program.Mighty.Parser
 import Program.Mighty.Process

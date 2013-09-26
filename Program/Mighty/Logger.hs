@@ -1,4 +1,4 @@
-module Log (
+module Program.Mighty.Logger (
     Logger
   , initLogger
   , apatcheLogger
