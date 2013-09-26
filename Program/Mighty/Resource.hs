@@ -30,12 +30,12 @@ setGroupUser user group = do
 
 ----------------------------------------------------------------
 
--- | Set the limit of open files to 10,000.
-unlimit :: IO ()
-unlimit = handle ignore $ do
+-- | Set the limit of open files.
+unlimit :: Integer -> IO ()
+unlimit limit = handle ignore $ do
     hard <- hardLimit <$> getResourceLimit ResourceOpenFiles
     let lim = if hard == ResourceLimitInfinity then
-                  ResourceLimits (ResourceLimit 10000) hard
+                  ResourceLimits (ResourceLimit limit) hard
                 else
                   ResourceLimits hard hard
     setResourceLimit ResourceOpenFiles lim

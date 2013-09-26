@@ -31,6 +31,9 @@ programVersion = showVersion P.version
 backlogNumber :: Int
 backlogNumber = 2048
 
+openFileNumber :: Integer
+openFileNumber = 10000
+
 ----------------------------------------------------------------
 
 main :: IO ()
@@ -96,7 +99,7 @@ main = do
 
 run :: Option -> RouteDB -> Reporter -> IO ()
 run opt route rpt = reportDo rpt $ do
-    unlimit
+    unlimit openFileNumber
     service <- openService opt
     unless debug writePidFile
     logCheck logtype
