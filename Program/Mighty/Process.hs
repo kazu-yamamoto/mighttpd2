@@ -2,7 +2,6 @@
 
 module Program.Mighty.Process (
     getMightyPid
-  , PsResult(..)
   ) where
 
 import Control.Applicative
@@ -75,6 +74,7 @@ deleteAloneChild (p:ps) = p : deleteAloneChild (filter noParent ps)
 
 ----------------------------------------------------------------
 
+-- | Getting the process id of a running Mighty.
 getMightyPid :: IO [ProcessID]
 getMightyPid = (map pid . findParent) <$> runPS
 
