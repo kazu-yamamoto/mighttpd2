@@ -2,18 +2,18 @@
 
 module Main where
 
-import Control.Concurrent
-import Control.Monad
+import Control.Concurrent (forkIO)
+import Control.Monad (void, unless, when)
 import Network.Wai.Application.Classic hiding ((</>), (+++))
-import Network.Wai.Logger
+import Network.Wai.Logger (IPAddrSource(FromSocket))
 import Network.Wai.Logger.Prefork
-import System.Directory
-import System.Environment
-import System.Exit
-import System.FilePath
+import System.Directory (getCurrentDirectory)
+import System.Environment (getArgs)
+import System.Exit (exitFailure)
+import System.FilePath (addTrailingPathSeparator, isAbsolute, normalise, (</>))
 import System.IO
-import System.Posix
-import Data.Version
+import System.Posix (getProcessID, setFileMode)
+import Data.Version (showVersion)
 
 import Program.Mighty
 
