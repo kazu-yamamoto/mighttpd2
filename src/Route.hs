@@ -1,27 +1,53 @@
 {-# LANGUAGE OverloadedStrings, TupleSections #-}
 
-module Route (parseRoute) where
+module Route (
+    RouteDB
+  , Route(..)
+  , Block(..)
+  , Src
+  , Dst
+  , Domain
+  , Port
+  , parseRoute
+  ) where
 
 import Control.Applicative hiding (many,(<|>))
 import Control.Monad
+import Data.ByteString
 import qualified Data.ByteString.Char8 as BS
 import Network.Wai.Application.Classic
-import Parser
 import Text.Parsec
 import Text.Parsec.ByteString.Lazy
-import Types
 
-parseRoute :: FilePath -> IO RouteDB
-parseRoute = parseFile routeDB
+import Parser
 
-routeDB :: Parser RouteDB
-routeDB = commentLines *> many1 block <* eof
+----------------------------------------------------------------
 
-block :: Parser Block
-block = Block <$> cdomains <*> many croute
+type Src      = Path
+type Dst      = Path
+type Domain   = ByteString
+type Port     = Int
+data Block    = Block [Domain] [Route] deriving (Eq,Show)
+data Route    = RouteFile     Src Dst
+              | RouteRedirect Src Dst
+              | RouteCGI      Src Dst
+              | RouteRevProxy Src Dst Domain Port
+              deriving (Eq,Show)
+type RouteDB  = [Block]
+
+----------------------------------------------------------------
+
+parseRoute :: FilePath -> Domain -> Port -> IO RouteDB
+parseRoute file ddom dport = parseFile (routeDB ddom dport) file
+
+routeDB :: Domain -> Port -> Parser RouteDB
+routeDB ddom dport = commentLines *> many1 (block ddom dport) <* eof
+
+block :: Domain -> Port -> Parser Block
+block ddom dport = Block <$> cdomains <*> many croute
   where
     cdomains = domains <* commentLines
-    croute   = route   <* commentLines
+    croute   = route ddom dport  <* commentLines
 
 domains :: Parser [Domain]
 domains = open *> doms <* close <* trailing
@@ -34,8 +60,8 @@ domains = open *> doms <* close <* trailing
 
 data Op = OpFile | OpCGI | OpRevProxy | OpRedirect
 
-route :: Parser Route
-route = do
+route :: Domain -> Port -> Parser Route
+route ddom dport = do
     s <- src
     o <- op
     case o of
@@ -43,7 +69,7 @@ route = do
         OpRedirect -> RouteRedirect s <$> dst' <* trailing
         OpCGI      -> RouteCGI      s <$> dst <* trailing
         OpRevProxy -> do
-            (dom,prt,d) <- domPortDst
+            (dom,prt,d) <- domPortDst ddom dport
             return $ RouteRevProxy s d dom prt
   where
     src = path
@@ -65,10 +91,10 @@ path' = fromByteString . BS.pack <$> many (noneOf "[], \t\n") <* spcs
 
 -- [host1][:port2]/path2
 
-domPortDst :: Parser (Domain, Port, Dst)
-domPortDst = (defaultDomain,,) <$> port <*> path
-         <|> try((,,) <$> domain <*> port <*> path)
-         <|> (,defaultPort,) <$> domain <*> path
+domPortDst :: Domain -> Port -> Parser (Domain, Port, Dst)
+domPortDst ddom dport = (ddom,,) <$> port <*> path
+                    <|> try((,,) <$> domain <*> port <*> path)
+                    <|> (,dport,) <$> domain <*> path
   where
     domain = BS.pack <$> many1 (noneOf ":/[], \t\n")
     port = do

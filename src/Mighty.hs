@@ -60,7 +60,7 @@ main = do
           let config_file = args !! 0
           routing_file <- getAbsoluteFile (args !! 1)
           opt   <- parseOption config_file svrnm
-          route <- parseRoute  routing_file
+          route <- parseRoute  routing_file defaultDomain defaultPort
           let opt' = opt {opt_routing_file = Just routing_file}
           return (opt',route)
       | otherwise = do

@@ -2,15 +2,15 @@
 
 module RouteSpec where
 
-import Route
 import Test.Hspec
-import Types
+
+import Route
 
 spec :: Spec
 spec = do
     describe "parseRoute" $ do
         it "parses example.route correctly" $ do
-            res <- parseRoute "conf/example.route"
+            res <- parseRoute "conf/example.route" "localhost" 80
             res `shouldBe` ans
 
 ans :: [Block]

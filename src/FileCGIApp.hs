@@ -8,7 +8,8 @@ import qualified Data.ByteString.Char8 as BS
 import Network.HTTP.Types
 import Network.Wai
 import Network.Wai.Application.Classic
-import Types
+
+import Route
 
 data Perhaps a = Found a | Redirect | Fail
 

@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings, CPP #-}
 
-module Single (single, mainLoop, closeService, ifRouteFileIsValid) where
+module Single (single, mainLoop, closeService, ifRouteFileIsValid, defaultDomain, defaultPort) where
 
 import Config
 import Route
@@ -30,6 +30,14 @@ import Program.Mighty
 import FileCGIApp
 import Log
 import Types
+
+----------------------------------------------------------------
+
+defaultDomain :: Domain
+defaultDomain = "localhost"
+
+defaultPort :: Int
+defaultPort = 80
 
 ----------------------------------------------------------------
 
@@ -80,7 +88,7 @@ single opt route service rpt stt lgr = reportDo rpt $ do
 ifRouteFileIsValid :: Reporter -> Option -> (RouteDB -> IO ()) -> IO ()
 ifRouteFileIsValid rpt opt act = case opt_routing_file opt of
     Nothing    -> return ()
-    Just rfile -> try (parseRoute rfile) >>= either reportError act
+    Just rfile -> try (parseRoute rfile defaultDomain defaultPort) >>= either reportError act
   where
     reportError = report rpt . BS.pack . ioeGetErrorString
 
