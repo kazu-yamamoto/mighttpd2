@@ -59,7 +59,6 @@ type ConnPool = ()
 server :: Option -> RouteDB -> Service -> Reporter -> Stater -> Logger -> IO ()
 server opt route service rpt stt lgr = reportDo rpt $ do
     setGroupUser (opt_user opt) (opt_group opt) -- don't change the user of the master process
-    ignoreSigChild
     getInfo <- fileCacheInit
     setHandler sigStop   stopHandler
     setHandler sigRetire retireHandler

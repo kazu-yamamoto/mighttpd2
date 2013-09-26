@@ -41,7 +41,3 @@ sigLogCtl = sigUSR1
 -- | Setting 'Handler' for 'Signal'.
 setHandler :: Signal -> Handler -> IO ()
 setHandler sig func = void $ installHandler sig func Nothing
-
--- | Ignoring 'SigChild'. FIXME
-ignoreSigChild :: IO ()
-ignoreSigChild = setHandler sigCHLD Ignore
