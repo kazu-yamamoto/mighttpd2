@@ -4,7 +4,7 @@ module RouteSpec where
 
 import Test.Hspec
 
-import Route
+import Program.Mighty
 
 spec :: Spec
 spec = do

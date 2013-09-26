@@ -9,7 +9,7 @@ import Network.HTTP.Types
 import Network.Wai
 import Network.Wai.Application.Classic
 
-import Route
+import Program.Mighty
 
 data Perhaps a = Found a | Redirect | Fail
 

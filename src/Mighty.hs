@@ -17,9 +17,7 @@ import Data.Version
 
 import Program.Mighty
 
-import Config
 import Log
-import Route
 import Single
 import Types
 import Paths_mighttpd2 as P

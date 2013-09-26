@@ -1,4 +1,4 @@
-module Parser where
+module Program.Mighty.Parser where
 
 import Control.Applicative hiding (many,(<|>))
 import Control.Exception

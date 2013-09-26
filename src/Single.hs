@@ -2,8 +2,6 @@
 
 module Single (single, mainLoop, closeService, ifRouteFileIsValid, defaultDomain, defaultPort) where
 
-import Config
-import Route
 import Control.Applicative
 import Control.Concurrent
 import Control.Exception

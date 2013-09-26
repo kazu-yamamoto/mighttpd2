@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings, TupleSections #-}
 
-module Route (
+module Program.Mighty.Route (
     RouteDB
   , Route(..)
   , Block(..)
@@ -19,7 +19,7 @@ import Network.Wai.Application.Classic
 import Text.Parsec
 import Text.Parsec.ByteString.Lazy
 
-import Parser
+import Program.Mighty.Parser
 
 ----------------------------------------------------------------
 

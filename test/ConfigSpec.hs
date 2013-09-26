@@ -1,6 +1,6 @@
 module ConfigSpec where
 
-import Config
+import Program.Mighty
 import Test.Hspec
 
 spec :: Spec

@@ -1,13 +1,13 @@
 {-# LANGUAGE FlexibleInstances, TypeSynonymInstances, OverloadedStrings #-}
 
-module Config (
+module Program.Mighty.Config (
     Option(..), parseOption, defaultOption
   , ConfValue(..)
   , parseConfig
   ) where
 
 import Control.Applicative hiding (many,optional,(<|>))
-import Parser
+import Program.Mighty.Parser
 import Text.Parsec
 import Text.Parsec.ByteString.Lazy
 
