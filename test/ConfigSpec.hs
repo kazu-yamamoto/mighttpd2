@@ -1,6 +1,6 @@
 module ConfigSpec where
 
-import Config.Internal
+import Config
 import Test.Hspec
 
 spec :: Spec
