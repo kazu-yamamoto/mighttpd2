@@ -2,7 +2,6 @@
 
 module Server (
     server
-  , mainLoop
   , ifRouteFileIsValid
   , defaultDomain
   , defaultPort
@@ -10,7 +9,7 @@ module Server (
   ) where
 
 import Control.Applicative ((<$>))
-import Control.Concurrent (forkIO, threadDelay)
+import Control.Concurrent (forkIO)
 import Control.Exception (try)
 import Control.Monad (void)
 import qualified Data.ByteString.Char8 as BS (pack)
@@ -19,7 +18,7 @@ import Network.HTTP.Date (formatHTTPDate, epochTimeToHTTPDate)
 import Network.Wai.Application.Classic hiding ((</>), (+++))
 import Network.Wai.Handler.Warp
 import System.Date.Cache (DateCacheConf(..), clockDateCacher)
-import System.Exit (ExitCode(..), exitSuccess)
+import System.Exit (ExitCode(..))
 import System.IO.Error (ioeGetErrorString)
 import System.Posix (exitImmediately, Handler(..), epochTime)
 #ifdef REV_PROXY
@@ -164,21 +163,6 @@ reload opt route service rpt stt lgr getInfo _mgr = reportDo rpt $ do
       , keyFile  = opt_tls_key_file opt
       }
 #endif
-
-----------------------------------------------------------------
-
-mainLoop :: Reporter -> Stater -> Logger -> IO ()
-mainLoop rpt stt lgr = do
-    threadDelay 1000000
-    retiring <- isRetiring stt
-    counter <- getConnectionCounter stt
-    if retiring && counter == 0 then do
-        report rpt "Worker Mighty retired"
-        finReporter rpt
-        finLogger lgr
-        exitSuccess
-      else
-        mainLoop rpt stt lgr
 
 ----------------------------------------------------------------
 

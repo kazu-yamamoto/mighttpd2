@@ -2,18 +2,19 @@
 
 module Main where
 
-import Control.Concurrent (forkIO)
+import Control.Concurrent (forkIO, threadDelay)
 import Control.Monad (void, unless, when)
+import Data.Version (showVersion)
 import Network.Wai.Application.Classic hiding ((</>), (+++))
 import Network.Wai.Logger (IPAddrSource(FromSocket))
 import Network.Wai.Logger.Prefork
 import System.Directory (getCurrentDirectory)
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
+import System.Exit (exitSuccess)
 import System.FilePath (addTrailingPathSeparator, isAbsolute, normalise, (</>))
 import System.IO
 import System.Posix (getProcessID, setFileMode)
-import Data.Version (showVersion)
 
 import Program.Mighty
 
@@ -160,3 +161,18 @@ background opt svr = do
     daemonize svr
   where
     port = opt_port opt
+
+----------------------------------------------------------------
+
+mainLoop :: Reporter -> Stater -> Logger -> IO ()
+mainLoop rpt stt lgr = do
+    threadDelay 1000000
+    retiring <- isRetiring stt
+    counter <- getConnectionCounter stt
+    if retiring && counter == 0 then do
+        report rpt "Worker Mighty retired"
+        finReporter rpt
+        finLogger lgr
+        exitSuccess
+      else
+        mainLoop rpt stt lgr
