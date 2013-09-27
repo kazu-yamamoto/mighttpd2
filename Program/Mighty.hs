@@ -16,13 +16,11 @@ module Program.Mighty (
   , module Program.Mighty.Resource
   , module Program.Mighty.Signal
   -- * Internal modules
-  , module Program.Mighty.Exception
   , module Program.Mighty.IORef
   ) where
 
 import Program.Mighty.ByteString
 import Program.Mighty.Config
-import Program.Mighty.Exception
 import Program.Mighty.FileCache
 import Program.Mighty.IORef
 import Program.Mighty.Logger

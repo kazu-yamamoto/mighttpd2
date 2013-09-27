@@ -23,7 +23,6 @@ import System.IO.Error (ioeGetErrorType)
 import System.Posix (getProcessID)
 
 import Program.Mighty.ByteString
-import Program.Mighty.Exception
 
 newtype Reporter = Reporter Handle
 
@@ -34,7 +33,7 @@ finReporter :: Reporter -> IO ()
 finReporter (Reporter rpthdl) = hClose rpthdl
 
 report :: Reporter -> ByteString -> IO ()
-report (Reporter rpthdl) msg = handle ignore $ do
+report (Reporter rpthdl) msg = handle (\(SomeException _) -> return ()) $ do
     pid <- BS.pack . show <$> getProcessID
     tm <- getUnixTime >>= formatUnixTime "%d %b %Y %H:%M:%S"
     let logmsg = BS.concat [tm, ": pid = ", pid, ": ", msg, "\n"]

@@ -33,7 +33,6 @@ Library
   Exposed-Modules:      Program.Mighty
                         Program.Mighty.ByteString
                         Program.Mighty.Config
-                        Program.Mighty.Exception
                         Program.Mighty.FileCache
                         Program.Mighty.IORef
                         Program.Mighty.Logger
