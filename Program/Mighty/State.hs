@@ -1,15 +1,22 @@
 module Program.Mighty.State (
+  -- * Types
     Status(..)
+  , State(..)
+  , Two(..)
   , Stater
+  -- * Creating Starter
   , initStater
+  -- * Accessing Starter
   , getConnectionCounter
+  , getServerStatus
+  , isRetiring
+  -- * Modifying Starter
   , increment
   , decrement
-  , isRetiring
-  , goRetiring
-  , getServerStatus
   , setMyWarpThreadId
   , addAnotherWarpThreadId
+  , goRetiring
+  -- * Misc
   , ifWarpThreadsAreActive
   ) where
 
@@ -20,10 +27,13 @@ import Program.Mighty.IORef
 
 ----------------------------------------------------------------
 
+-- | Server status
 data Status = Serving | Retiring deriving (Eq, Show)
 
+-- | FIXME
 data Two a = Zero | One a | Two a a
 
+-- | FIXME
 data State = State {
     connectionCounter :: !Int
   , serverStatus      :: !Status
@@ -35,8 +45,10 @@ initialState = State 0 Serving Zero
 
 ----------------------------------------------------------------
 
+-- | Reference to a server state.
 newtype Stater = Stater (IORef State)
 
+-- | Creating a new 'Stater'.
 initStater :: IO Stater
 initStater = Stater <$> newIORef initialState
 
@@ -95,6 +107,8 @@ addAnotherWarpThreadId stt aid = do
         One tid -> setWarpThreadId stt (Two tid aid)
         _       -> undefined -- FIXME
 
+-- | If Warp threads are active, first terminate them and
+--   run new 'IO'.
 ifWarpThreadsAreActive :: Stater -> IO () -> IO ()
 ifWarpThreadsAreActive stt act = do
     ttids <- getWarpThreadId stt
