@@ -2,20 +2,17 @@ module Program.Mighty.Logger (
   -- * Types
     Logger
   , LogType(..)
-  , LogController
   , LoggerRef
-  , LogFlusher
+  -- * Accessor
+  , apatcheLogger
   -- * Starting and closing
   , initLogger
   , finLogger
+  -- * Log controller
+  , fileLoggerController
   -- * Utiles
-  , apatcheLogger
   , reopen
   , logCheck
-  -- * Log controller
-  , logController
-  , noLoggerController
-  , fileLoggerController
   ) where
 
 import Control.Applicative
@@ -31,27 +28,31 @@ import System.Posix
 
 ----------------------------------------------------------------
 
+type LogFlusher = IO ()
+
 data Logger = Logger WL.ApacheLogger LogFlusher
 
-initLogger :: WL.IPAddrSource -> LogType -> IO Logger
-initLogger ipsrc logtyp = do
-    (aplgr, flusher) <- logInit ipsrc logtyp
-    return $ Logger aplgr flusher
+data LogType = LogNone
+             | LogStdout
+               -- | 'Signal' is used to tell child processes to reopen a log file.
+             | LogFile FL.FileLogSpec
 
-finLogger :: Logger -> LogFlusher
-finLogger (Logger _ flusher) = flusher
+----------------------------------------------------------------
 
 apatcheLogger :: Logger -> WL.ApacheLogger
 apatcheLogger (Logger aplogr _) = aplogr
 
 ----------------------------------------------------------------
 
--- |
--- Checking if a log file can be written if 'LogType' is 'LogFile'.
-logCheck :: LogType -> IO ()
-logCheck LogNone        = return ()
-logCheck LogStdout      = return ()
-logCheck (LogFile spec) = FL.check spec
+initLogger :: WL.IPAddrSource -> LogType -> IO Logger
+initLogger ipsrc logtyp = do
+    (aplgr, flusher) <- logInit ipsrc logtyp
+    return $ Logger aplgr flusher
+
+finLogger :: Logger -> IO ()
+finLogger (Logger _ flusher) = flusher
+
+----------------------------------------------------------------
 
 -- |
 -- Creating 'ApacheLogger' according to 'LogType'.
@@ -72,16 +73,6 @@ stdoutLoggerInit ipsrc = do
     lgr <- WL.stdoutApacheLoggerInit2 ipsrc True dc
     return $! (lgr, return ())
 
--- |
--- Creating a log controller against child processes.
-logController :: LogType -> LogController
-logController LogNone        = noLoggerController
-logController LogStdout      = noLoggerController
-logController (LogFile spec) = fileLoggerController spec
-
-noLoggerController :: LogController
-noLoggerController = forever $ threadDelay maxBound
-
 ----------------------------------------------------------------
 
 newtype LoggerRef = LoggerRef (IORef FL.Logger)
@@ -93,8 +84,6 @@ setLogger :: LoggerRef -> FL.Logger -> IO ()
 setLogger (LoggerRef ref) = writeIORef ref
 
 ----------------------------------------------------------------
-
-type LogFlusher = IO ()
 
 fileLoggerInit :: WL.IPAddrSource -> FL.FileLogSpec
                -> IO (WL.ApacheLogger, LogFlusher)
@@ -133,7 +122,7 @@ fileFlusher' logref = getLogger logref >>= FL.loggerFlush
 
 ----------------------------------------------------------------
 
-fileLoggerController :: FL.FileLogSpec -> LogController
+fileLoggerController :: FL.FileLogSpec -> IO ()
 fileLoggerController spec = forever $ do
     isOver <- over
     when isOver $ FL.rotate spec
@@ -149,11 +138,12 @@ fileLoggerController spec = forever $ do
     handler :: SomeException -> IO Bool
     handler _ = return False
 
+
 ----------------------------------------------------------------
 
-data LogType = LogNone
-             | LogStdout
-               -- | 'Signal' is used to tell child processes to reopen a log file.
-             | LogFile FL.FileLogSpec
-
-type LogController = IO ()
+-- |
+-- Checking if a log file can be written if 'LogType' is 'LogFile'.
+logCheck :: LogType -> IO ()
+logCheck LogNone        = return ()
+logCheck LogStdout      = return ()
+logCheck (LogFile spec) = FL.check spec
