@@ -4,7 +4,6 @@ module Program.Mighty.Signal (
   , sigReload
   , sigRetire
   , sigInfo
-  , sigLogCtl
   -- * Signal handling
   , setHandler
   ) where
@@ -29,10 +28,6 @@ sigRetire = sigQUIT
 -- | The signal to get information from Mighty.
 sigInfo :: Signal
 sigInfo   = sigUSR2
-
--- | FIXME
-sigLogCtl :: Signal
-sigLogCtl = sigUSR1
 
 ----------------------------------------------------------------
 

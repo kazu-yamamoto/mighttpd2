@@ -7,7 +7,6 @@ import Control.Monad (void, unless, when)
 import Data.Version (showVersion)
 import Network.Wai.Application.Classic hiding ((</>), (+++))
 import Network.Wai.Logger (IPAddrSource(FromSocket))
-import Network.Wai.Logger.Prefork
 import System.Directory (getCurrentDirectory)
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
@@ -15,6 +14,7 @@ import System.Exit (exitSuccess)
 import System.FilePath (addTrailingPathSeparator, isAbsolute, normalise, (</>))
 import System.IO
 import System.Posix (getProcessID, setFileMode)
+import System.Log.FastLogger hiding (Logger)
 
 import Program.Mighty
 
@@ -104,12 +104,11 @@ run opt route rpt = reportDo rpt $ do
     service <- openService opt
     unless debug writePidFile
     logCheck logtype
-    myid <- getProcessID
     stt <- initStater
     lgr <- initLogger FromSocket logtype
     -- killed by signal
     void . forkIO $ server opt route service rpt stt lgr
-    void . forkIO $ logController logtype [myid]
+    void . forkIO $ logController logtype
     mainLoop rpt stt lgr
   where
     debug = opt_debug_mode opt
@@ -126,7 +125,7 @@ run opt route rpt = reportDo rpt $ do
     logtype
       | not (opt_logging opt) = LogNone
       | debug                 = LogStdout
-      | otherwise             = LogFile logspec sigLogCtl
+      | otherwise             = LogFile logspec
 
 openService :: Option -> IO Service
 openService opt

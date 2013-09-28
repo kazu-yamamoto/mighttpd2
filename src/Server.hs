@@ -2,7 +2,6 @@
 
 module Server (
     server
-  , ifRouteFileIsValid
   , defaultDomain
   , defaultPort
   , Service(..)
