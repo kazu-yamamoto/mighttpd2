@@ -8,23 +8,20 @@ module Program.Mighty.Logger (
   -- * Starting and closing
   , initLogger
   , finLogger
-  -- * Log controller
-  , fileLoggerController
   -- * Utiles
-  , reopen
+--  , reopen
   , logCheck
   ) where
 
 import Control.Applicative
 import Control.Concurrent
-import Control.Exception (handle, SomeException)
 import Control.Monad
+import Data.Array
 import Data.IORef
 import qualified Network.Wai.Logger as WL
 import System.Date.Cache
 import System.IO
 import qualified System.Log.FastLogger as FL
-import System.Posix
 
 ----------------------------------------------------------------
 
@@ -75,12 +72,14 @@ stdoutLoggerInit ipsrc = do
 
 ----------------------------------------------------------------
 
-newtype LoggerRef = LoggerRef (IORef FL.Logger)
+type LoggerSet = Array Int FL.Logger
 
-getLogger :: LoggerRef -> IO FL.Logger
+newtype LoggerRef = LoggerRef (IORef LoggerSet)
+
+getLogger :: LoggerRef -> IO LoggerSet
 getLogger (LoggerRef ref) = readIORef ref
 
-setLogger :: LoggerRef -> FL.Logger -> IO ()
+setLogger :: LoggerRef -> LoggerSet -> IO ()
 setLogger (LoggerRef ref) = writeIORef ref
 
 ----------------------------------------------------------------
@@ -88,34 +87,44 @@ setLogger (LoggerRef ref) = writeIORef ref
 fileLoggerInit :: WL.IPAddrSource -> FL.FileLogSpec
                -> IO (WL.ApacheLogger, LogFlusher)
 fileLoggerInit ipsrc spec = do
-    hdl <- open spec
+    n <- getNumCapabilities
+    hdls <- replicateM n $ open spec
     dc <- clockDateCacher FL.zonedDateCacheConf
-    logger <- FL.mkLogger2 False hdl dc
-    logref <- LoggerRef <$> newIORef logger
+    loggers <- mapM (\hdl -> FL.mkLogger2 False hdl dc) hdls
+    let loggerset = listArray (0, n - 1) loggers
+    logref <- LoggerRef <$> newIORef loggerset
     return (fileLogger ipsrc logref, fileFlusher logref)
 
 open :: FL.FileLogSpec -> IO Handle
 open spec = openFile (FL.log_file spec) AppendMode
 
+{- FIXME
 reopen :: FL.FileLogSpec -> LoggerRef -> IO ()
 reopen spec logref = do
     oldlogger <- getLogger logref
     newlogger <- open spec >>= FL.renewLogger oldlogger
     setLogger logref newlogger
+-}
 
 ----------------------------------------------------------------
 
 fileLogger :: WL.IPAddrSource -> LoggerRef -> WL.ApacheLogger
 fileLogger ipsrc logref req status msiz = do
-    logger <- getLogger logref
+    loggerset <- getLogger logref
+    (i,_) <- myThreadId >>= threadCapability
+    let logger = loggerset ! i
     date <- FL.loggerDate logger
     FL.loggerPutStr logger $ WL.apacheFormat ipsrc date req status msiz
 
 fileFlusher :: LoggerRef -> IO ()
-fileFlusher logref = getLogger logref >>= FL.loggerFlush
+fileFlusher logref = do
+    loggerset <- getLogger logref
+    mapM_ FL.loggerFlush $ elems loggerset
 
 ----------------------------------------------------------------
 
+{-
+-- FIXME
 fileLoggerController :: FL.FileLogSpec -> IO ()
 fileLoggerController spec = forever $ do
     isOver <- over
@@ -131,7 +140,7 @@ fileLoggerController spec = forever $ do
             return False
     handler :: SomeException -> IO Bool
     handler _ = return False
-
+-}
 
 ----------------------------------------------------------------
 
