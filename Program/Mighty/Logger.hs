@@ -92,8 +92,7 @@ fileLoggerInit ipsrc spec = do
     dc <- clockDateCacher FL.zonedDateCacheConf
     logger <- FL.mkLogger2 False hdl dc
     logref <- LoggerRef <$> newIORef logger
-    void . forkIO $ fileFlusher logref
-    return (fileLogger ipsrc logref, fileFlusher' logref)
+    return (fileLogger ipsrc logref, fileFlusher logref)
 
 open :: FL.FileLogSpec -> IO Handle
 open spec = openFile (FL.log_file spec) AppendMode
@@ -113,12 +112,7 @@ fileLogger ipsrc logref req status msiz = do
     FL.loggerPutStr logger $ WL.apacheFormat ipsrc date req status msiz
 
 fileFlusher :: LoggerRef -> IO ()
-fileFlusher logref = forever $ do
-    threadDelay 10000000
-    fileFlusher' logref
-
-fileFlusher' :: LoggerRef -> IO ()
-fileFlusher' logref = getLogger logref >>= FL.loggerFlush
+fileFlusher logref = getLogger logref >>= FL.loggerFlush
 
 ----------------------------------------------------------------
 
