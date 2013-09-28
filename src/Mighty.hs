@@ -108,7 +108,6 @@ run opt route rpt = reportDo rpt $ do
     lgr <- initLogger FromSocket logtype
     -- killed by signal
     void . forkIO $ server opt route service rpt stt lgr
-    void . forkIO $ logController logtype
     mainLoop rpt stt lgr
   where
     debug = opt_debug_mode opt
@@ -163,6 +162,7 @@ background opt svr = do
 
 ----------------------------------------------------------------
 
+-- FIXME log controller should be implemented here
 mainLoop :: Reporter -> Stater -> Logger -> IO ()
 mainLoop rpt stt lgr = do
     threadDelay 1000000
