@@ -31,11 +31,14 @@ Library
   if flag(rev-proxy)
     Cpp-Options:        -DREV_PROXY
   Exposed-Modules:      Program.Mighty
+                        Program.Mighty.Apache
                         Program.Mighty.ByteString
                         Program.Mighty.Config
                         Program.Mighty.Date
                         Program.Mighty.FileCache
                         Program.Mighty.IORef
+                        Program.Mighty.IP
+                        Program.Mighty.LogMsg
                         Program.Mighty.Logger
                         Program.Mighty.Network
                         Program.Mighty.Parser
@@ -47,11 +50,15 @@ Library
                         Program.Mighty.State
   Build-Depends:        base >= 4.0 && < 5
                       , array
+                      , blaze-builder
+                      , byteorder
                       , bytestring
+                      , case-insensitive
                       , conduit
                       , date-cache
                       , fast-logger
                       , http-date
+                      , http-types
                       , io-choice
                       , network
                       , parsec >= 3
@@ -59,10 +66,10 @@ Library
                       , unix
                       , unix-time
                       , unordered-containers
+                      , wai
                       , wai-app-file-cgi
                       , wai-logger
                       , warp
-                      , blaze-builder
 
 Executable mighty
   Default-Language:     Haskell2010
