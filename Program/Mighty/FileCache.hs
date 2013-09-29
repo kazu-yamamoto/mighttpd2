@@ -1,9 +1,13 @@
-module Program.Mighty.FileCache (fileCacheInit, GetInfo) where
+module Program.Mighty.FileCache (
+  -- * Types
+    GetInfo
+  , RemoveInfo
+  -- * Starter
+  , fileCacheInit
+  ) where
 
-import Control.Concurrent
 import Control.Exception
 import Control.Exception.IOChoice
-import Control.Monad
 import Data.ByteString (ByteString)
 import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as M
@@ -16,6 +20,7 @@ import System.Posix.Files
 data Entry = Negative | Positive FileInfo
 type Cache = HashMap ByteString Entry
 type GetInfo = Path -> IO FileInfo
+type RemoveInfo = IO ()
 
 fileInfo :: IORef Cache -> GetInfo
 fileInfo ref path = do
@@ -61,12 +66,11 @@ negative ref path = do
 
 ----------------------------------------------------------------
 
-fileCacheInit :: IO GetInfo
+fileCacheInit :: IO (GetInfo, RemoveInfo)
 fileCacheInit = do
     ref <- newIORef M.empty
-    void . forkIO $ remover ref
-    return $ fileInfo ref
+    return $ (fileInfo ref, remover ref)
 
 -- atomicModifyIORef is not necessary here.
 remover :: IORef Cache -> IO ()
-remover ref = forever $ threadDelay 10000000 >> writeIORef ref M.empty
+remover ref = writeIORef ref M.empty
