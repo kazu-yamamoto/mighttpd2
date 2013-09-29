@@ -5,7 +5,6 @@ module Program.Mighty.Apache (
   , apacheLogMsg
   ) where
 
-import Program.Mighty.LogMsg
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
 import Data.CaseInsensitive
@@ -14,8 +13,9 @@ import Data.Maybe
 import Data.Monoid
 import Network.HTTP.Types
 import Network.Wai
-import Network.Wai.Logger.Utils
-import System.Log.FastLogger
+import Program.Mighty.Date
+import Program.Mighty.IP
+import Program.Mighty.LogMsg
 
 -- | Source from which the IP source address of the client is obtained.
 data IPAddrSource =

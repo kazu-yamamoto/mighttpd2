@@ -36,6 +36,7 @@ Library
                         Program.Mighty.Config
                         Program.Mighty.Date
                         Program.Mighty.FileCache
+                        Program.Mighty.FileLog
                         Program.Mighty.IORef
                         Program.Mighty.IP
                         Program.Mighty.LogMsg
@@ -49,14 +50,13 @@ Library
                         Program.Mighty.Signal
                         Program.Mighty.State
   Build-Depends:        base >= 4.0 && < 5
-                      , array
                       , blaze-builder
                       , byteorder
                       , bytestring
                       , case-insensitive
                       , conduit
-                      , date-cache
-                      , fast-logger
+                      , directory
+                      , filepath
                       , http-date
                       , http-types
                       , io-choice
@@ -68,7 +68,6 @@ Library
                       , unordered-containers
                       , wai
                       , wai-app-file-cgi
-                      , wai-logger
                       , warp
 
 Executable mighty
@@ -82,9 +81,7 @@ Executable mighty
     Cpp-Options:        -DTLS
   Build-Depends:        base >= 4.0 && < 5
                       , bytestring
-                      , date-cache
                       , directory
-                      , fast-logger
                       , filepath
                       , http-date
                       , http-types
@@ -95,7 +92,6 @@ Executable mighty
                       , unix
                       , wai >= 1.3
                       , wai-app-file-cgi
-                      , wai-logger
                       , warp >= 1.3
   if flag(rev-proxy)
     Build-Depends:      http-conduit >= 1.8.2.1

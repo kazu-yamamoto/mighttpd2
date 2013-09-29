@@ -16,32 +16,36 @@ module Program.Mighty.Logger (
 import Control.Applicative
 import Control.Concurrent
 import Control.Monad
-import Data.Array
 import Data.IORef
-import qualified Network.Wai.Logger as WL
-import System.Date.Cache
+import Network.HTTP.Types
+import Network.Wai
 import System.IO
-import qualified System.Log.FastLogger as FL
+
+import Program.Mighty.Apache
+import Program.Mighty.Date
+import Program.Mighty.FileLog
 
 ----------------------------------------------------------------
 
+type ApacheLogger = Request -> Status -> Maybe Integer -> IO ()
+
 type LogFlusher = IO ()
 
-data Logger = Logger WL.ApacheLogger LogFlusher
+data Logger = Logger ApacheLogger LogFlusher
 
 data LogType = LogNone
              | LogStdout
                -- | 'Signal' is used to tell child processes to reopen a log file.
-             | LogFile FL.FileLogSpec
+             | LogFile FileLogSpec
 
 ----------------------------------------------------------------
 
-apatcheLogger :: Logger -> WL.ApacheLogger
+apatcheLogger :: Logger -> ApacheLogger
 apatcheLogger (Logger aplogr _) = aplogr
 
 ----------------------------------------------------------------
 
-initLogger :: WL.IPAddrSource -> LogType -> IO Logger
+initLogger :: IPAddrSource -> LogType -> IO Logger
 initLogger ipsrc logtyp = do
     (aplgr, flusher) <- logInit ipsrc logtyp
     return $ Logger aplgr flusher
@@ -53,88 +57,82 @@ finLogger (Logger _ flusher) = flusher
 
 -- |
 -- Creating 'ApacheLogger' according to 'LogType'.
-logInit :: WL.IPAddrSource -> LogType -> IO (WL.ApacheLogger, LogFlusher)
+logInit :: IPAddrSource -> LogType -> IO (ApacheLogger, LogFlusher)
 logInit _     LogNone        = noLoggerInit
 logInit ipsrc LogStdout      = stdoutLoggerInit ipsrc
 logInit ipsrc (LogFile spec) = fileLoggerInit ipsrc spec
 
-noLoggerInit :: IO (WL.ApacheLogger, LogFlusher)
+noLoggerInit :: IO (ApacheLogger, LogFlusher)
 noLoggerInit = return $! (noLogger, noFlusher)
   where
     noLogger _ _ _ = return ()
     noFlusher = return ()
 
-stdoutLoggerInit :: WL.IPAddrSource -> IO (WL.ApacheLogger, LogFlusher)
+stdoutLoggerInit :: IPAddrSource -> IO (ApacheLogger, LogFlusher)
 stdoutLoggerInit ipsrc = do
-    dc <- clockDateCacher FL.zonedDateCacheConf
-    lgr <- WL.stdoutApacheLoggerInit2 ipsrc True dc
+    dc <- clockDateCacher zonedDateCacheConf
+    lgr <- undefined
     return $! (lgr, return ())
 
 ----------------------------------------------------------------
 
-type LoggerSet = Array Int FL.Logger
+newtype LoggerRef = LoggerRef (IORef Logger)
 
-newtype LoggerRef = LoggerRef (IORef LoggerSet)
-
-getLogger :: LoggerRef -> IO LoggerSet
+getLogger :: LoggerRef -> IO Logger
 getLogger (LoggerRef ref) = readIORef ref
 
-setLogger :: LoggerRef -> LoggerSet -> IO ()
+setLogger :: LoggerRef -> Logger -> IO ()
 setLogger (LoggerRef ref) = writeIORef ref
 
 ----------------------------------------------------------------
 
-fileLoggerInit :: WL.IPAddrSource -> FL.FileLogSpec
-               -> IO (WL.ApacheLogger, LogFlusher)
+fileLoggerInit :: IPAddrSource -> FileLogSpec
+               -> IO (ApacheLogger, LogFlusher)
 fileLoggerInit ipsrc spec = do
     n <- getNumCapabilities
     hdls <- replicateM n $ open spec
-    dc <- clockDateCacher FL.zonedDateCacheConf
-    loggers <- mapM (\hdl -> FL.mkLogger2 False hdl dc) hdls
-    let loggerset = listArray (0, n - 1) loggers
-    logref <- LoggerRef <$> newIORef loggerset
+    dc <- clockDateCacher zonedDateCacheConf
+    let logger = undefined
+    logref <- LoggerRef <$> newIORef logger
     return (fileLogger ipsrc logref, fileFlusher logref)
 
-open :: FL.FileLogSpec -> IO Handle
-open spec = openFile (FL.log_file spec) AppendMode
+open :: FileLogSpec -> IO Handle
+open spec = openFile (log_file spec) AppendMode
 
 {- FIXME
-reopen :: FL.FileLogSpec -> LoggerRef -> IO ()
+reopen :: FileLogSpec -> LoggerRef -> IO ()
 reopen spec logref = do
     oldlogger <- getLogger logref
-    newlogger <- open spec >>= FL.renewLogger oldlogger
+    newlogger <- open spec >>= renewLogger oldlogger
     setLogger logref newlogger
 -}
 
 ----------------------------------------------------------------
 
-fileLogger :: WL.IPAddrSource -> LoggerRef -> WL.ApacheLogger
+fileLogger :: IPAddrSource -> LoggerRef -> ApacheLogger
 fileLogger ipsrc logref req status msiz = do
-    loggerset <- getLogger logref
-    (i,_) <- myThreadId >>= threadCapability
-    let logger = loggerset ! i
-    date <- FL.loggerDate logger
-    FL.loggerPutStr logger $ WL.apacheFormat ipsrc date req status msiz
+    date <- undefined
+    undefined $ apacheLogMsg ipsrc date req status msiz
 
 fileFlusher :: LoggerRef -> IO ()
 fileFlusher logref = do
     loggerset <- getLogger logref
-    mapM_ FL.loggerFlush $ elems loggerset
+    undefined
 
 ----------------------------------------------------------------
 
 {-
 -- FIXME
-fileLoggerController :: FL.FileLogSpec -> IO ()
+fileLoggerController :: FileLogSpec -> IO ()
 fileLoggerController spec = forever $ do
     isOver <- over
-    when isOver $ FL.rotate spec
+    when isOver $ rotate spec
     threadDelay 10000000
   where
-    file = FL.log_file spec
+    file = log_file spec
     over = handle handler $ do
         siz <- fromIntegral . fileSize <$> getFileStatus file
-        if siz > FL.log_file_size spec then
+        if siz > log_file_size spec then
             return True
           else
             return False
@@ -149,4 +147,4 @@ fileLoggerController spec = forever $ do
 logCheck :: LogType -> IO ()
 logCheck LogNone        = return ()
 logCheck LogStdout      = return ()
-logCheck (LogFile spec) = FL.check spec
+logCheck (LogFile spec) = check spec

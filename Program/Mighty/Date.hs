@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP, OverloadedStrings #-}
+
 -- |
 -- Formatting time is slow.
 -- This package provides mechanisms to cache formatted date.
@@ -6,6 +8,9 @@ module Program.Mighty.Date(
     DateCacheConf(..)
   , DateCacheGetter
   , DateCacheUpdater
+  , DateCache
+  , ZonedDate
+  , zonedDateCacheConf
   -- * Date cacher
   , clockDateCacher
   ) where
@@ -13,6 +18,14 @@ module Program.Mighty.Date(
 import Control.Applicative
 import Data.ByteString (ByteString)
 import Data.IORef
+#if WINDOWS
+import qualified Data.ByteString.Char8 as BS
+import Data.Time
+import System.Locale
+#else
+import Data.UnixTime
+import System.Posix (EpochTime, epochTime)
+#endif
 
 type DateCacheGetter = IO ByteString
 type DateCacheUpdater = IO ()
@@ -28,6 +41,25 @@ data DateCacheConf t = DateCacheConf {
     -- | A function to format a time.
   , formatDate :: t -> IO ByteString
   }
+
+-- | A type for zoned date.
+type ZonedDate = ByteString
+
+#if WINDOWS
+zonedDateCacheConf :: DateCacheConf UTCTime
+zonedDateCacheConf = DateCacheConf {
+    getTime = getCurrentTime
+  , formatDate = \ut -> do
+      zt <- utcToLocalZonedTime ut
+      return $ BS.pack $ formatTime defaultTimeLocale "%d/%b/%Y:%T %z" zt
+  }
+#else
+zonedDateCacheConf :: DateCacheConf EpochTime
+zonedDateCacheConf = DateCacheConf {
+    getTime = epochTime
+  , formatDate = formatUnixTime "%d/%b/%Y:%T %z" . fromEpochTime
+  }
+#endif
 
 newDate :: DateCacheConf t -> t -> IO (DateCache t)
 newDate setting tm = DateCache tm <$> formatDate setting tm
