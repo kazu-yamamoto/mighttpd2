@@ -1,24 +1,43 @@
 {-# LANGUAGE BangPatterns #-}
 
 module Program.Mighty.LogMsg (
+  -- * LogMsg
     LogMsg
   , fromByteString
-  , writeLogMsg
+  -- * Logger
+  , Buffer
+  , BufSize
+  , Logger(..)
+  , initLogger
+  , renewLogger
+  -- * Logging
+  , pushLogMsg
+  , flushLogMsg
+  -- * Utilities
+  , logOpen
   ) where
 
 import qualified Blaze.ByteString.Builder as BD
 import Blaze.ByteString.Builder.Internal
 import Blaze.ByteString.Builder.Internal.Types
+import Control.Concurrent.MVar
 import Control.Monad
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.ByteString.Char8 ()
 import Data.ByteString.Char8 ()
+import Data.IORef
 import Data.Monoid
 import Data.Word (Word8)
+import Foreign.Marshal.Alloc
 import Foreign.Ptr
 import System.Posix.IO
 import System.Posix.Types (Fd)
+
+----------------------------------------------------------------
+
+type Buffer = Ptr Word8
+type BufSize = Int
 
 ----------------------------------------------------------------
 
@@ -33,12 +52,14 @@ instance Monoid LogMsg where
 fromByteString :: ByteString -> LogMsg
 fromByteString bs = LogMsg (BS.length bs) (BD.fromByteString bs)
 
+----------------------------------------------------------------
+
 -- | Writting 'LogMsg' using a buffer in blocking mode.
 --   The size of 'LogMsg' must be smaller or equal to
 --   the size of buffer.
 writeLogMsg :: Fd
-            -> Ptr Word8 -- ^ buffer
-            -> Int       -- ^ buffer size
+            -> Buffer
+            -> BufSize
             -> LogMsg
             -> IO ()
 writeLogMsg fd buf size (LogMsg len builder) = do
@@ -47,7 +68,7 @@ writeLogMsg fd buf size (LogMsg len builder) = do
       else
         toBufIOWith buf size (write fd) builder
 
-toBufIOWith :: Ptr Word8 -> Int -> (Ptr Word8 -> Int -> IO a) -> Builder -> IO a
+toBufIOWith :: Buffer -> BufSize -> (Buffer -> Int -> IO a) -> Builder -> IO a
 toBufIOWith buf !size io (Builder build) = do
     signal <- runBuildStep step range
     case signal of
@@ -58,10 +79,56 @@ toBufIOWith buf !size io (Builder build) = do
     !range = BufRange buf (buf `plusPtr` size)
     finalStep !(BufRange p _) = return $ Done p ()
 
-write :: Fd -> Ptr Word8 -> Int -> IO ()
-write fd buf size = loop buf (fromIntegral size)
+write :: Fd -> Buffer -> Int -> IO ()
+write fd buf len' = loop buf (fromIntegral len')
   where
-    loop bf !sz = do
-        written <- fdWriteBuf fd bf sz
-        when (written < sz) $ do
-            loop (bf `plusPtr` (fromIntegral written)) (sz - written)
+    loop bf !len = do
+        written <- fdWriteBuf fd bf len
+        when (written < len) $ do
+            loop (bf `plusPtr` (fromIntegral written)) (len - written)
+
+----------------------------------------------------------------
+
+data Logger = Logger (IORef Fd) (MVar Buffer) !BufSize (IORef LogMsg)
+
+initLogger :: Fd -> BufSize -> IO Logger
+initLogger fd size = do
+    fref <- newIORef fd
+    buf <- getBuffer size
+    mbuf <- newMVar buf
+    lref <- newIORef mempty
+    return $ Logger fref mbuf size lref
+
+renewLogger :: Logger -> Fd -> IO ()
+renewLogger (Logger fref _ _ _) newfd = do
+    oldfd <- atomicModifyIORef fref (\fd -> (newfd, fd))
+    closeFd oldfd
+
+pushLogMsg :: Logger -> LogMsg -> IO ()
+pushLogMsg logger@(Logger _ _ size ref) nlogmsg@(LogMsg nlen _) = do
+    needFlush <- atomicModifyIORef ref check
+    when needFlush $ do
+        flushLogMsg logger
+        pushLogMsg logger nlogmsg
+  where
+    check ologmsg@(LogMsg olen _)
+      | size < olen + nlen = (ologmsg, True)
+      | otherwise          = (ologmsg <> nlogmsg, False)
+
+flushLogMsg :: Logger -> IO ()
+flushLogMsg (Logger fref mbuf size lref) = do
+    logmsg <- atomicModifyIORef lref (\old -> (mempty, old))
+    buf <- takeMVar mbuf
+    fd <- readIORef fref
+    writeLogMsg fd buf size logmsg
+    putMVar mbuf buf
+
+----------------------------------------------------------------
+
+logOpen :: FilePath -> IO Fd
+logOpen file = openFd file WriteOnly (Just 0o644) flags
+  where
+    flags = defaultFileFlags { append = True }
+
+getBuffer :: BufSize -> IO Buffer
+getBuffer = mallocBytes
