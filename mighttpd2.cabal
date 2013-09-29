@@ -33,6 +33,7 @@ Library
   Exposed-Modules:      Program.Mighty
                         Program.Mighty.ByteString
                         Program.Mighty.Config
+                        Program.Mighty.Date
                         Program.Mighty.FileCache
                         Program.Mighty.IORef
                         Program.Mighty.Logger
@@ -61,6 +62,7 @@ Library
                       , wai-app-file-cgi
                       , wai-logger
                       , warp
+                      , blaze-builder
 
 Executable mighty
   Default-Language:     Haskell2010
