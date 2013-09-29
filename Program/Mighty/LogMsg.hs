@@ -8,7 +8,7 @@ module Program.Mighty.LogMsg (
   , Buffer
   , BufSize
   , Logger(..)
-  , initLogger
+  , newLogger
   , renewLogger
   -- * Logging
   , pushLogMsg
@@ -91,8 +91,8 @@ write fd buf len' = loop buf (fromIntegral len')
 
 data Logger = Logger (IORef Fd) (MVar Buffer) !BufSize (IORef LogMsg)
 
-initLogger :: Fd -> BufSize -> IO Logger
-initLogger fd size = do
+newLogger :: Fd -> BufSize -> IO Logger
+newLogger fd size = do
     fref <- newIORef fd
     buf <- getBuffer size
     mbuf <- newMVar buf
