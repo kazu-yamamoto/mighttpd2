@@ -61,12 +61,12 @@ fileLoggerInit :: IPAddrSource -> FileLogSpec -> BufSize
 fileLoggerInit ipsrc spec size = do
     (dateget, updater) <- clockDateCacher zonedDateCacheConf
     fd <- logOpen (log_file spec)
-    lgr <- newLogger fd size
-    return $! (logger lgr dateget, flushLogMsg lgr, updater)
+    lgrset <- newLoggerSet fd size
+    return $! (logger lgrset dateget, flushLogMsg' lgrset, updater)
   where
-    logger lgr dateget req st mlen = do
+    logger lgrset dateget req st mlen = do
         zdata <- dateget
-        pushLogMsg lgr (apacheLogMsg ipsrc zdata req st mlen)
+        pushLogMsg' lgrset (apacheLogMsg ipsrc zdata req st mlen)
 
 ----------------------------------------------------------------
 

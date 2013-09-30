@@ -50,6 +50,7 @@ Library
                         Program.Mighty.Signal
                         Program.Mighty.State
   Build-Depends:        base >= 4.0 && < 5
+                      , array
                       , blaze-builder
                       , byteorder
                       , bytestring

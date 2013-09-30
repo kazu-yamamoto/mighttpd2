@@ -15,13 +15,19 @@ module Program.Mighty.LogMsg (
   , flushLogMsg
   -- * Utilities
   , logOpen
+  -- * LoggerSet
+  , LoggerSet
+  , newLoggerSet
+  , pushLogMsg'
+  , flushLogMsg'
   ) where
 
 import qualified Blaze.ByteString.Builder as BD
 import Blaze.ByteString.Builder.Internal
 import Blaze.ByteString.Builder.Internal.Types
-import Control.Concurrent.MVar
+import Control.Concurrent
 import Control.Monad
+import Data.Array
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.ByteString.Char8 ()
@@ -70,13 +76,13 @@ writeLogMsg fd buf size (LogMsg len builder) = do
 
 toBufIOWith :: Buffer -> BufSize -> (Buffer -> Int -> IO a) -> Builder -> IO a
 toBufIOWith buf !size io (Builder build) = do
-    signal <- runBuildStep step range
+    signal <- runBuildStep step bufRange
     case signal of
         Done ptr _ -> io buf (ptr `minusPtr` buf)
         _          -> error "toBufIOWith"
   where
     !step = build (buildStep finalStep)
-    !range = BufRange buf (buf `plusPtr` size)
+    !bufRange = BufRange buf (buf `plusPtr` size)
     finalStep !(BufRange p _) = return $ Done p ()
 
 write :: Fd -> Buffer -> Int -> IO ()
@@ -132,3 +138,30 @@ logOpen file = openFd file WriteOnly (Just 0o644) flags
 
 getBuffer :: BufSize -> IO Buffer
 getBuffer = mallocBytes
+
+----------------------------------------------------------------
+
+type LoggerSet = Array Int Logger
+
+newLoggerSet :: Fd -> BufSize -> IO (Array Int Logger)
+newLoggerSet fd size = do
+    n <- getNumCapabilities
+    loggers <- replicateM n $ newLogger fd size
+    return $ listArray (0,n-1) loggers
+
+getLogger :: LoggerSet -> IO Logger
+getLogger loggerset = do
+    (i, _) <- myThreadId >>= threadCapability
+    return $! loggerset ! i
+
+pushLogMsg' :: LoggerSet -> LogMsg -> IO ()
+pushLogMsg' loggerset logmsg = do
+    logger <- getLogger loggerset
+    pushLogMsg logger logmsg
+
+flushLogMsg' :: LoggerSet -> IO ()
+flushLogMsg' loggerset = do
+    n <- getNumCapabilities
+    mapM_ flushIt [0..n-1]
+  where
+    flushIt i = flushLogMsg (loggerset ! i)
