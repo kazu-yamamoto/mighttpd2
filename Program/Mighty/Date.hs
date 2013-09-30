@@ -5,12 +5,14 @@
 -- This package provides mechanisms to cache formatted date.
 module Program.Mighty.Date(
   -- * Types
-    DateCacheConf(..)
-  , DateCacheGetter
+    DateCacheGetter
   , DateCacheUpdater
-  , DateCache
   , ZonedDate
+  , GMTDate
+  -- * Cache configuration
+  , DateCacheConf(..)
   , zonedDateCacheConf
+  , gmtDateCacheConf
   -- * Date cacher
   , clockDateCacher
   ) where
@@ -18,6 +20,7 @@ module Program.Mighty.Date(
 import Control.Applicative
 import Data.ByteString (ByteString)
 import Data.IORef
+import Network.HTTP.Date (formatHTTPDate, epochTimeToHTTPDate)
 #if WINDOWS
 import qualified Data.ByteString.Char8 as BS
 import Data.Time
@@ -27,13 +30,20 @@ import Data.UnixTime
 import System.Posix (EpochTime, epochTime)
 #endif
 
+----------------------------------------------------------------
+
 type DateCacheGetter = IO ByteString
 type DateCacheUpdater = IO ()
 
-data DateCache t = DateCache {
-    timeKey :: !t
-  , formattedDate :: !ByteString
-  } deriving (Eq, Show)
+----------------------------------------------------------------
+
+-- | A type for zoned date.
+type ZonedDate = ByteString
+
+-- | A type for GMT date.
+type GMTDate = ByteString
+
+----------------------------------------------------------------
 
 data DateCacheConf t = DateCacheConf {
     -- | A function to get a time. E.g 'epochTime' and 'getCurrentTime'.
@@ -42,10 +52,8 @@ data DateCacheConf t = DateCacheConf {
   , formatDate :: t -> IO ByteString
   }
 
--- | A type for zoned date.
-type ZonedDate = ByteString
-
 #if WINDOWS
+-- | Zoned date cacher using UTC.
 zonedDateCacheConf :: DateCacheConf UTCTime
 zonedDateCacheConf = DateCacheConf {
     getTime = getCurrentTime
@@ -54,12 +62,29 @@ zonedDateCacheConf = DateCacheConf {
       return $ BS.pack $ formatTime defaultTimeLocale "%d/%b/%Y:%T %z" zt
   }
 #else
+-- | Zoned date cacher using UnixTime.
 zonedDateCacheConf :: DateCacheConf EpochTime
 zonedDateCacheConf = DateCacheConf {
     getTime = epochTime
   , formatDate = formatUnixTime "%d/%b/%Y:%T %z" . fromEpochTime
   }
 #endif
+
+-- | GMT date cacher using HTTPDate.
+gmtDateCacheConf :: DateCacheConf EpochTime
+gmtDateCacheConf = DateCacheConf {
+    getTime = epochTime
+  , formatDate = return . formatHTTPDate . epochTimeToHTTPDate
+  }
+
+----------------------------------------------------------------
+
+data DateCache t = DateCache {
+    timeKey :: !t
+  , formattedDate :: !ByteString
+  } deriving (Eq, Show)
+
+----------------------------------------------------------------
 
 newDate :: DateCacheConf t -> t -> IO (DateCache t)
 newDate setting tm = DateCache tm <$> formatDate setting tm
