@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, CPP #-}
+{-# LANGUAGE OverloadedStrings, CPP, BangPatterns #-}
 
 module Server (server, defaultDomain, defaultPort) where
 
@@ -8,14 +8,12 @@ import Control.Exception (try)
 import Control.Monad (void, unless, when)
 import qualified Data.ByteString.Char8 as BS (pack)
 import Network (Socket, sClose)
-import Network.HTTP.Date (formatHTTPDate, epochTimeToHTTPDate)
 import Network.Wai.Application.Classic hiding ((</>), (+++))
 import Network.Wai.Handler.Warp
 import System.Exit (ExitCode(..), exitSuccess)
 import System.IO
 import System.IO.Error (ioeGetErrorString)
-import System.Posix (exitImmediately, Handler(..), epochTime)
-import System.Posix (getProcessID, setFileMode)
+import System.Posix (exitImmediately, Handler(..), getProcessID, setFileMode)
 #ifdef REV_PROXY
 import qualified Network.HTTP.Conduit as H
 #endif
@@ -26,10 +24,6 @@ import Network.Wai.Handler.WarpTLS
 import Program.Mighty
 
 import WaiApp
-
-----------------------------------------------------------------
-
-data Service = HttpOnly Socket | HttpsOnly Socket | HttpAndHttps Socket Socket
 
 ----------------------------------------------------------------
 
@@ -48,39 +42,34 @@ openFileNumber = 10000
 oneSecond :: Int
 oneSecond = 1000000
 
+longTimerInterval :: Int
+longTimerInterval = 10
+
 logBufferSize :: Int
 logBufferSize = 4 * 1024 * 10
 
-----------------------------------------------------------------
-
-#ifdef REV_PROXY
-type ConnPool = H.Manager
-#else
-type ConnPool = ()
-#endif
+managerNumber :: Int
+managerNumber = 1024 -- FIXME
 
 ----------------------------------------------------------------
 
-server :: Option -> RouteDB -> Reporter -> IO ()
-server opt route rpt = reportDo rpt $ do
+server :: Option -> Reporter -> RouteDB -> IO ()
+server opt rpt route = reportDo rpt $ do
     unlimit openFileNumber
     svc <- openService opt
     unless debug writePidFile
+    setGroupUser (opt_user opt) (opt_group opt)
     logCheck logtype
     stt <- initStater
-    (lgr,flusher,updater) <- initLogger FromSocket logtype -- FIXME
-    -- killed by signal
-    setGroupUser (opt_user opt) (opt_group opt) -- don't change the user of the master process
-    (getInfo, _fixme) <- fileCacheInit
-#ifdef REV_PROXY
-    mgr <- H.newManager H.def { H.managerConnCount = 1024 } -- FIXME
-#else
-    let mgr = ()
-#endif
-    setHandlers opt rpt svc stt lgr getInfo mgr
+    (lgr,flusher,zupdater) <- initLogger FromSocket logtype
+    (gdater,gupdater) <- clockDateCacher gmtDateCacheConf
+    (getInfo,cleaner) <- fileCacheInit
+    mgr <- getManager
+    let mighty = reload opt rpt svc stt lgr getInfo mgr gdater
+    setHandlers opt rpt svc stt mighty
     report rpt "Worker Mighty started"
-    void . forkIO $ reload opt route svc rpt stt lgr getInfo mgr -- FIXME
-    mainLoop rpt stt flusher
+    void . forkIO $ mighty route
+    mainLoop rpt stt cleaner flusher zupdater gupdater 0
   where
     debug = opt_debug_mode opt
     pidfile = opt_pid_file opt
@@ -98,8 +87,8 @@ server opt route rpt = reportDo rpt $ do
       | debug                 = LogStdout logBufferSize
       | otherwise             = LogFile logspec logBufferSize
 
-setHandlers :: Option -> Reporter -> Service -> Stater -> ApacheLogger -> (Path -> IO FileInfo) -> ConnPool -> IO ()
-setHandlers opt rpt svc stt lgr getInfo mgr = do
+setHandlers :: Option -> Reporter -> Service -> Stater -> Mighty -> IO ()
+setHandlers opt rpt svc stt mighty = do
     setHandler sigStop   stopHandler
     setHandler sigRetire retireHandler
     setHandler sigInfo   infoHandler
@@ -108,12 +97,13 @@ setHandlers opt rpt svc stt lgr getInfo mgr = do
     stopHandler = Catch $ do
         report rpt "Worker Mighty finished"
         finReporter rpt
---        finLogger lgr -- FIXME
         closeService svc
+--        finLogger lgr -- flush and close FIXME
         exitImmediately ExitSuccess
     retireHandler = Catch $ ifWarpThreadsAreActive stt $ do
         report rpt "Worker Mighty retiring"
         closeService svc
+--        finLogger lgr -- flush and close FIXME
         goRetiring stt
     infoHandler = Catch $ do
         i <- bshow <$> getConnectionCounter stt
@@ -122,11 +112,13 @@ setHandlers opt rpt svc stt lgr getInfo mgr = do
     reloadHandler = Catch $ ifWarpThreadsAreActive stt $
         ifRouteFileIsValid rpt opt $ \newroute -> do
             report rpt "Worker Mighty reloaded"
-            void . forkIO $ reload opt newroute svc rpt stt lgr getInfo mgr
+            void . forkIO $ mighty newroute
 
 ----------------------------------------------------------------
 
-ifRouteFileIsValid :: Reporter -> Option -> (RouteDB -> IO ()) -> IO ()
+type Mighty = RouteDB -> IO ()
+
+ifRouteFileIsValid :: Reporter -> Option -> Mighty -> IO ()
 ifRouteFileIsValid rpt opt act = case opt_routing_file opt of
     Nothing    -> return ()
     Just rfile -> try (parseRoute rfile defaultDomain defaultPort) >>= either reportError act
@@ -135,17 +127,15 @@ ifRouteFileIsValid rpt opt act = case opt_routing_file opt of
 
 ----------------------------------------------------------------
 
-reload :: Option -> RouteDB -> Service
-       -> Reporter -> Stater -> ApacheLogger
-       -> (Path -> IO FileInfo) -> ConnPool
-       -> IO ()
-reload opt route svc rpt stt lgr getInfo _mgr = reportDo rpt $ do
+reload :: Option -> Reporter -> Service -> Stater
+       -> ApacheLogger -> GetInfo -> ConnPool -> DateCacheGetter
+       -> Mighty
+reload opt rpt svc stt lgr getInfo _mgr gdater route = reportDo rpt $ do
     setMyWarpThreadId stt
-    zdater <- initZoneDater -- FIXME
 #ifdef REV_PROXY
-    let app req = fileCgiApp (cspec zdater) filespec cgispec revproxyspec route req
+    let app req = fileCgiApp (cspec gdater) filespec cgispec revproxyspec route req
 #else
-    let app req = fileCgiApp (cspec zdater) filespec cgispec route req
+    let app req = fileCgiApp (cspec gdater) filespec cgispec route req
 #endif
     case svc of
         HttpOnly s  -> runSettingsSocket setting s app
@@ -171,10 +161,10 @@ reload opt route svc rpt stt lgr getInfo _mgr = reportDo rpt $ do
       , settingsResourceTPerRequest = False
       }
     serverName = BS.pack $ opt_server_name opt
-    cspec zdater = ClassicAppSpec {
+    cspec dtr = ClassicAppSpec {
         softwareName = serverName
       , logger = lgr
-      , dater = zdater
+      , dater  = dtr
       , statusFileDir = fromString $ opt_status_file_dir opt
       }
     filespec = FileAppSpec {
@@ -184,10 +174,6 @@ reload opt route svc rpt stt lgr getInfo _mgr = reportDo rpt $ do
       }
     cgispec = CgiAppSpec {
         indexCgi = "index.cgi"
-      }
-    initZoneDater = fst <$> clockDateCacher DateCacheConf {
-        getTime = epochTime
-      , formatDate = return . formatHTTPDate . epochTimeToHTTPDate
       }
 #ifdef REV_PROXY
     revproxyspec = RevProxyAppSpec {
@@ -200,6 +186,35 @@ reload opt route svc rpt stt lgr getInfo _mgr = reportDo rpt $ do
       , keyFile  = opt_tls_key_file opt
       }
 #endif
+
+----------------------------------------------------------------
+
+-- FIXME log controller should be implemented here
+mainLoop :: Reporter -> Stater -> RemoveInfo -> LogFlusher
+         -> DateCacheUpdater -> DateCacheUpdater -> Int -> IO ()
+mainLoop rpt stt cleaner flusher zupdater gupdater sec = do
+    threadDelay oneSecond
+    retiring <- isRetiring stt
+    counter <- getConnectionCounter stt
+    if retiring && counter == 0 then do
+        report rpt "Worker Mighty retired"
+        finReporter rpt
+        flusher
+        exitSuccess
+      else do
+        zupdater
+        gupdater
+        let longTimer = sec == longTimerInterval
+        when longTimer $ do
+            flusher
+            cleaner
+            -- rotator -- FIXME
+        let !next = if longTimer then 0 else sec + 1
+        mainLoop rpt stt cleaner flusher zupdater gupdater next
+
+----------------------------------------------------------------
+
+data Service = HttpOnly Socket | HttpsOnly Socket | HttpAndHttps Socket Socket
 
 ----------------------------------------------------------------
 
@@ -235,19 +250,17 @@ closeService (HttpOnly s) = sClose s
 closeService (HttpsOnly s) = sClose s
 closeService (HttpAndHttps s1 s2) = sClose s1 >> sClose s2
 
-
 ----------------------------------------------------------------
 
--- FIXME log controller should be implemented here
-mainLoop :: Reporter -> Stater -> LogFlusher -> IO ()
-mainLoop rpt stt flusher = do
-    threadDelay oneSecond
-    retiring <- isRetiring stt
-    counter <- getConnectionCounter stt
-    if retiring && counter == 0 then do
-        report rpt "Worker Mighty retired"
-        finReporter rpt
-        flusher
-        exitSuccess
-      else
-        mainLoop rpt stt flusher
+#ifdef REV_PROXY
+type ConnPool = H.Manager
+#else
+type ConnPool = ()
+#endif
+
+getManager :: IO H.Manager
+#ifdef REV_PROXY
+getManager = H.newManager H.def { H.managerConnCount = managerNumber }
+#else
+getManager = return ()
+#endif

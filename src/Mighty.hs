@@ -32,10 +32,11 @@ main = do
     checkTLS opt
     let reportFile = reportFileName opt
     rpt <- initReporter reportFile >>= checkReporter reportFile
+    let run = server opt rpt route
     if opt_debug_mode opt then
-        server opt route rpt
+        run
       else
-        background opt $ server opt route rpt
+        background opt run
   where
     getOptRoute = getArgs >>= eachCase
     svrnm = programName ++ "/" ++ programVersion
