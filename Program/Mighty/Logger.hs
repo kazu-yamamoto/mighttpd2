@@ -48,9 +48,8 @@ stdoutLoggerInit :: IPAddrSource -> BufSize
 stdoutLoggerInit ipsrc size = do
     (dateget, updater) <- clockDateCacher zonedDateCacheConf
     lgr <- newLogger stdOutput size
-    return $! (logger lgr dateget, noFlusher, updater)
+    return $! (logger lgr dateget, flushLogMsg lgr, updater)
   where
-    noFlusher = return ()
     logger lgr dateget req st mlen = do
         zdata <- dateget
         pushLogMsg lgr (apacheLogMsg ipsrc zdata req st mlen)
@@ -63,9 +62,8 @@ fileLoggerInit ipsrc spec size = do
     (dateget, updater) <- clockDateCacher zonedDateCacheConf
     fd <- logOpen (log_file spec)
     lgr <- newLogger fd size
-    return $! (logger lgr dateget, noFlusher, updater)
+    return $! (logger lgr dateget, flushLogMsg lgr, updater)
   where
-    noFlusher = return ()
     logger lgr dateget req st mlen = do
         zdata <- dateget
         pushLogMsg lgr (apacheLogMsg ipsrc zdata req st mlen)
