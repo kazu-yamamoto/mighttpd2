@@ -67,12 +67,6 @@ main = do
       | otherwise       = do
           dir <- getCurrentDirectory
           return $ dir </> normalise file
-    reportFileName opt
-      | port == 80 = rfile
-      | otherwise  = rfile ++ show port
-      where
-        rfile = opt_report_file opt
-        port = opt_port opt
     checkReporter _          (Right rpt) = return rpt
     checkReporter reportFile (Left e)    = do
         hPutStrLn stderr $ reportFile ++ " is not writable"
@@ -91,8 +85,16 @@ main = do
 background :: Option -> IO () -> IO ()
 background opt svr = do
     putStrLn $ "Serving on port " ++ show port ++ " and detaching this terminal..."
-    putStrLn $ "(If errors occur, they will be written in \"" ++ opt_report_file opt ++ "\".)"
+    putStrLn $ "(If errors occur, they will be written in \"" ++ reportFileName opt ++ "\".)"
     hFlush stdout
     daemonize svr
   where
+    port = opt_port opt
+
+reportFileName :: Option -> FilePath
+reportFileName opt
+  | port == 80 = rfile
+  | otherwise  = rfile ++ show port
+  where
+    rfile = opt_report_file opt
     port = opt_port opt
