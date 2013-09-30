@@ -67,7 +67,7 @@ server opt rpt route = reportDo rpt $ do
     mgr <- getManager
     let mighty = reload opt rpt svc stt lgr getInfo mgr gdater
     setHandlers opt rpt svc stt mighty
-    report rpt "Worker Mighty started"
+    report rpt "Mighty started"
     void . forkIO $ mighty route
     mainLoop rpt stt cleaner flusher zupdater gupdater 0
   where
@@ -95,13 +95,13 @@ setHandlers opt rpt svc stt mighty = do
     setHandler sigReload reloadHandler
   where
     stopHandler = Catch $ do
-        report rpt "Worker Mighty finished"
+        report rpt "Mighty finished"
         finReporter rpt
         closeService svc
 --        finLogger lgr -- flush and close FIXME
         exitImmediately ExitSuccess
     retireHandler = Catch $ ifWarpThreadsAreActive stt $ do
-        report rpt "Worker Mighty retiring"
+        report rpt "Mighty retiring"
         closeService svc
 --        finLogger lgr -- flush and close FIXME
         goRetiring stt
@@ -111,7 +111,7 @@ setHandlers opt rpt svc stt mighty = do
         report rpt $ status +++ ": # of connections = " +++ i
     reloadHandler = Catch $ ifWarpThreadsAreActive stt $
         ifRouteFileIsValid rpt opt $ \newroute -> do
-            report rpt "Worker Mighty reloaded"
+            report rpt "Mighty reloaded"
             void . forkIO $ mighty newroute
 
 ----------------------------------------------------------------
@@ -197,7 +197,7 @@ mainLoop rpt stt cleaner flusher zupdater gupdater sec = do
     retiring <- isRetiring stt
     counter <- getConnectionCounter stt
     if retiring && counter == 0 then do
-        report rpt "Worker Mighty retired"
+        report rpt "Mighty retired"
         finReporter rpt
         flusher
         exitSuccess
