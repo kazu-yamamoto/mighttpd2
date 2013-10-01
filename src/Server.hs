@@ -14,6 +14,7 @@ import System.Exit (ExitCode(..), exitSuccess)
 import System.IO
 import System.IO.Error (ioeGetErrorString)
 import System.Posix (exitImmediately, Handler(..), getProcessID, setFileMode)
+
 #ifdef REV_PROXY
 import qualified Network.HTTP.Conduit as H
 #endif
@@ -61,12 +62,13 @@ server opt rpt route = reportDo rpt $ do
     setGroupUser (opt_user opt) (opt_group opt)
     logCheck logtype
     stt <- initStater
-    (lgr,flusher,zupdater) <- initLogger FromSocket logtype
     (gdater,gupdater) <- clockDateCacher gmtDateCacheConf
+    (zdater,zupdater) <- clockDateCacher zonedDateCacheConf
+    (lgr,flusher) <- initLogger FromSocket logtype zdater
     (getInfo,cleaner) <- fileCacheInit
     mgr <- getManager
     let mighty = reload opt rpt svc stt lgr getInfo mgr gdater
-    setHandlers opt rpt svc stt mighty
+    setHandlers opt rpt svc stt flusher mighty
     report rpt "Mighty started"
     void . forkIO $ mighty route
     mainLoop rpt stt cleaner flusher zupdater gupdater 0
@@ -87,8 +89,8 @@ server opt rpt route = reportDo rpt $ do
       | debug                 = LogStdout logBufferSize
       | otherwise             = LogFile logspec logBufferSize
 
-setHandlers :: Option -> Reporter -> Service -> Stater -> Mighty -> IO ()
-setHandlers opt rpt svc stt mighty = do
+setHandlers :: Option -> Reporter -> Service -> Stater -> LogFlusher -> Mighty -> IO ()
+setHandlers opt rpt svc stt flusher mighty = do
     setHandler sigStop   stopHandler
     setHandler sigRetire retireHandler
     setHandler sigInfo   infoHandler
@@ -98,12 +100,12 @@ setHandlers opt rpt svc stt mighty = do
         report rpt "Mighty finished"
         finReporter rpt
         closeService svc
---        finLogger lgr -- flush and close FIXME
+        flusher -- FIXME and close?
         exitImmediately ExitSuccess
     retireHandler = Catch $ ifWarpThreadsAreActive stt $ do
         report rpt "Mighty retiring"
         closeService svc
---        finLogger lgr -- flush and close FIXME
+        flusher -- FIXME and close?
         goRetiring stt
     infoHandler = Catch $ do
         i <- bshow <$> getConnectionCounter stt
@@ -206,7 +208,7 @@ mainLoop rpt stt cleaner flusher zupdater gupdater sec = do
         gupdater
         let longTimer = sec == longTimerInterval
         when longTimer $ do
-            flusher
+            flusher -- FIXME for stdout
             cleaner
             -- rotator -- FIXME
         let !next = if longTimer then 0 else sec + 1

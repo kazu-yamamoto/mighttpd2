@@ -8,9 +8,14 @@ module Program.Mighty.Logger (
   , logCheck
   ) where
 
+import Control.Applicative ((<$>))
+import Control.Exception (handle,SomeException(..))
+import Control.Monad (when)
 import Network.HTTP.Types
 import Network.Wai
 import System.Posix.IO
+import System.Posix.Types (Fd)
+import System.Posix.Files (getFileStatus, fileSize)
 
 import Program.Mighty.Apache
 import Program.Mighty.Date
@@ -31,63 +36,57 @@ data LogType = LogNone
 
 -- |
 -- Creating 'ApacheLogger' according to 'LogType'.
-initLogger :: IPAddrSource -> LogType -> IO (ApacheLogger, LogFlusher, DateCacheUpdater)
-initLogger _     LogNone             = noLoggerInit
-initLogger ipsrc (LogStdout size)    = stdoutLoggerInit ipsrc size
-initLogger ipsrc (LogFile spec size) = fileLoggerInit ipsrc spec size
+initLogger :: IPAddrSource -> LogType -> DateCacheGetter -> IO (ApacheLogger, LogFlusher)
+initLogger _     LogNone             _       = noLoggerInit
+initLogger ipsrc (LogStdout size)    dateget = stdoutLoggerInit ipsrc size dateget
+initLogger ipsrc (LogFile spec size) dateget = fileLoggerInit ipsrc spec size dateget
 
-noLoggerInit :: IO (ApacheLogger, LogFlusher, DateCacheUpdater)
-noLoggerInit = return $! (noLogger, noFlusher, noUpdater)
+----------------------------------------------------------------
+
+noLoggerInit :: IO (ApacheLogger, LogFlusher)
+noLoggerInit = return $! (noLogger, noFlusher)
   where
     noLogger _ _ _ = return ()
     noFlusher = return ()
-    noUpdater = return ()
 
-stdoutLoggerInit :: IPAddrSource -> BufSize
-                 -> IO (ApacheLogger, LogFlusher, DateCacheUpdater)
-stdoutLoggerInit ipsrc size = do
-    (dateget, updater) <- clockDateCacher zonedDateCacheConf
-    lgrset <- newLoggerSet stdOutput size
-    return $! (logger lgrset dateget, flushLogMsg lgrset, updater)
-  where
-    logger lgr dateget req st mlen = do
-        zdata <- dateget
-        pushLogMsg lgr (apacheLogMsg ipsrc zdata req st mlen)
+stdoutLoggerInit :: IPAddrSource -> BufSize -> DateCacheGetter
+                 -> IO (ApacheLogger, LogFlusher)
+stdoutLoggerInit ipsrc size dateget = loggerInit ipsrc size dateget stdOutput
+
+fileLoggerInit :: IPAddrSource -> FileLogSpec -> BufSize -> DateCacheGetter
+               -> IO (ApacheLogger, LogFlusher)
+fileLoggerInit ipsrc spec size dateget =
+    logOpen (log_file spec) >>= loggerInit ipsrc size dateget
 
 ----------------------------------------------------------------
 
-fileLoggerInit :: IPAddrSource -> FileLogSpec -> BufSize
-               -> IO (ApacheLogger, LogFlusher, DateCacheUpdater)
-fileLoggerInit ipsrc spec size = do
-    (dateget, updater) <- clockDateCacher zonedDateCacheConf
-    fd <- logOpen (log_file spec)
+loggerInit :: IPAddrSource -> BufSize -> DateCacheGetter -> Fd
+           -> IO (ApacheLogger, LogFlusher)
+loggerInit ipsrc size dateget fd = do
     lgrset <- newLoggerSet fd size
-    return $! (logger lgrset dateget, flushLogMsg lgrset, updater)
-  where
-    logger lgrset dateget req st mlen = do
-        zdata <- dateget
-        pushLogMsg lgrset (apacheLogMsg ipsrc zdata req st mlen)
+    return $! (apache lgrset ipsrc dateget, flushLogMsg lgrset)
+
+apache :: LoggerSet -> IPAddrSource -> DateCacheGetter -> ApacheLogger
+apache lgrset ipsrc dateget req st mlen = do
+    zdata <- dateget
+    pushLogMsg lgrset (apacheLogMsg ipsrc zdata req st mlen)
 
 ----------------------------------------------------------------
 
-{-
--- FIXME
-fileLoggerController :: FileLogSpec -> IO ()
-fileLoggerController spec = forever $ do
-    isOver <- over
-    when isOver $ rotate spec
-    threadDelay 10000000
+rotater :: LoggerSet -> FileLogSpec -> IO ()
+rotater lgrset spec = do
+    over <- isOver
+    when over $ do
+        rotate spec
+        logOpen (log_file spec) >>= renewLoggerSet lgrset
   where
     file = log_file spec
-    over = handle handler $ do
+    isOver = handle (\(SomeException _) -> return False) $ do
         siz <- fromIntegral . fileSize <$> getFileStatus file
         if siz > log_file_size spec then
             return True
           else
             return False
-    handler :: SomeException -> IO Bool
-    handler _ = return False
--}
 
 ----------------------------------------------------------------
 
