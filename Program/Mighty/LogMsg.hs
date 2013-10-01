@@ -86,30 +86,32 @@ write fd buf len' = loop buf (fromIntegral len')
 
 ----------------------------------------------------------------
 
-data Logger = Logger Buffer !BufSize (IORef LogMsg)
+data Logger = Logger (MVar Buffer) !BufSize (IORef LogMsg)
 
 newLogger :: BufSize -> IO Logger
 newLogger size = do
     buf <- getBuffer size
+    mbuf <- newMVar buf
     lref <- newIORef mempty
-    return $ Logger buf size lref
+    return $ Logger mbuf size lref
 
 pushLog :: Fd -> Logger -> LogMsg -> IO ()
-pushLog fd logger@(Logger buf size lref) nlogmsg@(LogMsg nlen _) = do
-    needFlush <- atomicModifyIORef lref check
+pushLog fd logger@(Logger  _ size ref) nlogmsg@(LogMsg nlen _) = do
+    needFlush <- atomicModifyIORef ref check
     when needFlush $ do
-        flushLog fd buf size lref
-        -- Assuming that the buffer is never filled up during flushing
+        flushLog fd logger
         pushLog fd logger nlogmsg
   where
     check ologmsg@(LogMsg olen _)
       | size < olen + nlen = (ologmsg, True)
       | otherwise          = (ologmsg <> nlogmsg, False)
 
-flushLog :: Fd -> Buffer -> BufSize -> IORef LogMsg -> IO ()
-flushLog fd buf size lref = do
+flushLog :: Fd -> Logger -> IO ()
+flushLog fd (Logger mbuf size lref) = do
     logmsg <- atomicModifyIORef lref (\old -> (mempty, old))
+    buf <- takeMVar mbuf
     writeLogMsg fd buf size logmsg
+    putMVar mbuf buf
 
 ----------------------------------------------------------------
 
@@ -123,7 +125,7 @@ getBuffer = mallocBytes
 
 ----------------------------------------------------------------
 
-data LoggerSet = LoggerSet (IORef Fd) (Array Int Logger) Buffer BufSize
+data LoggerSet = LoggerSet (IORef Fd) (Array Int Logger)
 
 newLoggerSet :: Fd -> BufSize -> IO LoggerSet
 newLoggerSet fd size = do
@@ -131,30 +133,25 @@ newLoggerSet fd size = do
     loggers <- replicateM n $ newLogger size
     let arr = listArray (0,n-1) loggers
     fref <- newIORef fd
-    buf <- getBuffer size
-    return $ LoggerSet fref arr buf size
+    return $ LoggerSet fref arr
 
 pushLogMsg :: LoggerSet -> LogMsg -> IO ()
-pushLogMsg (LoggerSet fref arr _ _) logmsg = do
+pushLogMsg (LoggerSet fref arr) logmsg = do
     (i, _) <- myThreadId >>= threadCapability
     let logger = arr ! i
     fd <- readIORef fref
     pushLog fd logger logmsg
 
--- 'buf' is critical section.
--- It is assumed that this code is called after enough interval
 flushLogMsg :: LoggerSet -> IO ()
-flushLogMsg (LoggerSet fref arr buf size) = do
+flushLogMsg (LoggerSet fref arr) = do
     n <- getNumCapabilities
     fd <- readIORef fref
     mapM_ (flushIt fd) [0..n-1]
   where
-    flushIt fd i = do
-        let Logger _ _ lref = arr ! i
-        flushLog fd buf size lref
+    flushIt fd i = flushLog fd (arr ! i)
 
 -- | Renewing 'Fd' in 'LoggerSet'. Old 'Fd' is closed.
 renewLoggerSet :: LoggerSet -> Fd -> IO ()
-renewLoggerSet (LoggerSet fref _ _ _) newfd = do
+renewLoggerSet (LoggerSet fref _) newfd = do
     oldfd <- atomicModifyIORef fref (\fd -> (newfd, fd))
     closeFd oldfd
