@@ -8,6 +8,7 @@ module Program.Mighty.LogMsg (
   , BufSize
   , LoggerSet
   , newLoggerSet
+  , renewLoggerSet
   , pushLogMsg
   , flushLogMsg
   -- * Utilities
@@ -149,9 +150,7 @@ flushLogMsg (LoggerSet fref arr) = do
   where
     flushIt fd i = flushLog fd (arr ! i)
 
-{- FIXME
-renewLogger :: Logger -> Fd -> IO ()
-renewLogger (Logger fref _ _ _) newfd = do
+renewLoggerSet :: LoggerSet -> Fd -> IO ()
+renewLoggerSet (LoggerSet fref _) newfd = do
     oldfd <- atomicModifyIORef fref (\fd -> (newfd, fd))
     closeFd oldfd
--}
