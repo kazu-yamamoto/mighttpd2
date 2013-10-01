@@ -150,6 +150,7 @@ flushLogMsg (LoggerSet fref arr) = do
   where
     flushIt fd i = flushLog fd (arr ! i)
 
+-- | Renewing 'Fd' in 'LoggerSet'. Old 'Fd' is closed.
 renewLoggerSet :: LoggerSet -> Fd -> IO ()
 renewLoggerSet (LoggerSet fref _) newfd = do
     oldfd <- atomicModifyIORef fref (\fd -> (newfd, fd))
