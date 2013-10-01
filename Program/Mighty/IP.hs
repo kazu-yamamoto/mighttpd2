@@ -9,7 +9,7 @@ import System.ByteOrder
 import Text.Printf
 
 -- A type for IP address in numeric string representation.
-type NumericAddress = String
+type NumericAddress = String -- FIXME we should use ByteString
 
 showIPv4 :: Word32 -> Bool -> NumericAddress
 showIPv4 w32 little
@@ -39,7 +39,6 @@ showIPv6 (w1,w2,w3,w4) =
         h2 = w .&. 0x0000ffff
 -- | Convert 'SockAddr' to 'NumericAddress'. If the address is
 --   an IPv4-embedded IPv6 address, the IPv4 is extracted.
---   FIXME -- ByteString
 showSockAddr :: SockAddr -> NumericAddress
 -- HostAddr is network byte order.
 showSockAddr (SockAddrInet _ addr4)                       = showIPv4 addr4 (byteOrder == LittleEndian)
