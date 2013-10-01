@@ -3,6 +3,7 @@ module Program.Mighty.Logger (
     LogType(..)
   , ApacheLogger
   , LogFlusher
+  , LogRotator
   -- * Utilities
   , initLogger
   , logCheck
@@ -13,9 +14,8 @@ import Control.Exception (handle,SomeException(..))
 import Control.Monad (when)
 import Network.HTTP.Types
 import Network.Wai
-import System.Posix.IO
-import System.Posix.Types (Fd)
 import System.Posix.Files (getFileStatus, fileSize)
+import System.Posix.IO
 
 import Program.Mighty.Apache
 import Program.Mighty.Date
@@ -27,6 +27,7 @@ import Program.Mighty.LogMsg
 type ApacheLogger = Request -> Status -> Maybe Integer -> IO ()
 
 type LogFlusher = IO ()
+type LogRotator = IO ()
 
 data LogType = LogNone
              | LogStdout BufSize
@@ -36,35 +37,40 @@ data LogType = LogNone
 
 -- |
 -- Creating 'ApacheLogger' according to 'LogType'.
-initLogger :: IPAddrSource -> LogType -> DateCacheGetter -> IO (ApacheLogger, LogFlusher)
+initLogger :: IPAddrSource -> LogType -> DateCacheGetter -> IO (ApacheLogger, LogFlusher, LogRotator)
 initLogger _     LogNone             _       = noLoggerInit
 initLogger ipsrc (LogStdout size)    dateget = stdoutLoggerInit ipsrc size dateget
 initLogger ipsrc (LogFile spec size) dateget = fileLoggerInit ipsrc spec size dateget
 
 ----------------------------------------------------------------
 
-noLoggerInit :: IO (ApacheLogger, LogFlusher)
-noLoggerInit = return $! (noLogger, noFlusher)
+noLoggerInit :: IO (ApacheLogger, LogFlusher, LogRotator)
+noLoggerInit = return $! (noLogger, noFlusher, noRotator)
   where
     noLogger _ _ _ = return ()
     noFlusher = return ()
+    noRotator = return ()
 
 stdoutLoggerInit :: IPAddrSource -> BufSize -> DateCacheGetter
-                 -> IO (ApacheLogger, LogFlusher)
-stdoutLoggerInit ipsrc size dateget = loggerInit ipsrc size dateget stdOutput
+                 -> IO (ApacheLogger, LogFlusher, LogRotator)
+stdoutLoggerInit ipsrc size dateget = do
+    lgrset <- newLoggerSet stdOutput size
+    let logger = apache lgrset ipsrc dateget
+        flusher = flushLogMsg lgrset
+        noRotater = return ()
+    return $! (logger, flusher, noRotater)
 
 fileLoggerInit :: IPAddrSource -> FileLogSpec -> BufSize -> DateCacheGetter
-               -> IO (ApacheLogger, LogFlusher)
-fileLoggerInit ipsrc spec size dateget =
-    logOpen (log_file spec) >>= loggerInit ipsrc size dateget
+               -> IO (ApacheLogger, LogFlusher, LogRotator)
+fileLoggerInit ipsrc spec size dateget = do
+    fd <- logOpen (log_file spec)
+    lgrset <- newLoggerSet fd size
+    let logger = apache lgrset ipsrc dateget
+        flusher = flushLogMsg lgrset
+        rotator = logRotater lgrset spec
+    return $! (logger, flusher, rotator)
 
 ----------------------------------------------------------------
-
-loggerInit :: IPAddrSource -> BufSize -> DateCacheGetter -> Fd
-           -> IO (ApacheLogger, LogFlusher)
-loggerInit ipsrc size dateget fd = do
-    lgrset <- newLoggerSet fd size
-    return $! (apache lgrset ipsrc dateget, flushLogMsg lgrset)
 
 apache :: LoggerSet -> IPAddrSource -> DateCacheGetter -> ApacheLogger
 apache lgrset ipsrc dateget req st mlen = do
@@ -73,8 +79,8 @@ apache lgrset ipsrc dateget req st mlen = do
 
 ----------------------------------------------------------------
 
-rotater :: LoggerSet -> FileLogSpec -> IO ()
-rotater lgrset spec = do
+logRotater :: LoggerSet -> FileLogSpec -> IO ()
+logRotater lgrset spec = do
     over <- isOver
     when over $ do
         rotate spec

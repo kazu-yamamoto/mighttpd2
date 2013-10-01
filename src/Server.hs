@@ -64,14 +64,14 @@ server opt rpt route = reportDo rpt $ do
     stt <- initStater
     (gdater,gupdater) <- clockDateCacher gmtDateCacheConf
     (zdater,zupdater) <- clockDateCacher zonedDateCacheConf
-    (lgr,flusher) <- initLogger FromSocket logtype zdater
+    (lgr,flusher,rotator) <- initLogger FromSocket logtype zdater
     (getInfo,cleaner) <- fileCacheInit
     mgr <- getManager
     let mighty = reload opt rpt svc stt lgr getInfo mgr gdater
     setHandlers opt rpt svc stt flusher mighty
     report rpt "Mighty started"
     void . forkIO $ mighty route
-    mainLoop rpt stt cleaner flusher zupdater gupdater 0
+    mainLoop rpt stt cleaner flusher rotator zupdater gupdater 0
   where
     debug = opt_debug_mode opt
     pidfile = opt_pid_file opt
@@ -192,9 +192,11 @@ reload opt rpt svc stt lgr getInfo _mgr gdater route = reportDo rpt $ do
 ----------------------------------------------------------------
 
 -- FIXME log controller should be implemented here
-mainLoop :: Reporter -> Stater -> RemoveInfo -> LogFlusher
-         -> DateCacheUpdater -> DateCacheUpdater -> Int -> IO ()
-mainLoop rpt stt cleaner flusher zupdater gupdater sec = do
+mainLoop :: Reporter -> Stater -> RemoveInfo
+         -> LogFlusher -> LogRotator
+         -> DateCacheUpdater -> DateCacheUpdater
+         -> Int -> IO ()
+mainLoop rpt stt cleaner flusher rotator zupdater gupdater sec = do
     threadDelay oneSecond
     retiring <- isRetiring stt
     counter <- getConnectionCounter stt
@@ -210,9 +212,9 @@ mainLoop rpt stt cleaner flusher zupdater gupdater sec = do
         when longTimer $ do
             flusher -- FIXME for stdout
             cleaner
-            -- rotator -- FIXME
+            rotator
         let !next = if longTimer then 0 else sec + 1
-        mainLoop rpt stt cleaner flusher zupdater gupdater next
+        mainLoop rpt stt cleaner flusher rotator zupdater gupdater next
 
 ----------------------------------------------------------------
 
