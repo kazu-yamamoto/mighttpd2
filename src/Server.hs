@@ -191,7 +191,6 @@ reload opt rpt svc stt lgr getInfo _mgr gdater route = reportDo rpt $ do
 
 ----------------------------------------------------------------
 
--- FIXME log controller should be implemented here
 mainLoop :: Reporter -> Stater -> RemoveInfo
          -> LogFlusher -> LogRotator
          -> DateCacheUpdater -> DateCacheUpdater
