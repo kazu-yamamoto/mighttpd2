@@ -109,6 +109,12 @@ pushLog fd logger@(Logger  _ size ref) nlogmsg@(LogMsg nlen _) = do
 flushLog :: Fd -> Logger -> IO ()
 flushLog fd (Logger mbuf size lref) = do
     logmsg <- atomicModifyIORef lref (\old -> (mempty, old))
+    -- If a special buffer is prepared for flusher, this MVar could
+    -- be removed. But such a code does not contribute logging speed
+    -- according to experiment. And even with the special buffer,
+    -- there is no grantee that this function is exclusively called
+    -- for a buffer. So, we use MVar here.
+    -- This is safe and speed penalty can be ignored.
     buf <- takeMVar mbuf
     writeLogMsg fd buf size logmsg
     putMVar mbuf buf
