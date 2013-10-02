@@ -13,6 +13,7 @@ module Program.Mighty.Report (
 import Control.Applicative
 import Control.Exception
 import qualified Control.Exception as E (catch)
+import Control.Monad
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
 import Data.UnixTime
@@ -24,21 +25,27 @@ import System.Posix (getProcessID)
 
 import Program.Mighty.ByteString
 
-newtype Reporter = Reporter Handle
+data Method = FileOnly | FileAndStdout deriving Eq
+data Reporter = Reporter Method Handle
 
-initReporter :: FilePath -> IO (Either SomeException Reporter)
-initReporter reportFile = try $ Reporter <$> openFile reportFile AppendMode
+initReporter :: Bool -> FilePath -> IO (Either SomeException Reporter)
+initReporter debug reportFile = try $ Reporter method <$> openFile reportFile AppendMode
+  where
+    method
+      | debug     = FileAndStdout
+      | otherwise = FileOnly
 
 finReporter :: Reporter -> IO ()
-finReporter (Reporter rpthdl) = hClose rpthdl
+finReporter (Reporter _ rpthdl) = hClose rpthdl
 
 report :: Reporter -> ByteString -> IO ()
-report (Reporter rpthdl) msg = handle (\(SomeException _) -> return ()) $ do
+report (Reporter method rpthdl) msg = handle (\(SomeException _) -> return ()) $ do
     pid <- BS.pack . show <$> getProcessID
     tm <- getUnixTime >>= formatUnixTime "%d %b %Y %H:%M:%S"
     let logmsg = BS.concat [tm, ": pid = ", pid, ": ", msg, "\n"]
     BS.hPutStr rpthdl logmsg
     hFlush rpthdl
+    when (method == FileAndStdout) $ BS.putStr logmsg
 
 ----------------------------------------------------------------
 
