@@ -71,7 +71,7 @@ server opt rpt route = reportDo rpt $ do
     setHandlers opt rpt svc stt flusher mighty
     report rpt "Mighty started"
     void . forkIO $ mighty route
-    mainLoop rpt stt cleaner flusher rotator zupdater gupdater 0
+    mainLoop rpt stt cleaner flusher debug rotator zupdater gupdater 0
   where
     debug = opt_debug_mode opt
     pidfile = opt_pid_file opt
@@ -192,10 +192,10 @@ reload opt rpt svc stt lgr getInfo _mgr gdater route = reportDo rpt $ do
 ----------------------------------------------------------------
 
 mainLoop :: Reporter -> Stater -> RemoveInfo
-         -> LogFlusher -> LogRotator
+         -> LogFlusher -> Bool ->  LogRotator
          -> DateCacheUpdater -> DateCacheUpdater
          -> Int -> IO ()
-mainLoop rpt stt cleaner flusher rotator zupdater gupdater sec = do
+mainLoop rpt stt cleaner flusher everySecond rotator zupdater gupdater sec = do
     threadDelay oneSecond
     retiring <- isRetiring stt
     counter <- getConnectionCounter stt
@@ -207,13 +207,14 @@ mainLoop rpt stt cleaner flusher rotator zupdater gupdater sec = do
       else do
         zupdater
         gupdater
+        when everySecond $ flusher
         let longTimer = sec == longTimerInterval
         when longTimer $ do
-            flusher -- FIXME for stdout
+            unless everySecond $ flusher
             cleaner
             rotator
         let !next = if longTimer then 0 else sec + 1
-        mainLoop rpt stt cleaner flusher rotator zupdater gupdater next
+        mainLoop rpt stt cleaner flusher everySecond rotator zupdater gupdater next
 
 ----------------------------------------------------------------
 
