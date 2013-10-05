@@ -86,7 +86,7 @@ Executable mighty
                         Utils
                         Paths_mighttpd2
 
-Executable mkindex
+Executable mighty-mkindex
   HS-Source-Dirs:       utils, src
   Main-Is:              mkindex.hs
   GHC-Options:          -Wall
