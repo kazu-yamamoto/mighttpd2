@@ -18,6 +18,7 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
 import Data.UnixTime
 import GHC.IO.Exception (IOErrorType(..))
+import Network.Wai
 import Network.Wai.Handler.Warp (InvalidRequest)
 import System.IO
 import System.IO.Error (ioeGetErrorType)
@@ -50,12 +51,12 @@ report (Reporter method rpthdl) msg = handle (\(SomeException _) -> return ()) $
 ----------------------------------------------------------------
 
 reportDo :: Reporter -> IO () -> IO ()
-reportDo rpt act = act `E.catch` warpHandler rpt
+reportDo rpt act = act `E.catch` warpHandler rpt Nothing
 
 ----------------------------------------------------------------
 
-warpHandler :: Reporter -> SomeException -> IO ()
-warpHandler rpt e = throwIO e `catches` handlers
+warpHandler :: Reporter -> Maybe Request -> SomeException -> IO ()
+warpHandler rpt _ e = throwIO e `catches` handlers
   where
     handlers = [Handler ah, Handler ih, Handler oh, Handler sh]
     ah :: AsyncException -> IO ()
@@ -78,5 +79,5 @@ warpHandler rpt e = throwIO e `catches` handlers
 
 ----------------------------------------------------------------
 
-printStdout :: SomeException -> IO ()
-printStdout x = print x >> hFlush stdout
+printStdout :: Maybe Request -> SomeException -> IO ()
+printStdout _ x = print x >> hFlush stdout
