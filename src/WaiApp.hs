@@ -6,7 +6,8 @@ import Control.Monad.IO.Class (liftIO)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS (isPrefixOf, length)
 import Network.HTTP.Types (preconditionFailed412, movedPermanently301)
-import Network.Wai (Application, serverName, rawPathInfo, responseLBS)
+import Network.Wai (Application, responseLBS)
+import Network.Wai.Internal
 import Network.Wai.Application.Classic
 
 import Program.Mighty
@@ -45,7 +46,8 @@ fileCgiApp cspec filespec cgispec
     _ -> error "never reach"
 #endif
   where
-    mmp = case getBlock (serverName req) um of
+    (host, _) = hostPort (requestHeaders req)
+    mmp = case getBlock host um of
         Nothing  -> Fail
         Just blk -> getRoute (rawPathInfo req) blk
     fastResponse st hdr body = return $ responseLBS st hdr body
