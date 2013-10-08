@@ -104,7 +104,7 @@ Executable mighty
                         WaiApp
                         Paths_mighttpd2
 
-Executable mkindex
+Executable mighty-mkindex
   Default-Language:     Haskell2010
   HS-Source-Dirs:       utils, src
   Main-Is:              mkindex.hs
