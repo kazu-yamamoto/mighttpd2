@@ -160,7 +160,6 @@ reload opt rpt svc stt lgr getInfo _mgr gdater route = reportDo rpt $ do
       , settingsTimeout     = opt_connection_timeout opt
       , settingsHost        = HostAny
       , settingsFdCacheDuration     = opt_fd_cache_duration opt
-      , settingsResourceTPerRequest = False
       }
     serverName = BS.pack $ opt_server_name opt
     cspec dtr = ClassicAppSpec {
