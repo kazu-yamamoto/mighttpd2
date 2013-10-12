@@ -49,8 +49,10 @@ longTimerInterval = 10
 logBufferSize :: Int
 logBufferSize = 4 * 1024 * 10
 
+#ifdef REV_PROXY
 managerNumber :: Int
 managerNumber = 1024 -- FIXME
+#endif
 
 ----------------------------------------------------------------
 
@@ -261,7 +263,7 @@ type ConnPool = H.Manager
 type ConnPool = ()
 #endif
 
-getManager :: IO H.Manager
+getManager :: IO ConnPool
 #ifdef REV_PROXY
 getManager = H.newManager H.def { H.managerConnCount = managerNumber }
 #else
