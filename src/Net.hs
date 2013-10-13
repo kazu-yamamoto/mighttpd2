@@ -3,7 +3,7 @@ module Net (listenSocket) where
 import Control.Exception
 import Network
 import Network.BSD
-import Network.Socket
+import Network.Socket as NS
 
 listenSocket :: String -> IO Socket
 listenSocket serv = do
@@ -25,4 +25,4 @@ listenSocket' addr = bracketOnError setup cleanup $ \sock -> do
     return sock
  where
    setup = socket (addrFamily addr) (addrSocketType addr) (addrProtocol addr)
-   cleanup = sClose
+   cleanup = NS.sClose
