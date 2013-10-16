@@ -76,7 +76,10 @@ server opt rpt route = reportDo rpt $ do
     mainLoop rpt stt cleaner flusher debug rotator zupdater gupdater 0
   where
     debug = opt_debug_mode opt
-    pidfile = opt_pid_file opt
+    port = opt_port opt
+    pidfile
+        | port == 80 = opt_pid_file opt
+        | otherwise  = opt_pid_file opt ++ show port
     writePidFile = do
         pid <- getProcessID
         writeFile pidfile $ show pid ++ "\n"
