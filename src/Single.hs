@@ -54,7 +54,12 @@ single opt route service rpt stt lgr = reportDo rpt $ do
     setHandler sigRetire retireHandler
     setHandler sigInfo   infoHandler
 #ifdef REV_PROXY
-    mgr <- H.newManager H.def { H.managerConnCount = 1024 } -- FIXME
+    mgr <- H.newManager H.def { H.managerConnCount = 1024 -- FIXME
+                              , H.managerResponseTimeout
+                              = maybe (H.managerResponseTimeout H.def)
+                                      (mfilter (> 0) . return)
+                                      (opt_response_timeout opt)
+                              }
 #else
     let mgr = ()
 #endif
