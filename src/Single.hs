@@ -58,7 +58,7 @@ single opt route service rpt stt lgr = reportDo rpt $ do
                               , H.managerResponseTimeout
                               = maybe (H.managerResponseTimeout H.def)
                                       (mfilter (> 0) . return)
-                                      (opt_response_timeout opt)
+                                      (opt_proxy_timeout opt)
                               }
 #else
     let mgr = ()
