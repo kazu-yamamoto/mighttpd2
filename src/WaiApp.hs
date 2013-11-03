@@ -46,7 +46,7 @@ fileCgiApp cspec filespec cgispec
     _ -> error "never reach"
 #endif
   where
-    (host, _) = hostPort (requestHeaders req)
+    (host, _) = hostPort req
     mmp = case getBlock host um of
         Nothing  -> Fail
         Just blk -> getRoute (rawPathInfo req) blk
