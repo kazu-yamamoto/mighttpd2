@@ -5,7 +5,7 @@ module Program.Mighty.Network (
 
 import Control.Exception
 import Control.Monad
-import Network
+import qualified Network as N
 import Network.BSD
 import Network.Socket
 import System.Exit
@@ -36,7 +36,7 @@ listenSocket' addr backlog = bracketOnError setup cleanup $ \sock -> do
     return sock
  where
    setup = socket (addrFamily addr) (addrSocketType addr) (addrProtocol addr)
-   cleanup = sClose
+   cleanup = N.sClose
 
 ----------------------------------------------------------------
 
