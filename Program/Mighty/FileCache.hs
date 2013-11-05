@@ -69,7 +69,7 @@ negative ref path = do
 fileCacheInit :: IO (GetInfo, RemoveInfo)
 fileCacheInit = do
     ref <- newIORef M.empty
-    return $ (fileInfo ref, remover ref)
+    return (fileInfo ref, remover ref)
 
 -- atomicModifyIORef is not necessary here.
 remover :: IORef Cache -> IO ()

@@ -59,11 +59,9 @@ writeLogMsg :: Fd
             -> BufSize
             -> LogMsg
             -> IO ()
-writeLogMsg fd buf size (LogMsg len builder) = do
-    if size < len then
-        error "writeLogMsg"
-      else
-        toBufIOWith buf size (write fd) builder
+writeLogMsg fd buf size (LogMsg len builder)
+  | size < len = error "writeLogMsg"
+  | otherwise  = toBufIOWith buf size (write fd) builder
 
 toBufIOWith :: Buffer -> BufSize -> (Buffer -> Int -> IO a) -> Builder -> IO a
 toBufIOWith buf !size io (Builder build) = do
@@ -81,8 +79,8 @@ write fd buf len' = loop buf (fromIntegral len')
   where
     loop bf !len = do
         written <- fdWriteBuf fd bf len
-        when (written < len) $ do
-            loop (bf `plusPtr` (fromIntegral written)) (len - written)
+        when (written < len) $
+            loop (bf `plusPtr` fromIntegral written) (len - written)
 
 ----------------------------------------------------------------
 
