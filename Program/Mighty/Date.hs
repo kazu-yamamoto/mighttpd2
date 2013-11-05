@@ -8,11 +8,9 @@ module Program.Mighty.Date(
     DateCacheGetter
   , DateCacheUpdater
   , ZonedDate
-  , GMTDate
   -- * Cache configuration
   , DateCacheConf(..)
   , zonedDateCacheConf
-  , gmtDateCacheConf
   -- * Date cacher
   , clockDateCacher
   ) where
@@ -20,7 +18,6 @@ module Program.Mighty.Date(
 import Control.Applicative
 import Data.ByteString (ByteString)
 import Data.IORef
-import Network.HTTP.Date (formatHTTPDate, epochTimeToHTTPDate)
 #if WINDOWS
 import qualified Data.ByteString.Char8 as BS
 import Data.Time
@@ -39,9 +36,6 @@ type DateCacheUpdater = IO ()
 
 -- | A type for zoned date.
 type ZonedDate = ByteString
-
--- | A type for GMT date.
-type GMTDate = ByteString
 
 ----------------------------------------------------------------
 
@@ -69,13 +63,6 @@ zonedDateCacheConf = DateCacheConf {
   , formatDate = formatUnixTime "%d/%b/%Y:%T %z" . fromEpochTime
   }
 #endif
-
--- | GMT date cacher using HTTPDate.
-gmtDateCacheConf :: DateCacheConf EpochTime
-gmtDateCacheConf = DateCacheConf {
-    getTime = epochTime
-  , formatDate = return . formatHTTPDate . epochTimeToHTTPDate
-  }
 
 ----------------------------------------------------------------
 

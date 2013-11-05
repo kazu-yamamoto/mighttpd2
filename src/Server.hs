@@ -64,16 +64,15 @@ server opt rpt route = reportDo rpt $ do
     setGroupUser (opt_user opt) (opt_group opt)
     logCheck logtype
     stt <- initStater
-    (gdater,gupdater) <- clockDateCacher gmtDateCacheConf
     (zdater,zupdater) <- clockDateCacher zonedDateCacheConf
     (lgr,flusher,rotator) <- initLogger FromSocket logtype zdater
     (getInfo,cleaner) <- fileCacheInit
     mgr <- getManager
-    let mighty = reload opt rpt svc stt lgr getInfo mgr gdater
+    let mighty = reload opt rpt svc stt lgr getInfo mgr
     setHandlers opt rpt svc stt flusher mighty
     report rpt "Mighty started"
     void . forkIO $ mighty route
-    mainLoop rpt stt cleaner flusher debug rotator zupdater gupdater 0
+    mainLoop rpt stt cleaner flusher debug rotator zupdater 0
   where
     debug = opt_debug_mode opt
     port = opt_port opt
@@ -135,14 +134,14 @@ ifRouteFileIsValid rpt opt act = case opt_routing_file opt of
 ----------------------------------------------------------------
 
 reload :: Option -> Reporter -> Service -> Stater
-       -> ApacheLogger -> GetInfo -> ConnPool -> DateCacheGetter
+       -> ApacheLogger -> GetInfo -> ConnPool
        -> Mighty
-reload opt rpt svc stt lgr getInfo _mgr gdater route = reportDo rpt $ do
+reload opt rpt svc stt lgr getInfo _mgr route = reportDo rpt $ do
     setMyWarpThreadId stt
 #ifdef REV_PROXY
-    let app req = fileCgiApp (cspec gdater) filespec cgispec revproxyspec route req
+    let app req = fileCgiApp cspec filespec cgispec revproxyspec route req
 #else
-    let app req = fileCgiApp (cspec gdater) filespec cgispec route req
+    let app req = fileCgiApp cspec filespec cgispec route req
 #endif
     case svc of
         HttpOnly s  -> runSettingsSocket setting s app
@@ -167,10 +166,9 @@ reload opt rpt svc stt lgr getInfo _mgr gdater route = reportDo rpt $ do
       , settingsFdCacheDuration     = opt_fd_cache_duration opt
       }
     serverName = BS.pack $ opt_server_name opt
-    cspec dtr = ClassicAppSpec {
+    cspec = ClassicAppSpec {
         softwareName = serverName
       , logger = lgr
-      , dater  = dtr
       , statusFileDir = fromString $ opt_status_file_dir opt
       }
     filespec = FileAppSpec {
@@ -197,9 +195,9 @@ reload opt rpt svc stt lgr getInfo _mgr gdater route = reportDo rpt $ do
 
 mainLoop :: Reporter -> Stater -> RemoveInfo
          -> LogFlusher -> Bool ->  LogRotator
-         -> DateCacheUpdater -> DateCacheUpdater
+         -> DateCacheUpdater
          -> Int -> IO ()
-mainLoop rpt stt cleaner flusher everySecond rotator zupdater gupdater sec = do
+mainLoop rpt stt cleaner flusher everySecond rotator zupdater sec = do
     threadDelay oneSecond
     retiring <- isRetiring stt
     counter <- getConnectionCounter stt
@@ -210,7 +208,6 @@ mainLoop rpt stt cleaner flusher everySecond rotator zupdater gupdater sec = do
         exitSuccess
       else do
         zupdater
-        gupdater
         when everySecond $ flusher
         let longTimer = sec == longTimerInterval
         when longTimer $ do
@@ -218,7 +215,7 @@ mainLoop rpt stt cleaner flusher everySecond rotator zupdater gupdater sec = do
             cleaner
             rotator
         let !next = if longTimer then 0 else sec + 1
-        mainLoop rpt stt cleaner flusher everySecond rotator zupdater gupdater next
+        mainLoop rpt stt cleaner flusher everySecond rotator zupdater next
 
 ----------------------------------------------------------------
 
