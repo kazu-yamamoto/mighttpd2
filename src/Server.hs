@@ -14,6 +14,7 @@ import System.Exit (ExitCode(..), exitSuccess)
 import System.IO
 import System.IO.Error (ioeGetErrorString)
 import System.Posix (exitImmediately, Handler(..), getProcessID, setFileMode)
+import System.Posix.Signals (sigCHLD)
 
 #ifdef REV_PROXY
 import qualified Network.HTTP.Conduit as H
@@ -99,6 +100,7 @@ setHandlers opt rpt svc stt flusher mighty = do
     setHandler sigRetire retireHandler
     setHandler sigInfo   infoHandler
     setHandler sigReload reloadHandler
+    setHandler sigCHLD   Ignore        -- for CGI
   where
     stopHandler = Catch $ do
         report rpt "Mighty finished"
