@@ -67,9 +67,9 @@ Library
                       , unix
                       , unix-time
                       , unordered-containers
-                      , wai
-                      , wai-app-file-cgi
-                      , warp >= 1.3
+                      , wai >= 2.0
+                      , wai-app-file-cgi >= 1.0
+                      , warp >= 2.0
 
 Executable mighty
   Default-Language:     Haskell2010
@@ -91,9 +91,9 @@ Executable mighty
                       , network-conduit
                       , transformers
                       , unix
-                      , wai >= 1.3
-                      , wai-app-file-cgi
-                      , warp >= 1.3
+                      , wai >= 2.0
+                      , wai-app-file-cgi >= 1.0
+                      , warp >= 2.0
   if flag(rev-proxy)
     Build-Depends:      http-conduit >= 1.9.3
   if flag(tls)
