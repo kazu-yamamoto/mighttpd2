@@ -68,7 +68,7 @@ server opt rpt route = reportDo rpt $ do
     (zdater,zupdater) <- clockDateCacher zonedDateCacheConf
     (lgr,flusher,rotator) <- initLogger FromSocket logtype zdater
     (getInfo,cleaner) <- fileCacheInit
-    mgr <- getManager
+    mgr <- getManager opt
     let mighty = reload opt rpt svc stt lgr getInfo mgr
     setHandlers opt rpt svc stt flusher mighty
     report rpt "Mighty started"
@@ -265,9 +265,15 @@ type ConnPool = H.Manager
 type ConnPool = ()
 #endif
 
-getManager :: IO ConnPool
+getManager :: Option -> IO ConnPool
 #ifdef REV_PROXY
-getManager = H.newManager H.def { H.managerConnCount = managerNumber }
+getManager opt = H.newManager H.def {
+    H.managerConnCount = managerNumber
+  , H.managerResponseTimeout = if opt_proxy_timeout opt == 0 then
+                                   H.managerResponseTimeout H.def
+                                 else
+                                   Just (opt_proxy_timeout opt)
+  }
 #else
-getManager = return ()
+getManager _ = return ()
 #endif

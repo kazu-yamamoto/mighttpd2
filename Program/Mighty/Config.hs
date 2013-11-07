@@ -33,6 +33,7 @@ defaultOption svrnm = Option {
   , opt_index_cgi = "index.cgi"
   , opt_status_file_dir = "/usr/local/share/mighty/status"
   , opt_connection_timeout = 30
+  , opt_proxy_timeout = 0
   , opt_fd_cache_duration = 10
   , opt_server_name = svrnm
   , opt_routing_file = Nothing
@@ -57,6 +58,7 @@ data Option = Option {
   , opt_index_cgi  :: !FilePath
   , opt_status_file_dir :: !FilePath
   , opt_connection_timeout :: !Int
+  , opt_proxy_timeout :: !Int
   , opt_fd_cache_duration :: !Int
   , opt_server_name :: !String
   , opt_routing_file :: !(Maybe FilePath)
@@ -90,6 +92,7 @@ makeOpt def conf = Option {
   , opt_index_cgi          = get "Index_Cgi" opt_index_cgi
   , opt_status_file_dir    = get "Status_File_Dir" opt_status_file_dir
   , opt_connection_timeout = get "Connection_Timeout" opt_connection_timeout
+  , opt_proxy_timeout      = get "Proxy_Timeout" opt_proxy_timeout
   , opt_fd_cache_duration  = get "Fd_Cache_Duration" opt_fd_cache_duration
   , opt_server_name        = get "Server_Name" opt_server_name
   , opt_routing_file       = Nothing

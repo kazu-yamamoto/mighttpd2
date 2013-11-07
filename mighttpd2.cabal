@@ -17,7 +17,7 @@ Data-Dir:               conf
 Data-Files:             example.conf example.route
 
 Flag rev-proxy
-  Description:          Support reverse proxy wish http-conduit.
+  Description:          Support reverse proxy with http-conduit.
                         This requires unnecessary crypt libraries.
   Default:              True
 
@@ -95,7 +95,7 @@ Executable mighty
                       , wai-app-file-cgi
                       , warp >= 1.3
   if flag(rev-proxy)
-    Build-Depends:      http-conduit >= 1.8.2.1
+    Build-Depends:      http-conduit >= 1.9.3
   if flag(tls)
     Build-Depends:      tls
                       , warp-tls >= 1.4.1
@@ -135,7 +135,7 @@ Test-Suite spec
                       , hspec >= 1.3
                       , mighttpd2
   if flag(rev-proxy)
-    Build-Depends:      http-conduit >= 1.8.2.1
+    Build-Depends:      http-conduit >= 1.9.3
   if flag(tls)
     Build-Depends:      tls
                       , warp-tls >= 1.4.1
