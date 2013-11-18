@@ -8,6 +8,7 @@ import Control.Exception (try)
 import Control.Monad (void, unless, when)
 import qualified Data.ByteString.Char8 as BS (pack)
 import Network (Socket, sClose)
+import qualified Network.HTTP.Client.Manager as H
 import Network.Wai.Application.Classic hiding ((</>), (+++))
 import Network.Wai.Handler.Warp
 import System.Exit (ExitCode(..), exitSuccess)
@@ -16,9 +17,6 @@ import System.IO.Error (ioeGetErrorString)
 import System.Posix (exitImmediately, Handler(..), getProcessID, setFileMode)
 import System.Posix.Signals (sigCHLD)
 
-#ifdef REV_PROXY
-import qualified Network.HTTP.Conduit as H
-#endif
 #ifdef TLS
 import Network.Wai.Handler.WarpTLS
 #endif
@@ -50,10 +48,8 @@ longTimerInterval = 10
 logBufferSize :: Int
 logBufferSize = 4 * 1024 * 10
 
-#ifdef REV_PROXY
 managerNumber :: Int
 managerNumber = 1024 -- FIXME
-#endif
 
 ----------------------------------------------------------------
 
@@ -140,11 +136,7 @@ reload :: Option -> Reporter -> Service -> Stater
        -> Mighty
 reload opt rpt svc stt lgr getInfo _mgr route = reportDo rpt $ do
     setMyWarpThreadId stt
-#ifdef REV_PROXY
     let app req = fileCgiApp cspec filespec cgispec revproxyspec route req
-#else
-    let app req = fileCgiApp cspec filespec cgispec route req
-#endif
     case svc of
         HttpOnly s  -> runSettingsSocket setting s app
 #ifdef TLS
@@ -181,11 +173,9 @@ reload opt rpt svc stt lgr getInfo _mgr route = reportDo rpt $ do
     cgispec = CgiAppSpec {
         indexCgi = "index.cgi"
       }
-#ifdef REV_PROXY
     revproxyspec = RevProxyAppSpec {
         revProxyManager = _mgr
       }
-#endif
 #ifdef TLS
     tlsSetting = defaultTlsSettings {
         certFile = opt_tls_cert_file opt
@@ -259,21 +249,13 @@ closeService (HttpAndHttps s1 s2) = sClose s1 >> sClose s2
 
 ----------------------------------------------------------------
 
-#ifdef REV_PROXY
 type ConnPool = H.Manager
-#else
-type ConnPool = ()
-#endif
 
 getManager :: Option -> IO ConnPool
-#ifdef REV_PROXY
-getManager opt = H.newManager H.def {
+getManager opt = H.newManager H.defaultManagerSettings {
     H.managerConnCount = managerNumber
   , H.managerResponseTimeout = if opt_proxy_timeout opt == 0 then
-                                   H.managerResponseTimeout H.def
+                                   H.managerResponseTimeout H.defaultManagerSettings
                                  else
                                    Just (opt_proxy_timeout opt)
   }
-#else
-getManager _ = return ()
-#endif
