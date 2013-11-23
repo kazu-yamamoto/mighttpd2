@@ -38,7 +38,7 @@ type BufSize = Int
 
 ----------------------------------------------------------------
 
--- | Log message builder. Use '(<>)' to append two LogMsg in O(1).
+-- | Log message builder. Use ('<>') to append two LogMsg in O(1).
 data LogMsg = LogMsg !Int Builder
 
 instance Monoid LogMsg where
