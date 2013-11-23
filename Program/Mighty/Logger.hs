@@ -14,12 +14,12 @@ import Control.Exception (handle,SomeException(..))
 import Control.Monad (when)
 import Network.HTTP.Types
 import Network.Wai
+import System.Log.FastLogger.File
 import System.Posix.Files (getFileStatus, fileSize)
 import System.Posix.IO
 
 import Program.Mighty.Apache
 import Program.Mighty.Date
-import Program.Mighty.FileLog
 import Program.Mighty.LogMsg
 
 ----------------------------------------------------------------

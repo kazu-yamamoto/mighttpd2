@@ -13,7 +13,6 @@ module Program.Mighty (
   , module Program.Mighty.Apache
   , module Program.Mighty.IP
   , module Program.Mighty.LogMsg
-  , module Program.Mighty.FileLog
   , module Program.Mighty.Date
   -- * Utilities
   , module Program.Mighty.ByteString
@@ -30,7 +29,6 @@ import Program.Mighty.ByteString
 import Program.Mighty.Config
 import Program.Mighty.Date
 import Program.Mighty.FileCache
-import Program.Mighty.FileLog
 import Program.Mighty.IORef
 import Program.Mighty.IP
 import Program.Mighty.LogMsg
