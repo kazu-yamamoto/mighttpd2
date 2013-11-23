@@ -18,8 +18,6 @@ import System.Log.FastLogger.File
 import System.Posix (exitImmediately, Handler(..), getProcessID, setFileMode)
 import System.Posix.Signals (sigCHLD)
 import Network.Wai.Logger
-import Network.Wai.Logger.Apache
-import Network.Wai.Logger.Date
 
 #ifdef TLS
 import Network.Wai.Handler.WarpTLS
@@ -65,7 +63,7 @@ server opt rpt route = reportDo rpt $ do
     setGroupUser (opt_user opt) (opt_group opt)
     logCheck logtype
     stt <- initStater
-    (zdater,zupdater) <- clockDateCacher zonedDateCacheConf
+    (zdater,zupdater) <- clockDateCacher
     (lgr,flusher,rotator) <- initLogger FromSocket logtype zdater
     (getInfo,cleaner) <- fileCacheInit
     mgr <- getManager opt
