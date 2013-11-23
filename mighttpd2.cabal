@@ -24,14 +24,10 @@ Library
   Default-Language:     Haskell2010
   GHC-Options:          -Wall
   Exposed-Modules:      Program.Mighty
-                        Program.Mighty.Apache
                         Program.Mighty.ByteString
                         Program.Mighty.Config
-                        Program.Mighty.Date
                         Program.Mighty.FileCache
                         Program.Mighty.IORef
-                        Program.Mighty.LogMsg
-                        Program.Mighty.Logger
                         Program.Mighty.Network
                         Program.Mighty.Parser
                         Program.Mighty.Process

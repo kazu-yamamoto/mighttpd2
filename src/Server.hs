@@ -17,6 +17,9 @@ import System.IO.Error (ioeGetErrorString)
 import System.Log.FastLogger.File
 import System.Posix (exitImmediately, Handler(..), getProcessID, setFileMode)
 import System.Posix.Signals (sigCHLD)
+import Network.Wai.Logger
+import Network.Wai.Logger.Apache
+import Network.Wai.Logger.Date
 
 #ifdef TLS
 import Network.Wai.Handler.WarpTLS
