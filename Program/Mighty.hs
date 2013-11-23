@@ -11,7 +11,6 @@ module Program.Mighty (
   -- * Logger
   , module Program.Mighty.Logger
   , module Program.Mighty.Apache
-  , module Program.Mighty.IP
   , module Program.Mighty.LogMsg
   , module Program.Mighty.Date
   -- * Utilities
@@ -30,7 +29,6 @@ import Program.Mighty.Config
 import Program.Mighty.Date
 import Program.Mighty.FileCache
 import Program.Mighty.IORef
-import Program.Mighty.IP
 import Program.Mighty.LogMsg
 import Program.Mighty.Logger
 import Program.Mighty.Network

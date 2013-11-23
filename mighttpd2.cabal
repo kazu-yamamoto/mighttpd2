@@ -30,7 +30,6 @@ Library
                         Program.Mighty.Date
                         Program.Mighty.FileCache
                         Program.Mighty.IORef
-                        Program.Mighty.IP
                         Program.Mighty.LogMsg
                         Program.Mighty.Logger
                         Program.Mighty.Network
@@ -62,6 +61,7 @@ Library
                       , unordered-containers
                       , wai >= 2.0
                       , wai-app-file-cgi >= 1.0
+                      , wai-logger
                       , warp >= 2.0
 
 Executable mighty
@@ -86,6 +86,7 @@ Executable mighty
                       , unix
                       , wai >= 2.0
                       , wai-app-file-cgi >= 1.0
+                      , wai-logger
                       , warp >= 2.0
   if flag(tls)
     Build-Depends:      tls

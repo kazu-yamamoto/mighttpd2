@@ -13,8 +13,8 @@ import Data.Maybe
 import Data.Monoid
 import Network.HTTP.Types
 import Network.Wai
+import Network.Wai.Logger.Utils
 import Program.Mighty.Date
-import Program.Mighty.IP
 import Program.Mighty.LogMsg
 
 -- | Source from which the IP source address of the client is obtained.
