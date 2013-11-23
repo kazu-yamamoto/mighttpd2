@@ -14,7 +14,6 @@ import Network.Wai.Handler.Warp
 import System.Exit (ExitCode(..), exitSuccess)
 import System.IO
 import System.IO.Error (ioeGetErrorString)
-import System.Log.FastLogger.File
 import System.Posix (exitImmediately, Handler(..), getProcessID, setFileMode)
 import System.Posix.Signals (sigCHLD)
 import Network.Wai.Logger

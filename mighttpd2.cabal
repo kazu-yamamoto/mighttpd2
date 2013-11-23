@@ -44,7 +44,6 @@ Library
                       , case-insensitive
                       , conduit
                       , directory
-                      , fast-logger
                       , filepath
                       , http-date
                       , http-types
@@ -57,7 +56,6 @@ Library
                       , unordered-containers
                       , wai >= 2.0
                       , wai-app-file-cgi >= 1.0
-                      , wai-logger
                       , warp >= 2.0
 
 Executable mighty
@@ -70,7 +68,6 @@ Executable mighty
   Build-Depends:        base >= 4.0 && < 5
                       , bytestring
                       , directory
-                      , fast-logger
                       , filepath
                       , http-client
                       , http-date
