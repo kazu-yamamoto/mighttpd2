@@ -210,10 +210,10 @@ mainLoop rpt stt cleaner flusher remover everySecond rotator zupdater sec = do
         exitSuccess
       else do
         zupdater
-        when everySecond $ flusher
+        when everySecond flusher
         let longTimer = sec == longTimerInterval
         when longTimer $ do
-            unless everySecond $ flusher
+            unless everySecond flusher
             cleaner
             rotator
         let !next = if longTimer then 0 else sec + 1
