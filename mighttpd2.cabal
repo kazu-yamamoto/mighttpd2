@@ -78,8 +78,8 @@ Executable mighty
                       , transformers
                       , unix
                       , wai >= 2.0
-                      , wai-app-file-cgi >= 1.0
-                      , wai-logger
+                      , wai-app-file-cgi >= 2.0
+                      , wai-logger >= 2.0
                       , warp >= 2.0
   if flag(tls)
     Build-Depends:      tls
