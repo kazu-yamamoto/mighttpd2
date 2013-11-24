@@ -54,6 +54,12 @@ managerNumber = 1024 -- FIXME
 
 ----------------------------------------------------------------
 
+type LogFlusher = IO ()
+type LogRotator = IO ()
+type LogRemover = IO ()
+
+----------------------------------------------------------------
+
 server :: Option -> Reporter -> RouteDB -> IO ()
 server opt rpt route = reportDo rpt $ do
     unlimit openFileNumber
@@ -63,14 +69,18 @@ server opt rpt route = reportDo rpt $ do
     logCheck logtype
     stt <- initStater
     (zdater,zupdater) <- clockDateCacher
-    (lgr,flusher,rotator) <- initLogger FromSocket logtype zdater
+    ap <- initLogger FromSocket logtype zdater
+    let lgr = apacheLogger ap
+        flusher = logFlusher ap
+        rotator = logRotator ap
+        remover = logRemover ap
     (getInfo,cleaner) <- fileCacheInit
     mgr <- getManager opt
     let mighty = reload opt rpt svc stt lgr getInfo mgr
-    setHandlers opt rpt svc stt flusher mighty
+    setHandlers opt rpt svc stt remover mighty
     report rpt "Mighty started"
     void . forkIO $ mighty route
-    mainLoop rpt stt cleaner flusher debug rotator zupdater 0
+    mainLoop rpt stt cleaner flusher remover debug rotator zupdater 0
   where
     debug = opt_debug_mode opt
     port = opt_port opt
@@ -91,8 +101,8 @@ server opt rpt route = reportDo rpt $ do
       | debug                 = LogStdout logBufferSize
       | otherwise             = LogFile logspec logBufferSize
 
-setHandlers :: Option -> Reporter -> Service -> Stater -> LogFlusher -> Mighty -> IO ()
-setHandlers opt rpt svc stt flusher mighty = do
+setHandlers :: Option -> Reporter -> Service -> Stater -> LogRemover -> Mighty -> IO ()
+setHandlers opt rpt svc stt remover mighty = do
     setHandler sigStop   stopHandler
     setHandler sigRetire retireHandler
     setHandler sigInfo   infoHandler
@@ -103,12 +113,11 @@ setHandlers opt rpt svc stt flusher mighty = do
         report rpt "Mighty finished"
         finReporter rpt
         closeService svc
-        flusher -- FIXME and close?
+        remover
         exitImmediately ExitSuccess
     retireHandler = Catch $ ifWarpThreadsAreActive stt $ do
         report rpt "Mighty retiring"
         closeService svc
-        flusher -- FIXME and close?
         goRetiring stt
     infoHandler = Catch $ do
         i <- bshow <$> getConnectionCounter stt
@@ -187,17 +196,17 @@ reload opt rpt svc stt lgr getInfo _mgr route = reportDo rpt $ do
 ----------------------------------------------------------------
 
 mainLoop :: Reporter -> Stater -> RemoveInfo
-         -> LogFlusher -> Bool ->  LogRotator
+         -> LogFlusher -> LogRemover -> Bool -> LogRotator
          -> DateCacheUpdater
          -> Int -> IO ()
-mainLoop rpt stt cleaner flusher everySecond rotator zupdater sec = do
+mainLoop rpt stt cleaner flusher remover everySecond rotator zupdater sec = do
     threadDelay oneSecond
     retiring <- isRetiring stt
     counter <- getConnectionCounter stt
     if retiring && counter == 0 then do
         report rpt "Mighty retired"
         finReporter rpt
-        flusher
+        remover
         exitSuccess
       else do
         zupdater
@@ -208,7 +217,7 @@ mainLoop rpt stt cleaner flusher everySecond rotator zupdater sec = do
             cleaner
             rotator
         let !next = if longTimer then 0 else sec + 1
-        mainLoop rpt stt cleaner flusher everySecond rotator zupdater next
+        mainLoop rpt stt cleaner flusher remover everySecond rotator zupdater next
 
 ----------------------------------------------------------------
 
