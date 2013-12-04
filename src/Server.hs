@@ -8,7 +8,7 @@ import Control.Exception (try)
 import Control.Monad (void, unless, when)
 import qualified Data.ByteString.Char8 as BS (pack)
 import Network (Socket, sClose)
-import qualified Network.HTTP.Client.Manager as H
+import qualified Network.HTTP.Client as H
 import Network.Wai.Application.Classic hiding ((</>), (+++))
 import Network.Wai.Handler.Warp
 import System.Exit (ExitCode(..), exitSuccess)
