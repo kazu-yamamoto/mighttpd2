@@ -5,7 +5,7 @@ module WaiApp (fileCgiApp) where
 import Control.Monad.IO.Class (liftIO)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS (isPrefixOf, length)
-import Network.HTTP.Types (preconditionFailed412, movedPermanently301)
+import Network.HTTP.Types (preconditionFailed412, movedPermanently301, urlDecode)
 import Network.Wai (Application, responseLBS)
 import Network.Wai.Internal
 import Network.Wai.Application.Classic
@@ -36,9 +36,10 @@ fileCgiApp cspec filespec cgispec revproxyspec um req = case mmp of
         revProxyApp cspec revproxyspec (RevProxyRoute src dst dom prt) req
   where
     (host, _) = hostPort req
+    path = urlDecode False $ rawPathInfo req
     mmp = case getBlock host um of
         Nothing  -> Fail
-        Just blk -> getRoute (rawPathInfo req) blk
+        Just blk -> getRoute path blk
     fastResponse st hdr body = return $ responseLBS st hdr body
     defaultHeader = [("Content-Type", "text/plain")
                     ,("Server", softwareName cspec)]
