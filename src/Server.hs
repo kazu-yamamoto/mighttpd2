@@ -160,15 +160,14 @@ reload opt rpt svc stt lgr getInfo _mgr route = reportDo rpt $ do
 #endif
   where
     debug = opt_debug_mode opt
-    setting = defaultSettings {
-        settingsPort        = opt_port opt
-      , settingsOnException = if debug then printStdout else warpHandler rpt
-      , settingsOnOpen      = increment stt
-      , settingsOnClose     = decrement stt
-      , settingsTimeout     = opt_connection_timeout opt
-      , settingsHost        = HostAny
-      , settingsFdCacheDuration     = opt_fd_cache_duration opt
-      }
+    setting = setPort        (opt_port opt)
+            $ setOnException (if debug then printStdout else warpHandler rpt)
+            $ setOnOpen      (\_ -> increment stt >> return True)
+            $ setOnClose     (\_ -> decrement stt)
+            $ setTimeout     (opt_connection_timeout opt)
+            $ setHost        HostAny
+            $ setFdCacheDuration (opt_fd_cache_duration opt)
+            defaultSettings
     serverName = BS.pack $ opt_server_name opt
     cspec = ClassicAppSpec {
         softwareName = serverName

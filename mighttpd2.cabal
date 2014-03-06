@@ -54,9 +54,9 @@ Library
                       , unix
                       , unix-time
                       , unordered-containers
-                      , wai >= 2.0
+                      , wai >= 2.1
                       , wai-app-file-cgi >= 1.0
-                      , warp >= 2.0
+                      , warp >= 2.1
 
 Executable mighty
   Default-Language:     Haskell2010
