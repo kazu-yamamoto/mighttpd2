@@ -42,7 +42,8 @@ Library
                       , byteorder
                       , bytestring
                       , case-insensitive
-                      , conduit
+                      , conduit >= 1.1
+                      , conduit-extra
                       , directory
                       , filepath
                       , http-date
@@ -51,6 +52,7 @@ Library
                       , network
                       , parsec >= 3
                       , process-conduit
+                      , resourcet
                       , unix
                       , unix-time
                       , unordered-containers
@@ -74,7 +76,7 @@ Executable mighty
                       , http-types
                       , mighttpd2
                       , network
-                      , network-conduit
+                      , conduit-extra
                       , transformers
                       , unix
                       , wai >= 2.0

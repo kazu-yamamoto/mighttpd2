@@ -165,7 +165,7 @@ reload opt rpt svc stt lgr getInfo _mgr route = reportDo rpt $ do
             $ setOnOpen      (\_ -> increment stt >> return True)
             $ setOnClose     (\_ -> decrement stt)
             $ setTimeout     (opt_connection_timeout opt)
-            $ setHost        HostAny
+            $ setHost        "*"
             $ setFdCacheDuration (opt_fd_cache_duration opt)
             defaultSettings
     serverName = BS.pack $ opt_server_name opt
