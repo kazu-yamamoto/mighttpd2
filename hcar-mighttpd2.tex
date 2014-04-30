@@ -1,26 +1,21 @@
 % Mighttpd2YetanotherWebSer-KM.tex
 \begin{hcarentry}[updated]{Mighttpd2 --- Yet another Web Server}
 \label{mighttpd2}
-\report{Kazu Yamamoto}%11/13
+\report{Kazu Yamamoto}%05/14
 \status{open source, actively developed}
 \makeheader
 
-Mighttpd (called mighty) version 2 is a simple but practical Web server in Haskell.
-It is now working on Mew.org serving static files, CGI (mailman and contents search) and reverse proxy for back-end Yesod applications.
+Mighttpd (called mighty) version 3 is a simple but practical Web server in Haskell.
+It provides features to provide static files, redirection, CGI, reverse proxy, reloading configuration files and graceful shutdown. Also TLS is experimentally supported.
 
-Mighttpd is based on Warp providing
-performance on par with {\tt nginx}.
-You can use the {\tt mightyctl} command to
-reload configuration files dynamically and shutdown Mighttpd gracefully.
+Mighttpd 3 is now based on WAI 2.0 or later and uses new {\it warp} and new {\t fast-logger}. This results in much improvement of its peformance if Mighttpd 3 is compiled by GHC 7.8.2 or later.
 
-You can install Mighttpd 2 ({\it mighttpd2}) from HackageDB.
-
-Michael Snoyman and I are now working on WAI 2. So far, we improved the performance of Warp much. Mighty version 3 will be based on this new Warp and also provides much faster logger than the fast-logger package.
+You can install Mighttpd 3 ({\it mighttpd2}) from HackageDB. Note that the package name is {\it mighttpd2}, not {\it mighttpd3}, for historical reasons
 
 \FurtherReading
 \begin{compactitem}
 \item \url{http://www.mew.org/~kazu/proj/mighttpd/en/}
-\item \url{http://www.iij.ad.jp/en/company/development/tech/mighttpd/}
-\item \url{http://aosabook.org/en/posa/warp.html}
+\item \url{http://www.yesodweb.com/blog/2014/01/new-fast-logger}
+\item \url{http://www.yesodweb.com/blog/2014/02/new-warp}
 \end{compactitem}
 \end{hcarentry}
