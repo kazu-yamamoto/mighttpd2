@@ -16,31 +16,31 @@ data Perhaps a = Found a | Redirect | Fail
 
 fileCgiApp :: ClassicAppSpec -> FileAppSpec -> CgiAppSpec -> RevProxyAppSpec
            -> RouteDB -> Application
-fileCgiApp cspec filespec cgispec revproxyspec um req = case mmp of
+fileCgiApp cspec filespec cgispec revproxyspec um req respond = case mmp of
     Fail -> do
         let st = preconditionFailed412
         liftIO $ logger cspec req' st Nothing
-        fastResponse st defaultHeader "Precondition Failed\r\n"
+        fastResponse respond st defaultHeader "Precondition Failed\r\n"
     Redirect -> do
         let st = movedPermanently301
             hdr = defaultHeader ++ redirectHeader req'
         liftIO $ logger cspec req st Nothing
-        fastResponse st hdr "Moved Permanently\r\n"
+        fastResponse respond st hdr "Moved Permanently\r\n"
     Found (RouteFile  src dst) ->
-        fileApp cspec filespec (FileRoute src dst) req'
+        fileApp cspec filespec (FileRoute src dst) req' respond
     Found (RouteRedirect src dst) ->
-        redirectApp cspec (RedirectRoute src dst) req'
+        redirectApp cspec (RedirectRoute src dst) req' respond
     Found (RouteCGI   src dst) ->
-        cgiApp cspec cgispec (CgiRoute src dst) req'
+        cgiApp cspec cgispec (CgiRoute src dst) req' respond
     Found (RouteRevProxy src dst dom prt) ->
-        revProxyApp cspec revproxyspec (RevProxyRoute src dst dom prt) req
+        revProxyApp cspec revproxyspec (RevProxyRoute src dst dom prt) req respond
   where
     (host, _) = hostPort req
     path = urlDecode False $ rawPathInfo req
     mmp = case getBlock host um of
         Nothing  -> Fail
         Just blk -> getRoute path blk
-    fastResponse st hdr body = return $ responseLBS st hdr body
+    fastResponse respond st hdr body = respond $ responseLBS st hdr body
     defaultHeader = [("Content-Type", "text/plain")
                     ,("Server", softwareName cspec)]
     req' = req { rawPathInfo = path } -- FIXME
