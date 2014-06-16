@@ -40,7 +40,7 @@ fileCgiApp cspec filespec cgispec revproxyspec um req respond = case mmp of
     mmp = case getBlock host um of
         Nothing  -> Fail
         Just blk -> getRoute path blk
-    fastResponse respond st hdr body = respond $ responseLBS st hdr body
+    fastResponse resp st hdr body = resp $ responseLBS st hdr body
     defaultHeader = [("Content-Type", "text/plain")
                     ,("Server", softwareName cspec)]
     req' = req { rawPathInfo = path } -- FIXME
