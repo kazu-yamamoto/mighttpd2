@@ -20,6 +20,7 @@ import Data.UnixTime
 import GHC.IO.Exception (IOErrorType(..))
 import Network.Wai
 import Network.Wai.Handler.Warp (InvalidRequest)
+import Network.Wai.Handler.Warp.Timeout (TimeoutThread(..))
 import System.IO
 import System.IO.Error (ioeGetErrorType)
 import System.Posix (getProcessID)
@@ -58,10 +59,12 @@ reportDo rpt act = act `E.catch` warpHandler rpt Nothing
 warpHandler :: Reporter -> Maybe Request -> SomeException -> IO ()
 warpHandler rpt _ e = throwIO e `catches` handlers
   where
-    handlers = [Handler ah, Handler ih, Handler oh, Handler sh]
+    handlers = [Handler ah, Handler th, Handler ih, Handler oh, Handler sh]
     ah :: AsyncException -> IO ()
     ah ThreadKilled = norecode
     ah x            = recode x
+    th :: TimeoutThread -> IO ()
+    th TimeoutThread = norecode
     ih :: InvalidRequest -> IO ()
     ih _ = norecode
     oh :: IOException -> IO ()
