@@ -38,14 +38,13 @@ toPsResult _ = PsResult "unknown" 0 0 "unknown"
 ----------------------------------------------------------------
 
 runPS :: IO [PsResult]
-runPS = runResourceT $
-       sourceCmd "ps -ef"
-    $= CB.lines
-    $= CL.map BS.words
-    $= CL.map toPsResult
-    $= CL.filter mighty
-    $$ CL.consume
+runPS = snd <$> runResourceT (sourceCmdWithConsumer "ps -ef" consumer)
   where
+    consumer = CB.lines
+            $= CL.map BS.words
+            $= CL.map toPsResult
+            $= CL.filter mighty
+            $= CL.consume
     commandName = last . split '/' . command
     mighty ps = "mighty" `BS.isInfixOf` name
              && not ("mightyctl" `BS.isInfixOf` name)

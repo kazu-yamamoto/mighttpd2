@@ -51,7 +51,6 @@ Library
                       , io-choice
                       , network
                       , parsec >= 3
-                      , process-conduit
                       , resourcet
                       , unix
                       , unix-time
