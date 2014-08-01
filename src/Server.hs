@@ -54,7 +54,6 @@ managerNumber = 1024 -- FIXME
 
 ----------------------------------------------------------------
 
-type LogFlusher = IO ()
 type LogRotator = IO ()
 type LogRemover = IO ()
 
@@ -71,7 +70,6 @@ server opt rpt route = reportDo rpt $ do
     (zdater,zupdater) <- clockDateCacher
     ap <- initLogger FromSocket logtype zdater
     let lgr = apacheLogger ap
-        flusher = logFlusher ap
         rotator = logRotator ap
         remover = logRemover ap
     (getInfo,cleaner) <- fileCacheInit
@@ -80,7 +78,7 @@ server opt rpt route = reportDo rpt $ do
     setHandlers opt rpt svc stt remover mighty
     report rpt "Mighty started"
     void . forkIO $ mighty route
-    mainLoop rpt stt cleaner flusher remover debug rotator zupdater 0
+    mainLoop rpt stt cleaner remover debug rotator zupdater 0
   where
     debug = opt_debug_mode opt
     port = opt_port opt
@@ -195,10 +193,10 @@ reload opt rpt svc stt lgr getInfo _mgr route = reportDo rpt $ do
 ----------------------------------------------------------------
 
 mainLoop :: Reporter -> Stater -> RemoveInfo
-         -> LogFlusher -> LogRemover -> Bool -> LogRotator
+         -> LogRemover -> Bool -> LogRotator
          -> DateCacheUpdater
          -> Int -> IO ()
-mainLoop rpt stt cleaner flusher remover everySecond rotator zupdater sec = do
+mainLoop rpt stt cleaner remover everySecond rotator zupdater sec = do
     threadDelay oneSecond
     retiring <- isRetiring stt
     counter <- getConnectionCounter stt
@@ -209,14 +207,12 @@ mainLoop rpt stt cleaner flusher remover everySecond rotator zupdater sec = do
         exitSuccess
       else do
         zupdater
-        when everySecond flusher
         let longTimer = sec == longTimerInterval
         when longTimer $ do
-            unless everySecond flusher
             cleaner
             rotator
         let !next = if longTimer then 0 else sec + 1
-        mainLoop rpt stt cleaner flusher remover everySecond rotator zupdater next
+        mainLoop rpt stt cleaner remover everySecond rotator zupdater next
 
 ----------------------------------------------------------------
 

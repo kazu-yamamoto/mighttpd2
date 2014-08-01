@@ -80,7 +80,7 @@ Executable mighty
                       , unix
                       , wai >= 3.0
                       , wai-app-file-cgi >= 3.0
-                      , wai-logger >= 2.1
+                      , wai-logger >= 2.2
                       , warp >= 3.0
   if flag(tls)
     Build-Depends:      tls
