@@ -35,9 +35,9 @@ Library
                         Program.Mighty.Resource
                         Program.Mighty.Route
                         Program.Mighty.Signal
-                        Program.Mighty.State
   Build-Depends:        base >= 4.0 && < 5
                       , array
+                      , async
                       , blaze-builder
                       , byteorder
                       , bytestring

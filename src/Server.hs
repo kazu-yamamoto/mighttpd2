@@ -2,8 +2,7 @@
 
 module Server (server, defaultDomain, defaultPort) where
 
-import Control.Applicative ((<$>))
-import Control.Concurrent (forkIO, threadDelay)
+import Control.Concurrent (forkIO, threadDelay, runInUnboundThread)
 import Control.Exception (try)
 import Control.Monad (void, unless, when)
 import qualified Data.ByteString.Char8 as BS (pack)
@@ -19,6 +18,7 @@ import System.Posix.Signals (sigCHLD)
 import Network.Wai.Logger
 
 #ifdef TLS
+import Control.Concurrent.Async (concurrently)
 import Network.Wai.Handler.WarpTLS
 #endif
 
@@ -64,9 +64,9 @@ server opt rpt route = reportDo rpt $ do
     unlimit openFileNumber
     svc <- openService opt
     unless debug writePidFile
+    rdr <- newRouteDBRef route
     setGroupUser (opt_user opt) (opt_group opt)
     logCheck logtype
-    stt <- initStater
     (zdater,zupdater) <- clockDateCacher
     ap <- initLogger FromSocket logtype zdater
     let lgr = apacheLogger ap
@@ -74,11 +74,17 @@ server opt rpt route = reportDo rpt $ do
         remover = logRemover ap
     (getInfo,cleaner) <- fileCacheInit
     mgr <- getManager opt
-    let mighty = reload opt rpt svc stt lgr getInfo mgr
-    setHandlers opt rpt svc stt remover mighty
+    setHandlers opt rpt svc remover rdr
+
+    -- this must be removed
+    void . forkIO $ mainLoop cleaner rotator zupdater 0
+
     report rpt "Mighty started"
-    void . forkIO $ mighty route
-    mainLoop rpt stt cleaner remover debug rotator zupdater 0
+    runInUnboundThread $ mighty opt rpt svc lgr getInfo mgr rdr
+    report rpt "Mighty retired"
+    finReporter rpt
+    remover
+    exitSuccess
   where
     debug = opt_debug_mode opt
     port = opt_port opt
@@ -99,8 +105,8 @@ server opt rpt route = reportDo rpt $ do
       | debug                 = LogStdout logBufferSize
       | otherwise             = LogFile logspec logBufferSize
 
-setHandlers :: Option -> Reporter -> Service -> Stater -> LogRemover -> Mighty -> IO ()
-setHandlers opt rpt svc stt remover mighty = do
+setHandlers :: Option -> Reporter -> Service -> LogRemover -> RouteDBRef -> IO ()
+setHandlers opt rpt svc remover rdr = do
     setHandler sigStop   stopHandler
     setHandler sigRetire retireHandler
     setHandler sigInfo   infoHandler
@@ -113,24 +119,18 @@ setHandlers opt rpt svc stt remover mighty = do
         closeService svc
         remover
         exitImmediately ExitSuccess
-    retireHandler = Catch $ ifWarpThreadsAreActive stt $ do
+    retireHandler = Catch $ do
         report rpt "Mighty retiring"
-        closeService svc
-        goRetiring stt
-    infoHandler = Catch $ do
-        i <- bshow <$> getConnectionCounter stt
-        status <- bshow <$> getServerStatus stt
-        report rpt $ status +++ ": # of connections = " +++ i
-    reloadHandler = Catch $ ifWarpThreadsAreActive stt $
+        closeService svc -- this lets warp break
+    infoHandler = Catch $ report rpt "obsolted"
+    reloadHandler = Catch $ do
         ifRouteFileIsValid rpt opt $ \newroute -> do
+            writeRouteDBRef rdr newroute
             report rpt "Mighty reloaded"
-            void . forkIO $ mighty newroute
 
 ----------------------------------------------------------------
 
-type Mighty = RouteDB -> IO ()
-
-ifRouteFileIsValid :: Reporter -> Option -> Mighty -> IO ()
+ifRouteFileIsValid :: Reporter -> Option -> (RouteDB -> IO ()) -> IO ()
 ifRouteFileIsValid rpt opt act = case opt_routing_file opt of
     Nothing    -> return ()
     Just rfile -> try (parseRoute rfile defaultDomain defaultPort) >>= either reportError act
@@ -139,29 +139,26 @@ ifRouteFileIsValid rpt opt act = case opt_routing_file opt of
 
 ----------------------------------------------------------------
 
-reload :: Option -> Reporter -> Service -> Stater
-       -> ApacheLogger -> GetInfo -> ConnPool
-       -> Mighty
-reload opt rpt svc stt lgr getInfo _mgr route = reportDo rpt $ do
-    setMyWarpThreadId stt
-    let app req = fileCgiApp cspec filespec cgispec revproxyspec route req
-    case svc of
-        HttpOnly s  -> runSettingsSocket setting s app
+mighty :: Option -> Reporter -> Service
+       -> ApacheLogger -> GetInfo -> ConnPool -> RouteDBRef
+       -> IO ()
+mighty opt rpt svc lgr getInfo _mgr rdr = reportDo rpt $ case svc of
+    HttpOnly s  -> runSettingsSocket setting s app
 #ifdef TLS
-        HttpsOnly s -> runTLSSocket tlsSetting setting s app
-        HttpAndHttps s1 s2 -> do
-            tid <- forkIO $ runSettingsSocket setting s1 app
-            addAnotherWarpThreadId stt tid
-            runTLSSocket tlsSetting setting s2 app
+    HttpsOnly s -> runTLSSocket tlsSetting setting s app
+    HttpAndHttps s1 s2 -> concurrently
+        (runSettingsSocket setting s1 app)
+        (runTLSSocket tlsSetting setting s2 app)
 #else
-        _ -> error "never reach"
+    _ -> error "never reach"
 #endif
   where
+    app req = fileCgiApp cspec filespec cgispec revproxyspec rdr req
     debug = opt_debug_mode opt
+    -- We don't use setInstallShutdownHandler because we may use
+    -- two sockets for HTTP and HTTPS.
     setting = setPort        (opt_port opt)
             $ setOnException (if debug then printStdout else warpHandler rpt)
-            $ setOnOpen      (\_ -> increment stt >> return True)
-            $ setOnClose     (\_ -> decrement stt)
             $ setTimeout     (opt_connection_timeout opt)
             $ setHost        "*"
             $ setFdCacheDuration (opt_fd_cache_duration opt)
@@ -192,27 +189,16 @@ reload opt rpt svc stt lgr getInfo _mgr route = reportDo rpt $ do
 
 ----------------------------------------------------------------
 
-mainLoop :: Reporter -> Stater -> RemoveInfo
-         -> LogRemover -> Bool -> LogRotator
-         -> DateCacheUpdater
-         -> Int -> IO ()
-mainLoop rpt stt cleaner remover everySecond rotator zupdater sec = do
+mainLoop :: RemoveInfo -> LogRotator -> DateCacheUpdater -> Int -> IO ()
+mainLoop cleaner rotator zupdater sec = do
     threadDelay oneSecond
-    retiring <- isRetiring stt
-    counter <- getConnectionCounter stt
-    if retiring && counter == 0 then do
-        report rpt "Mighty retired"
-        finReporter rpt
-        remover
-        exitSuccess
-      else do
-        zupdater
-        let longTimer = sec == longTimerInterval
-        when longTimer $ do
-            cleaner
-            rotator
-        let !next = if longTimer then 0 else sec + 1
-        mainLoop rpt stt cleaner remover everySecond rotator zupdater next
+    zupdater
+    let longTimer = sec == longTimerInterval
+    when longTimer $ do
+        cleaner
+        rotator
+    let !next = if longTimer then 0 else sec + 1
+    mainLoop cleaner rotator zupdater next
 
 ----------------------------------------------------------------
 

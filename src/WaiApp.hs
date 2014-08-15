@@ -15,29 +15,31 @@ import Program.Mighty
 data Perhaps a = Found a | Redirect | Fail
 
 fileCgiApp :: ClassicAppSpec -> FileAppSpec -> CgiAppSpec -> RevProxyAppSpec
-           -> RouteDB -> Application
-fileCgiApp cspec filespec cgispec revproxyspec um req respond = case mmp of
-    Fail -> do
-        let st = preconditionFailed412
-        liftIO $ logger cspec req' st Nothing
-        fastResponse respond st defaultHeader "Precondition Failed\r\n"
-    Redirect -> do
-        let st = movedPermanently301
-            hdr = defaultHeader ++ redirectHeader req'
-        liftIO $ logger cspec req st Nothing
-        fastResponse respond st hdr "Moved Permanently\r\n"
-    Found (RouteFile  src dst) ->
-        fileApp cspec filespec (FileRoute src dst) req' respond
-    Found (RouteRedirect src dst) ->
-        redirectApp cspec (RedirectRoute src dst) req' respond
-    Found (RouteCGI   src dst) ->
-        cgiApp cspec cgispec (CgiRoute src dst) req' respond
-    Found (RouteRevProxy src dst dom prt) ->
-        revProxyApp cspec revproxyspec (RevProxyRoute src dst dom prt) req respond
+           -> RouteDBRef -> Application
+fileCgiApp cspec filespec cgispec revproxyspec rdr req respond = do
+    um <- readRouteDBRef rdr
+    case mmp um of
+        Fail -> do
+            let st = preconditionFailed412
+            liftIO $ logger cspec req' st Nothing
+            fastResponse respond st defaultHeader "Precondition Failed\r\n"
+        Redirect -> do
+            let st = movedPermanently301
+                hdr = defaultHeader ++ redirectHeader req'
+            liftIO $ logger cspec req st Nothing
+            fastResponse respond st hdr "Moved Permanently\r\n"
+        Found (RouteFile  src dst) ->
+            fileApp cspec filespec (FileRoute src dst) req' respond
+        Found (RouteRedirect src dst) ->
+            redirectApp cspec (RedirectRoute src dst) req' respond
+        Found (RouteCGI   src dst) ->
+            cgiApp cspec cgispec (CgiRoute src dst) req' respond
+        Found (RouteRevProxy src dst dom prt) ->
+            revProxyApp cspec revproxyspec (RevProxyRoute src dst dom prt) req respond
   where
     (host, _) = hostPort req
     path = urlDecode False $ rawPathInfo req
-    mmp = case getBlock host um of
+    mmp um = case getBlock host um of
         Nothing  -> Fail
         Just blk -> getRoute path blk
     fastResponse resp st hdr body = resp $ responseLBS st hdr body

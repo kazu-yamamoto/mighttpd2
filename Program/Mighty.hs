@@ -7,7 +7,6 @@ module Program.Mighty (
   -- * State
   , module Program.Mighty.FileCache
   , module Program.Mighty.Report
-  , module Program.Mighty.State
   -- * Utilities
   , module Program.Mighty.ByteString
   , module Program.Mighty.Network
@@ -29,4 +28,3 @@ import Program.Mighty.Report
 import Program.Mighty.Resource
 import Program.Mighty.Route
 import Program.Mighty.Signal
-import Program.Mighty.State

@@ -11,12 +11,18 @@ module Program.Mighty.Route (
   , Dst
   , Domain
   , Port
+  -- * RouteDBRef
+  , RouteDBRef
+  , newRouteDBRef
+  , readRouteDBRef
+  , writeRouteDBRef
   ) where
 
 import Control.Applicative hiding (many,(<|>))
 import Control.Monad
 import Data.ByteString
 import qualified Data.ByteString.Char8 as BS
+import Data.IORef
 import Network.Wai.Application.Classic
 import Text.Parsec
 import Text.Parsec.ByteString.Lazy
@@ -108,3 +114,16 @@ domPortDst ddom dport = (ddom,,) <$> port <*> path
     port = do
         void $ char ':'
         read <$> many1 (oneOf ['0'..'9'])
+
+----------------------------------------------------------------
+
+newtype RouteDBRef = RouteDBRef (IORef RouteDB)
+
+newRouteDBRef :: RouteDB -> IO RouteDBRef
+newRouteDBRef rout = RouteDBRef <$> newIORef rout
+
+readRouteDBRef :: RouteDBRef -> IO RouteDB
+readRouteDBRef (RouteDBRef ref) = readIORef ref
+
+writeRouteDBRef :: RouteDBRef -> RouteDB -> IO ()
+writeRouteDBRef (RouteDBRef ref) rout = writeIORef ref rout
