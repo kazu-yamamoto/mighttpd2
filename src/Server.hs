@@ -157,10 +157,10 @@ mighty opt rpt svc lgr getInfo _mgr rdr = reportDo rpt $ case svc of
     debug = opt_debug_mode opt
     -- We don't use setInstallShutdownHandler because we may use
     -- two sockets for HTTP and HTTPS.
-    setting = setPort        (opt_port opt)
-            $ setOnException (if debug then printStdout else warpHandler rpt)
-            $ setTimeout     (opt_connection_timeout opt)
-            $ setHost        "*"
+    setting = setPort            (opt_port opt)
+            $ setOnException     (if debug then printStdout else warpHandler rpt)
+            $ setTimeout         (opt_connection_timeout opt)
+            $ setHost            "*"
             $ setFdCacheDuration (opt_fd_cache_duration opt)
             defaultSettings
     serverName = BS.pack $ opt_server_name opt
@@ -234,8 +234,8 @@ openService opt
 ----------------------------------------------------------------
 
 closeService :: Service -> IO ()
-closeService (HttpOnly s) = sClose s
-closeService (HttpsOnly s) = sClose s
+closeService (HttpOnly s)         = sClose s
+closeService (HttpsOnly s)        = sClose s
 closeService (HttpAndHttps s1 s2) = sClose s1 >> sClose s2
 
 ----------------------------------------------------------------
@@ -245,8 +245,9 @@ type ConnPool = H.Manager
 getManager :: Option -> IO ConnPool
 getManager opt = H.newManager H.defaultManagerSettings {
     H.managerConnCount = managerNumber
-  , H.managerResponseTimeout = if opt_proxy_timeout opt == 0 then
-                                   H.managerResponseTimeout H.defaultManagerSettings
-                                 else
-                                   Just (opt_proxy_timeout opt)
+  , H.managerResponseTimeout = responseTimeout
   }
+  where
+    responseTimeout
+      | opt_proxy_timeout opt == 0 = H.managerResponseTimeout H.defaultManagerSettings
+      | otherwise                  = Just (opt_proxy_timeout opt)
