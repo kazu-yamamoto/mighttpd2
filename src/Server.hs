@@ -74,7 +74,7 @@ server opt rpt route = reportDo rpt $ do
     setHandlers opt rpt svc remover rdr
 
     -- this must be removed
-    void . forkIO $ mainLoop cleaner rotator
+    void . forkIO $ cleanupLoop cleaner rotator
 
     report rpt "Mighty started"
     runInUnboundThread $ mighty opt rpt svc lgr getInfo mgr rdr
@@ -186,12 +186,12 @@ mighty opt rpt svc lgr getInfo _mgr rdr = reportDo rpt $ case svc of
 
 ----------------------------------------------------------------
 
-mainLoop :: RemoveInfo -> LogRotator -> IO ()
-mainLoop cleaner rotator = do
+cleanupLoop :: RemoveInfo -> LogRotator -> IO ()
+cleanupLoop cleaner rotator = do
     threadDelay tenSecond
     cleaner
     rotator
-    mainLoop cleaner rotator
+    cleanupLoop cleaner rotator
 
 ----------------------------------------------------------------
 
