@@ -40,11 +40,8 @@ backlogNumber = 2048
 openFileNumber :: Integer
 openFileNumber = 10000
 
-oneSecond :: Int
-oneSecond = 1000000
-
-longTimerInterval :: Int
-longTimerInterval = 10
+tenSecond :: Int
+tenSecond = 10000000
 
 logBufferSize :: Int
 logBufferSize = 4 * 1024 * 10
@@ -67,7 +64,7 @@ server opt rpt route = reportDo rpt $ do
     rdr <- newRouteDBRef route
     setGroupUser (opt_user opt) (opt_group opt)
     logCheck logtype
-    (zdater,zupdater) <- clockDateCacher
+    (zdater,_) <- clockDateCacher
     ap <- initLogger FromSocket logtype zdater
     let lgr = apacheLogger ap
         rotator = logRotator ap
@@ -77,7 +74,7 @@ server opt rpt route = reportDo rpt $ do
     setHandlers opt rpt svc remover rdr
 
     -- this must be removed
-    void . forkIO $ mainLoop cleaner rotator zupdater 0
+    void . forkIO $ mainLoop cleaner rotator
 
     report rpt "Mighty started"
     runInUnboundThread $ mighty opt rpt svc lgr getInfo mgr rdr
@@ -189,16 +186,12 @@ mighty opt rpt svc lgr getInfo _mgr rdr = reportDo rpt $ case svc of
 
 ----------------------------------------------------------------
 
-mainLoop :: RemoveInfo -> LogRotator -> DateCacheUpdater -> Int -> IO ()
-mainLoop cleaner rotator zupdater sec = do
-    threadDelay oneSecond
-    zupdater
-    let longTimer = sec == longTimerInterval
-    when longTimer $ do
-        cleaner
-        rotator
-    let !next = if longTimer then 0 else sec + 1
-    mainLoop cleaner rotator zupdater next
+mainLoop :: RemoveInfo -> LogRotator -> IO ()
+mainLoop cleaner rotator = do
+    threadDelay tenSecond
+    cleaner
+    rotator
+    mainLoop cleaner rotator
 
 ----------------------------------------------------------------
 
