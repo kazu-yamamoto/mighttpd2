@@ -67,12 +67,12 @@ server opt rpt route = reportDo rpt $ do
     let lgr = apacheLogger ap
         rotator = logRotator ap
         remover = logRemover ap
-    (getInfo,cleaner) <- fileCacheInit
+    getInfo <- fileCacheInit
     mgr <- getManager opt
     setHandlers opt rpt svc remover rdr
 
     -- this must be removed
-    void . forkIO $ cleanupLoop cleaner rotator
+    void . forkIO $ cleanupLoop rotator
 
     report rpt "Mighty started"
     runInUnboundThread $ mighty opt rpt svc lgr getInfo mgr rdr
@@ -184,12 +184,11 @@ mighty opt rpt svc lgr getInfo _mgr rdr = reportDo rpt $ case svc of
 
 ----------------------------------------------------------------
 
-cleanupLoop :: RemoveInfo -> LogRotator -> IO ()
-cleanupLoop cleaner rotator = do
+cleanupLoop :: LogRotator -> IO ()
+cleanupLoop rotator = do
     threadDelay tenSecond
-    cleaner
     rotator
-    cleanupLoop cleaner rotator
+    cleanupLoop rotator
 
 ----------------------------------------------------------------
 

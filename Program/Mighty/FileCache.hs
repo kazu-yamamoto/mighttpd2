@@ -1,3 +1,5 @@
+{-# LANGUAGE RecordWildCards #-}
+
 module Program.Mighty.FileCache (
   -- * Types
     GetInfo
@@ -8,27 +10,27 @@ module Program.Mighty.FileCache (
 
 import Control.Exception
 import Control.Exception.IOChoice
+import Control.Reaper
 import Data.ByteString (ByteString)
 import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as M
-import Data.IORef
 import Network.HTTP.Date
 import Network.Wai.Application.Classic
-import Program.Mighty.IORef
 import System.Posix.Files
 
 data Entry = Negative | Positive FileInfo
 type Cache = HashMap ByteString Entry
 type GetInfo = Path -> IO FileInfo
 type RemoveInfo = IO ()
+type FileCache = Reaper Cache (ByteString,Entry)
 
-fileInfo :: IORef Cache -> GetInfo
-fileInfo ref path = do
-    cache <- readIORef ref
+fileInfo :: FileCache -> GetInfo
+fileInfo reaper@Reaper{..} path = do
+    cache <- reaperRead
     case M.lookup bpath cache of
         Just Negative     -> throwIO (userError "fileInfo")
         Just (Positive x) -> return x
-        Nothing           -> register ||> negative ref path
+        Nothing           -> register ||> negative reaper path
   where
     bpath = pathByteString path
     sfile = pathString path
@@ -37,13 +39,13 @@ fileInfo ref path = do
         let regular = not (isDirectory fs)
             readable = fileMode fs `intersectFileModes` ownerReadMode /= 0
         if regular && readable then
-            positive ref fs path
+            positive reaper fs path
           else
             goNext
 
-positive :: IORef Cache -> FileStatus -> GetInfo
-positive ref fs path = do
-    strictAtomicModifyIORef ref $ M.insert bpath entry
+positive :: FileCache -> FileStatus -> GetInfo
+positive Reaper{..} fs path = do
+    reaperAdd (bpath,entry)
     return info
   where
     info = FileInfo {
@@ -57,20 +59,25 @@ positive ref fs path = do
     entry = Positive info
     bpath = pathByteString path
 
-negative :: IORef Cache -> GetInfo
-negative ref path = do
-    strictAtomicModifyIORef ref $ M.insert bpath Negative
+negative :: FileCache -> GetInfo
+negative Reaper{..} path = do
+    reaperAdd (bpath,Negative)
     throwIO (userError "fileInfo")
   where
     bpath = pathByteString path
 
 ----------------------------------------------------------------
 
-fileCacheInit :: IO (GetInfo, RemoveInfo)
-fileCacheInit = do
-    ref <- newIORef M.empty
-    return (fileInfo ref, remover ref)
+fileCacheInit :: IO GetInfo
+fileCacheInit = mkReaper settings >>= return . fileInfo
+  where
+    settings = defaultReaperSettings {
+        reaperAction = override
+      , reaperDelay  = 10000000 -- 10 seconds
+      , reaperCons   = uncurry M.insert
+      , reaperNull   = M.null
+      , reaperEmpty  = M.empty
+      }
 
--- atomicModifyIORef is not necessary here.
-remover :: IORef Cache -> IO ()
-remover ref = writeIORef ref M.empty
+override :: Cache -> IO (Cache -> Cache)
+override _ = return $ const M.empty
