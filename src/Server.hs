@@ -2,9 +2,9 @@
 
 module Server (server, defaultDomain, defaultPort) where
 
-import Control.Concurrent (forkIO, threadDelay, runInUnboundThread)
+import Control.Concurrent (runInUnboundThread)
 import Control.Exception (try)
-import Control.Monad (void, unless, when)
+import Control.Monad (unless, when)
 import qualified Data.ByteString.Char8 as BS (pack)
 import Data.Streaming.Network (bindPortTCP)
 import Network (Socket, sClose)
@@ -38,9 +38,6 @@ defaultPort = 80
 openFileNumber :: Integer
 openFileNumber = 10000
 
-tenSecond :: Int
-tenSecond = 10000000
-
 logBufferSize :: Int
 logBufferSize = 4 * 1024 * 10
 
@@ -49,7 +46,6 @@ managerNumber = 1024 -- FIXME
 
 ----------------------------------------------------------------
 
-type LogRotator = IO ()
 type LogRemover = IO ()
 
 ----------------------------------------------------------------
@@ -65,14 +61,10 @@ server opt rpt route = reportDo rpt $ do
     (zdater,_) <- clockDateCacher
     ap <- initLogger FromSocket logtype zdater
     let lgr = apacheLogger ap
-        rotator = logRotator ap
         remover = logRemover ap
     getInfo <- fileCacheInit
     mgr <- getManager opt
     setHandlers opt rpt svc remover rdr
-
-    -- this must be removed
-    void . forkIO $ cleanupLoop rotator
 
     report rpt "Mighty started"
     runInUnboundThread $ mighty opt rpt svc lgr getInfo mgr rdr
@@ -181,14 +173,6 @@ mighty opt rpt svc lgr getInfo _mgr rdr = reportDo rpt $ case svc of
       , keyFile  = opt_tls_key_file opt
       }
 #endif
-
-----------------------------------------------------------------
-
-cleanupLoop :: LogRotator -> IO ()
-cleanupLoop rotator = do
-    threadDelay tenSecond
-    rotator
-    cleanupLoop rotator
 
 ----------------------------------------------------------------
 
