@@ -6,16 +6,17 @@ import Control.Concurrent (forkIO, threadDelay, runInUnboundThread)
 import Control.Exception (try)
 import Control.Monad (void, unless, when)
 import qualified Data.ByteString.Char8 as BS (pack)
+import Data.Streaming.Network (bindPortTCP)
 import Network (Socket, sClose)
 import qualified Network.HTTP.Client as H
 import Network.Wai.Application.Classic hiding ((</>), (+++))
 import Network.Wai.Handler.Warp
+import Network.Wai.Logger
 import System.Exit (ExitCode(..), exitSuccess)
 import System.IO
 import System.IO.Error (ioeGetErrorString)
 import System.Posix (exitImmediately, Handler(..), getProcessID, setFileMode)
 import System.Posix.Signals (sigCHLD)
-import Network.Wai.Logger
 
 #ifdef TLS
 import Control.Concurrent.Async (concurrently)
@@ -33,9 +34,6 @@ defaultDomain = "localhost"
 
 defaultPort :: Int
 defaultPort = 80
-
-backlogNumber :: Int
-backlogNumber = 2048
 
 openFileNumber :: Integer
 openFileNumber = 10000
@@ -154,10 +152,10 @@ mighty opt rpt svc lgr getInfo _mgr rdr = reportDo rpt $ case svc of
     debug = opt_debug_mode opt
     -- We don't use setInstallShutdownHandler because we may use
     -- two sockets for HTTP and HTTPS.
-    setting = setPort            (opt_port opt)
+    setting = setPort            (opt_port opt) -- just in case
+            $ setHost            (fromString (opt_host opt))  -- just in case
             $ setOnException     (if debug then printStdout else warpHandler rpt)
             $ setTimeout         (opt_connection_timeout opt)
-            $ setHost            "*"
             $ setFdCacheDuration (opt_fd_cache_duration opt)
             defaultSettings
     serverName = BS.pack $ opt_server_name opt
@@ -202,22 +200,23 @@ data Service = HttpOnly Socket | HttpsOnly Socket | HttpAndHttps Socket Socket
 openService :: Option -> IO Service
 openService opt
   | service == 1 = do
-      s <- listenSocket httpsPort backlogNumber
-      debugMessage $ "HTTP/TLS service on port " ++ httpsPort ++ "."
+      s <- bindPortTCP httpsPort hostpref
+      debugMessage $ "HTTP/TLS service on port " ++ show httpsPort ++ "."
       return $ HttpsOnly s
   | service == 2 = do
-      s1 <- listenSocket httpPort backlogNumber
-      s2 <- listenSocket httpsPort backlogNumber
-      debugMessage $ "HTTP service on port " ++ httpPort ++ " and "
-                  ++ "HTTP/TLS service on port " ++ httpsPort ++ "."
+      s1 <- bindPortTCP httpPort hostpref
+      s2 <- bindPortTCP httpsPort hostpref
+      debugMessage $ "HTTP service on port " ++ show httpPort ++ " and "
+                  ++ "HTTP/TLS service on port " ++ show httpsPort ++ "."
       return $ HttpAndHttps s1 s2
   | otherwise = do
-      s <- listenSocket httpPort backlogNumber
-      debugMessage $ "HTTP service on port " ++ httpPort ++ "."
+      s <- bindPortTCP httpPort hostpref
+      debugMessage $ "HTTP service on port " ++ show httpPort ++ "."
       return $ HttpOnly s
   where
-    httpPort  = show $ opt_port opt
-    httpsPort = show $ opt_tls_port opt
+    httpPort  = opt_port opt
+    httpsPort = opt_tls_port opt
+    hostpref  = fromString $ opt_host opt
     service = opt_service opt
     debug = opt_debug_mode opt
     debugMessage msg = when debug $ do

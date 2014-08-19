@@ -52,6 +52,7 @@ Library
                       , network
                       , parsec >= 3
                       , resourcet
+                      , streaming-commons
                       , unix
                       , unix-time
                       , unordered-containers
@@ -78,6 +79,7 @@ Executable mighty
                       , conduit-extra
                       , transformers
                       , unix
+                      , streaming-commons
                       , wai >= 3.0
                       , wai-app-file-cgi >= 3.0
                       , wai-logger >= 2.2

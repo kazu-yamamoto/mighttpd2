@@ -79,7 +79,7 @@ commentLines = () <$ many commentLine
 -- >>> isLeft $ parse trailing "" "X# comments\n"
 -- True
 trailing :: Parser ()
-trailing = () <$ (comment *> newline <|> newline)
+trailing = () <$ (spcs *> comment *> newline <|> spcs *> newline)
 
 -- | 'Parser' to consume a trailing comment
 --

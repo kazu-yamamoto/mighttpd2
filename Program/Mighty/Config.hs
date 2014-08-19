@@ -21,6 +21,7 @@ defaultOption :: String -- ^ A default server name (e.g. \"Mighttpd/3.0.0\")
               -> Option
 defaultOption svrnm = Option {
     opt_port = 8080
+  , opt_host = "*"
   , opt_debug_mode = True
   , opt_user = "root"
   , opt_group = "root"
@@ -46,6 +47,7 @@ defaultOption svrnm = Option {
 
 data Option = Option {
     opt_port :: !Int
+  , opt_host :: !String
   , opt_debug_mode :: !Bool
   , opt_user :: !String
   , opt_group :: !String
@@ -80,6 +82,7 @@ parseOption file svrnm = makeOpt (defaultOption svrnm) <$> parseConfig file
 makeOpt :: Option -> [Conf] -> Option
 makeOpt def conf = Option {
     opt_port               = get "Port" opt_port
+  , opt_host               = get "Host" opt_host
   , opt_debug_mode         = get "Debug_Mode" opt_debug_mode
   , opt_user               = get "User" opt_user
   , opt_group              = get "Group" opt_group
@@ -139,7 +142,7 @@ config = commentLines *> many cfield <* eof
     cfield = field <* commentLines
 
 field :: Parser Conf
-field = (,) <$> key <*> (sep *> value) <* trailing
+field = (,) <$> key <*> (sep *> value)
 
 key :: Parser String
 key = many1 (oneOf $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_") <* spcs
@@ -148,14 +151,15 @@ sep :: Parser ()
 sep = () <$ char ':' *> spcs
 
 value :: Parser ConfValue
-value = choice [try cv_int, try cv_bool, cv_string] <* spcs
+value = choice [try cv_int, try cv_bool, cv_string]
 
+-- Trailing should be included in try to allow IP addresses.
 cv_int :: Parser ConfValue
-cv_int = CV_Int . read <$> many1 digit
+cv_int = CV_Int . read <$> many1 digit <* trailing
 
 cv_bool :: Parser ConfValue
-cv_bool = CV_Bool True  <$ string "Yes" <|>
-          CV_Bool False <$ string "No"
+cv_bool = CV_Bool True  <$ string "Yes" <* trailing <|>
+          CV_Bool False <$ string "No"   <* trailing
 
 cv_string :: Parser ConfValue
-cv_string = CV_String <$> many1 (noneOf " \t\n")
+cv_string = CV_String <$> many1 (noneOf " \t\n") <* trailing
