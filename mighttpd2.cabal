@@ -58,7 +58,7 @@ Library
                       , unordered-containers
                       , wai >= 3.0
                       , wai-app-file-cgi >= 3.0
-                      , warp >= 3.0
+                      , warp >= 3.0.1
 
 Executable mighty
   Default-Language:     Haskell2010
@@ -82,8 +82,8 @@ Executable mighty
                       , streaming-commons
                       , wai >= 3.0
                       , wai-app-file-cgi >= 3.0
-                      , wai-logger >= 2.2
-                      , warp >= 3.0
+                      , wai-logger >= 2.2.2
+                      , warp >= 3.0.1
   if flag(tls)
     Build-Depends:      tls
                       , warp-tls >= 1.4.1
