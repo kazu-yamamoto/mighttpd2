@@ -147,7 +147,7 @@ mighty opt rpt svc lgr getInfo _mgr rdr = reportDo rpt $ case svc of
     setting = setPort            (opt_port opt) -- just in case
             $ setHost            (fromString (opt_host opt))  -- just in case
             $ setOnException     (if debug then printStdout else warpHandler rpt)
-            $ setTimeout         (opt_connection_timeout opt)
+            $ setTimeout         (opt_connection_timeout opt) -- seconds
             $ setFdCacheDuration (opt_fd_cache_duration opt)
             defaultSettings
     serverName = BS.pack $ opt_server_name opt
@@ -225,4 +225,4 @@ getManager opt = H.newManager H.defaultManagerSettings {
   where
     responseTimeout
       | opt_proxy_timeout opt == 0 = H.managerResponseTimeout H.defaultManagerSettings
-      | otherwise                  = Just (opt_proxy_timeout opt)
+      | otherwise                  = Just (opt_proxy_timeout opt * 1000000) -- micro seconds
