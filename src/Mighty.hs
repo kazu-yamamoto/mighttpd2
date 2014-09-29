@@ -2,7 +2,9 @@
 
 module Main where
 
+#ifndef TLS
 import Control.Monad (when)
+#endif
 import Data.Version (showVersion)
 import Network.Wai.Application.Classic hiding ((</>), (+++))
 import System.Directory (getCurrentDirectory)

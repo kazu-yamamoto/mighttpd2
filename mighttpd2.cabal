@@ -67,6 +67,7 @@ Executable mighty
   GHC-Options:          -Wall -threaded -rtsopts
   if flag(tls)
     Cpp-Options:        -DTLS
+    Build-Depends:      async
   Build-Depends:        base >= 4.0 && < 5
                       , bytestring
                       , directory

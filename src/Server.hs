@@ -21,6 +21,7 @@ import System.Posix.Signals (sigCHLD)
 #ifdef TLS
 import Control.Concurrent.Async (concurrently)
 import Network.Wai.Handler.WarpTLS
+import Control.Monad (void)
 #endif
 
 import Program.Mighty
@@ -133,7 +134,7 @@ mighty opt rpt svc lgr getInfo _mgr rdr = reportDo rpt $ case svc of
     HttpOnly s  -> runSettingsSocket setting s app
 #ifdef TLS
     HttpsOnly s -> runTLSSocket tlsSetting setting s app
-    HttpAndHttps s1 s2 -> concurrently
+    HttpAndHttps s1 s2 -> void $ concurrently
         (runSettingsSocket setting s1 app)
         (runTLSSocket tlsSetting setting s2 app)
 #else
