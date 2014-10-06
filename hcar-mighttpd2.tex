@@ -1,14 +1,16 @@
 % Mighttpd2YetanotherWebSer-KM.tex
 \begin{hcarentry}[updated]{Mighttpd2 --- Yet another Web Server}
 \label{mighttpd2}
-\report{Kazu Yamamoto}%05/14
+\report{Kazu Yamamoto}%11/14
 \status{open source, actively developed}
 \makeheader
 
 Mighttpd (called mighty) version 3 is a simple but practical Web server in Haskell.
 It provides features to handle static files, redirection, CGI, reverse proxy, reloading configuration files and graceful shutdown. Also TLS is experimentally supported.
 
-Mighttpd 3 is now based on WAI 2.0 or later and uses new {\it warp} and new {\t fast-logger}. This results in much improvement of its peformance if Mighttpd 3 is compiled by GHC 7.8.2 or later.
+Mighttpd 3 is now based on WAI 3.0. It also adopts the auto-update
+library to reduce CPU power consumption at no connection (but it is
+still consuming CPU power a bit because of http-client at this moment).
 
 You can install Mighttpd 3 ({\it mighttpd2}) from HackageDB. Note that the package name is {\it mighttpd2}, not {\it mighttpd3}, for historical reasons
 
