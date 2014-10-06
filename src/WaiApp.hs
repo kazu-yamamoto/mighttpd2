@@ -43,8 +43,7 @@ fileCgiApp cspec filespec cgispec revproxyspec rdr req respond = do
         Nothing  -> Fail
         Just blk -> getRoute path blk
     fastResponse resp st hdr body = resp $ responseLBS st hdr body
-    defaultHeader = [("Content-Type", "text/plain")
-                    ,("Server", softwareName cspec)]
+    defaultHeader = [("Content-Type", "text/plain")]
     req' = req { rawPathInfo = path } -- FIXME
 
 getBlock :: ByteString -> RouteDB -> Maybe [Route]

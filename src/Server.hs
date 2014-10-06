@@ -150,6 +150,7 @@ mighty opt rpt svc lgr getInfo _mgr rdr = reportDo rpt $ case svc of
             $ setOnException     (if debug then printStdout else warpHandler rpt)
             $ setTimeout         (opt_connection_timeout opt) -- seconds
             $ setFdCacheDuration (opt_fd_cache_duration opt)
+            $ setServerName      serverName
             defaultSettings
     serverName = BS.pack $ opt_server_name opt
     cspec = ClassicAppSpec {
