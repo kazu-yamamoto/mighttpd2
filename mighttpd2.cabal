@@ -1,5 +1,5 @@
 Name:                   mighttpd2
-Version:                3.2.3
+Version:                3.2.4
 Author:                 Kazu Yamamoto <kazu@iij.ad.jp>
 Maintainer:             Kazu Yamamoto <kazu@iij.ad.jp>
 License:                BSD3
@@ -87,7 +87,7 @@ Executable mighty
                       , warp >= 3.0.2
   if flag(tls)
     Build-Depends:      tls
-                      , warp-tls >= 1.4.1
+                      , warp-tls >= 3.0.1
   Other-Modules:        Mighty
                         Server
                         WaiApp
@@ -126,7 +126,7 @@ Test-Suite spec
                       , http-client
   if flag(tls)
     Build-Depends:      tls
-                      , warp-tls >= 1.4.1
+                      , warp-tls >= 3.0.1
 
 Source-Repository head
   Type:                 git
