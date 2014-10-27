@@ -5,7 +5,7 @@ module Server (server, defaultDomain, defaultPort) where
 import Control.Concurrent (runInUnboundThread)
 import Control.Exception (try)
 import Control.Monad (unless, when)
-import qualified Data.ByteString.Char8 as BS (pack)
+import qualified Data.ByteString.Char8 as BS
 import Data.Streaming.Network (bindPortTCP)
 import Network (Socket, sClose)
 import qualified Network.HTTP.Client as H
