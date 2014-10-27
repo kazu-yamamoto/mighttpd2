@@ -18,15 +18,16 @@ import System.IO.Error (ioeGetErrorString)
 import System.Posix (exitImmediately, Handler(..), getProcessID, setFileMode)
 import System.Posix.Signals (sigCHLD)
 
+import Program.Mighty
+import WaiApp
+
 #ifdef TLS
 import Control.Concurrent.Async (concurrently)
 import Network.Wai.Handler.WarpTLS
 import Control.Monad (void)
+#else
+data TLSSettings = TLSSettings
 #endif
-
-import Program.Mighty
-
-import WaiApp
 
 ----------------------------------------------------------------
 
@@ -57,6 +58,13 @@ server opt rpt route = reportDo rpt $ do
     svc <- openService opt
     unless debug writePidFile
     rdr <- newRouteDBRef route
+#ifdef TLS
+    cert <- BS.readFile $ opt_tls_cert_file opt
+    key  <- BS.readFile $ opt_tls_key_file opt
+    let tlsSetting = tlsSettingsMemory cert key
+#else
+    let tlsSetting = TLSSettings
+#endif
     setGroupUser (opt_user opt) (opt_group opt)
     logCheck logtype
     (zdater,_) <- clockDateCacher
@@ -68,7 +76,7 @@ server opt rpt route = reportDo rpt $ do
     setHandlers opt rpt svc remover rdr
 
     report rpt "Mighty started"
-    runInUnboundThread $ mighty opt rpt svc lgr getInfo mgr rdr
+    runInUnboundThread $ mighty opt rpt svc lgr getInfo mgr rdr tlsSetting
     report rpt "Mighty retired"
     finReporter rpt
     remover
@@ -129,14 +137,16 @@ ifRouteFileIsValid rpt opt act = case opt_routing_file opt of
 
 mighty :: Option -> Reporter -> Service
        -> ApacheLogger -> GetInfo -> ConnPool -> RouteDBRef
+       -> TLSSettings
        -> IO ()
-mighty opt rpt svc lgr getInfo _mgr rdr = reportDo rpt $ case svc of
+mighty opt rpt svc lgr getInfo mgr rdr _tlsSetting
+  = reportDo rpt $ case svc of
     HttpOnly s  -> runSettingsSocket setting s app
 #ifdef TLS
-    HttpsOnly s -> runTLSSocket tlsSetting setting s app
+    HttpsOnly s -> runTLSSocket _tlsSetting setting s app
     HttpAndHttps s1 s2 -> void $ concurrently
         (runSettingsSocket setting s1 app)
-        (runTLSSocket tlsSetting setting s2 app)
+        (runTLSSocket _tlsSetting setting s2 app)
 #else
     _ -> error "never reach"
 #endif
@@ -167,14 +177,8 @@ mighty opt rpt svc lgr getInfo _mgr rdr = reportDo rpt $ case svc of
         indexCgi = "index.cgi"
       }
     revproxyspec = RevProxyAppSpec {
-        revProxyManager = _mgr
+        revProxyManager = mgr
       }
-#ifdef TLS
-    tlsSetting = defaultTlsSettings {
-        certFile = opt_tls_cert_file opt
-      , keyFile  = opt_tls_key_file opt
-      }
-#endif
 
 ----------------------------------------------------------------
 
