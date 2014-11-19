@@ -21,10 +21,10 @@ import System.Posix.Signals (sigCHLD)
 import Program.Mighty
 import WaiApp
 
-#ifdef TLS
+#ifdef HTTP_OVER_TLS
 import Control.Concurrent.Async (concurrently)
-import Network.Wai.Handler.WarpTLS
 import Control.Monad (void)
+import Network.Wai.Handler.WarpTLS
 #else
 data TLSSettings = TLSSettings
 #endif
@@ -58,7 +58,7 @@ server opt rpt route = reportDo rpt $ do
     svc <- openService opt
     unless debug writePidFile
     rdr <- newRouteDBRef route
-#ifdef TLS
+#ifdef HTTP_OVER_TLS
     cert <- BS.readFile $ opt_tls_cert_file opt
     key  <- BS.readFile $ opt_tls_key_file opt
     let tlsSetting = tlsSettingsMemory cert key
@@ -142,7 +142,7 @@ mighty :: Option -> Reporter -> Service
 mighty opt rpt svc lgr getInfo mgr rdr _tlsSetting
   = reportDo rpt $ case svc of
     HttpOnly s  -> runSettingsSocket setting s app
-#ifdef TLS
+#ifdef HTTP_OVER_TLS
     HttpsOnly s -> runTLSSocket _tlsSetting setting s app
     HttpAndHttps s1 s2 -> void $ concurrently
         (runSettingsSocket setting s1 app)

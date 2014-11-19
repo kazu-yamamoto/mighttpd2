@@ -2,7 +2,7 @@
 
 module Main where
 
-#ifndef TLS
+#ifndef HTTP_OVER_TLS
 import Control.Monad (when)
 #endif
 import Data.Version (showVersion)
@@ -72,7 +72,7 @@ main = do
         hPutStrLn stderr $ reportFile ++ " is not writable"
         hPrint stderr e
         exitFailure
-#ifdef TLS
+#ifdef HTTP_OVER_TLS
     checkTLS _ = return ()
 #else
     checkTLS opt = when (opt_service opt > 1) $ do
