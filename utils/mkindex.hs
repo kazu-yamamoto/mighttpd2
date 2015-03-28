@@ -1,14 +1,20 @@
-{-
-  mkindex :: Making index.html for the current directory.
--}
+{-# LANGUAGE CPP #-}
+
+-- mkindex :: Making index.html for the current directory.
+
 import Control.Applicative
 import Data.Bits
-import Data.Time
+import Data.Time (formatTime)
 import Data.Time.Clock.POSIX
 import System.Directory
-import System.Locale
 import System.Posix.Files
 import Text.Printf
+
+#if MIN_VERSION_time(1,5,0)
+import Data.Time (defaultTimeLocale)
+#else
+import System.Locale (defaultTimeLocale)
+#endif
 
 indexFile :: String
 indexFile = "index.html"
@@ -67,29 +73,29 @@ ppSize st
 
 header :: String
 header = "\
-\<html>\n\
-\<head>\n\
-\<style type=\"text/css\">\n\
-\<!--\n\
-\body { padding-left: 10%; }\n\
-\h1 { font-size: x-large; }\n\
-\pre { font-size: large; }\n\
-\hr { text-align: left; margin-left: 0px; width: 80% }\n\
-\-->\n\
-\</style>\n\
-\</head>\n\
-\<title>Directory contents</title>\n\
-\<body>\n\
-\<h1>Directory contents</h1>\n\
-\<hr>\n\
-\<pre>\n"
+<html>\n\
+<head>\n\
+<style type=\"text/css\">\n\
+<!--\n\
+body { padding-left: 10%; }\n\
+h1 { font-size: x-large; }\n\
+pre { font-size: large; }\n\
+hr { text-align: left; margin-left: 0px; width: 80% }\n\
+-->\n\
+</style>\n\
+</head>\n\
+<title>Directory contents</title>\n\
+<body>\n\
+<h1>Directory contents</h1>\n\
+<hr>\n\
+<pre>\n"
 
 content :: Int -> (String,String,String,Int) -> String
 content lim (f,m,s,len) = "<a href=\"" ++ f ++ "\">" ++ f ++ "</a>  " ++ replicate (lim - len) ' ' ++ m ++ "  " ++ s ++ "\n"
 
 tailer :: String
 tailer = "\
-\</pre>\n\
-\<hr>\n\
-\</body>\n\
-\</html>\n"
+</pre>\n\
+<hr>\n\
+</body>\n\
+</html>\n"
