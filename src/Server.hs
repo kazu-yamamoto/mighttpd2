@@ -58,13 +58,7 @@ server opt rpt route = reportDo rpt $ do
     svc <- openService opt
     unless debug writePidFile
     rdr <- newRouteDBRef route
-#ifdef HTTP_OVER_TLS
-    cert <- BS.readFile $ opt_tls_cert_file opt
-    key  <- BS.readFile $ opt_tls_key_file opt
-    let tlsSetting = tlsSettingsMemory cert key
-#else
-    let tlsSetting = TLSSettings
-#endif
+    tlsSetting <- getTlsSetting opt
     setGroupUser (opt_user opt) (opt_group opt)
     logCheck logtype
     (zdater,_) <- clockDateCacher
@@ -123,6 +117,18 @@ setHandlers opt rpt svc remover rdr = do
         ifRouteFileIsValid rpt opt $ \newroute -> do
             writeRouteDBRef rdr newroute
             report rpt "Mighty reloaded"
+
+getTlsSetting :: Option -> IO TLSSettings
+getTlsSetting _opt =
+#ifdef HTTP_OVER_TLS
+    case opt_service _opt of
+        0 -> return defaultTlsSettings -- this is dummy
+        _ -> do cert <- BS.readFile $ opt_tls_cert_file _opt
+                key  <- BS.readFile $ opt_tls_key_file _opt
+                return $ tlsSettingsMemory cert key
+#else
+    return TLSSettings
+#endif
 
 ----------------------------------------------------------------
 
