@@ -19,8 +19,7 @@ import qualified Data.ByteString.Char8 as BS
 import Data.UnixTime
 import GHC.IO.Exception (IOErrorType(..))
 import Network.Wai
-import Network.Wai.Handler.Warp (InvalidRequest)
-import Network.Wai.Handler.Warp.Timeout (TimeoutThread(..))
+import Network.Wai.Handler.Warp (InvalidRequest, TimeoutThread(..))
 import System.IO
 import System.IO.Error (ioeGetErrorType)
 import System.Posix (getProcessID)
