@@ -2,7 +2,9 @@
 
 -- mkindex :: Making index.html for the current directory.
 
+#if __GLASGOW_HASKELL__ < 709
 import Control.Applicative
+#endif
 import Data.Bits
 import Data.Time (formatTime)
 import Data.Time.Clock.POSIX

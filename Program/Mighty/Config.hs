@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleInstances, TypeSynonymInstances, OverloadedStrings #-}
+{-# LANGUAGE CPP #-}
 
 module Program.Mighty.Config (
   -- * Parsing a configuration file.
@@ -9,7 +10,9 @@ module Program.Mighty.Config (
   , Option(..)
   ) where
 
+#if __GLASGOW_HASKELL__ < 709
 import Control.Applicative hiding (many,optional,(<|>))
+#endif
 import Program.Mighty.Parser
 import Text.Parsec
 import Text.Parsec.ByteString.Lazy

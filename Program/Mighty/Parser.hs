@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 -- | Parsers for Mighty
 
 module Program.Mighty.Parser (
@@ -12,7 +14,9 @@ module Program.Mighty.Parser (
   , comment
   ) where
 
+#if __GLASGOW_HASKELL__ < 709
 import Control.Applicative hiding (many,(<|>))
+#endif
 import Control.Exception
 import qualified Data.ByteString.Lazy.Char8 as BL
 import System.IO
