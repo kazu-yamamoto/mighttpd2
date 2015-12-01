@@ -5,7 +5,6 @@ module Program.Mighty (
   , module Program.Mighty.Route
   , module Program.Mighty.Parser
   -- * State
-  , module Program.Mighty.FileCache
   , module Program.Mighty.Report
   -- * Utilities
   , module Program.Mighty.ByteString
@@ -17,7 +16,6 @@ module Program.Mighty (
 
 import Program.Mighty.ByteString
 import Program.Mighty.Config
-import Program.Mighty.FileCache
 import Program.Mighty.Network
 import Program.Mighty.Parser
 import Program.Mighty.Process

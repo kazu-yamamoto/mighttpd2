@@ -65,12 +65,11 @@ server opt rpt route = reportDo rpt $ do
     ap <- initLogger FromSocket logtype zdater
     let lgr = apacheLogger ap
         remover = logRemover ap
-    getInfo <- fileCacheInit
     mgr <- getManager opt
     setHandlers opt rpt svc remover rdr
 
     report rpt "Mighty started"
-    runInUnboundThread $ mighty opt rpt svc lgr getInfo mgr rdr tlsSetting
+    runInUnboundThread $ mighty opt rpt svc lgr mgr rdr tlsSetting
     report rpt "Mighty retired"
     finReporter rpt
     remover
@@ -142,10 +141,10 @@ ifRouteFileIsValid rpt opt act = case opt_routing_file opt of
 ----------------------------------------------------------------
 
 mighty :: Option -> Reporter -> Service
-       -> ApacheLogger -> GetInfo -> ConnPool -> RouteDBRef
+       -> ApacheLogger -> ConnPool -> RouteDBRef
        -> TLSSettings
        -> IO ()
-mighty opt rpt svc lgr getInfo mgr rdr _tlsSetting
+mighty opt rpt svc lgr mgr rdr _tlsSetting
   = reportDo rpt $ case svc of
     HttpOnly s  -> runSettingsSocket setting s app
 #ifdef HTTP_OVER_TLS
@@ -177,7 +176,6 @@ mighty opt rpt svc lgr getInfo mgr rdr _tlsSetting
     filespec = FileAppSpec {
         indexFile = fromString $ opt_index_file opt
       , isHTML = \x -> ".html" `isSuffixOf` x || ".htm" `isSuffixOf` x
-      , getFileInfo = getInfo
       }
     cgispec = CgiAppSpec {
         indexCgi = "index.cgi"

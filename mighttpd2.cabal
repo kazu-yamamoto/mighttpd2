@@ -26,7 +26,6 @@ Library
   Exposed-Modules:      Program.Mighty
                         Program.Mighty.ByteString
                         Program.Mighty.Config
-                        Program.Mighty.FileCache
                         Program.Mighty.Network
                         Program.Mighty.Parser
                         Program.Mighty.Process
