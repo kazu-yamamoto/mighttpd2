@@ -167,11 +167,11 @@ mighty opt rpt svc lgr mgr rdr _tlsSetting
             $ setFdCacheDuration (opt_fd_cache_duration opt)
             $ setFileInfoCacheDuration 10
             $ setServerName      serverName
+            $ setLogger          lgr
             defaultSettings
     serverName = BS.pack $ opt_server_name opt
     cspec = ClassicAppSpec {
         softwareName = serverName
-      , logger = lgr
       , statusFileDir = fromString $ opt_status_file_dir opt
       }
     filespec = FileAppSpec {

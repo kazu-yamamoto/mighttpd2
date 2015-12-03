@@ -2,7 +2,6 @@
 
 module WaiApp (fileCgiApp) where
 
-import Control.Monad.IO.Class (liftIO)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS (isPrefixOf, length)
 import Network.HTTP.Types (preconditionFailed412, movedPermanently301, urlDecode)
@@ -21,12 +20,10 @@ fileCgiApp cspec filespec cgispec revproxyspec rdr req respond = do
     case mmp um of
         Fail -> do
             let st = preconditionFailed412
-            liftIO $ logger cspec req' st Nothing
             fastResponse respond st defaultHeader "Precondition Failed\r\n"
         Redirect -> do
             let st = movedPermanently301
                 hdr = defaultHeader ++ redirectHeader req'
-            liftIO $ logger cspec req st Nothing
             fastResponse respond st hdr "Moved Permanently\r\n"
         Found (RouteFile  src dst) ->
             fileApp cspec filespec (FileRoute src dst) req' respond
