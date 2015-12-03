@@ -165,6 +165,7 @@ mighty opt rpt svc lgr mgr rdr _tlsSetting
             $ setOnException     (if debug then printStdout else warpHandler rpt)
             $ setTimeout         (opt_connection_timeout opt) -- seconds
             $ setFdCacheDuration (opt_fd_cache_duration opt)
+            $ setFileInfoCacheDuration 10
             $ setServerName      serverName
             defaultSettings
     serverName = BS.pack $ opt_server_name opt
