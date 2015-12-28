@@ -1,5 +1,5 @@
 Name:                   mighttpd2
-Version:                3.2.9
+Version:                3.2.10
 Author:                 Kazu Yamamoto <kazu@iij.ad.jp>
 Maintainer:             Kazu Yamamoto <kazu@iij.ad.jp>
 License:                BSD3
@@ -55,9 +55,9 @@ Library
                       , unix
                       , unix-time
                       , unordered-containers
-                      , wai >= 3.0
-                      , wai-app-file-cgi >= 3.0.7
-                      , warp >= 3.0.11
+                      , wai >= 3.0 && < 3.1
+                      , wai-app-file-cgi >= 3.0.9
+                      , warp >= 3.1.12 && < 3.2
 
 Executable mighty
   Default-Language:     Haskell2010
@@ -80,13 +80,14 @@ Executable mighty
                       , transformers
                       , unix
                       , streaming-commons
-                      , wai >= 3.0
-                      , wai-app-file-cgi >= 3.0.7
+                      , wai >= 3.0 && < 3.1
+                      , wai-app-file-cgi >= 3.0.9
                       , wai-logger >= 2.2.2
-                      , warp >= 3.0.11
+                      , warp >= 3.1.12 && < 3.2
+
   if flag(tls)
     Build-Depends:      tls
-                      , warp-tls >= 3.0.1
+                      , warp-tls >= 3.1.5 && < 3.2
   Other-Modules:        Mighty
                         Server
                         WaiApp
@@ -125,7 +126,7 @@ Test-Suite spec
                       , http-client
   if flag(tls)
     Build-Depends:      tls
-                      , warp-tls >= 3.0.1
+                      , warp-tls >= 3.1.5 && < 3.2
 
 Source-Repository head
   Type:                 git
