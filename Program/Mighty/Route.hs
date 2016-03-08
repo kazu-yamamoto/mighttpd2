@@ -101,10 +101,10 @@ route ddom dport = do
 path :: Parser Path
 path = do
     c <- char '/'
-    fromByteString . BS.pack . (c:) <$> many (noneOf "[], \t\n") <* spcs
+    BS.pack . (c:) <$> many (noneOf "[], \t\n") <* spcs
 
 path' :: Parser Path
-path' = fromByteString . BS.pack <$> many (noneOf "[], \t\n") <* spcs
+path' = BS.pack <$> many (noneOf "[], \t\n") <* spcs
 
 -- [host1][:port2]/path2
 

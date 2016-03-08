@@ -66,13 +66,9 @@ routeSource (RouteCGI      src _)     = src
 routeSource (RouteRevProxy src _ _ _) = src
 
 isPrefixOf :: Path -> ByteString -> Bool
-isPrefixOf src key = src' `BS.isPrefixOf` key
-  where
-    src' = pathByteString src
+isPrefixOf src key = src `BS.isPrefixOf` key
 
 isMountPointOf :: Path -> ByteString -> Bool
 isMountPointOf src key = hasTrailingPathSeparator src
-                      && BS.length src' - BS.length key == 1
-                      && key `BS.isPrefixOf` src'
-  where
-    src' = pathByteString src
+                      && BS.length src - BS.length key == 1
+                      && key `BS.isPrefixOf` src
