@@ -6,7 +6,7 @@ module Main where
 import Control.Monad (when)
 #endif
 import Data.Version (showVersion)
-import Network.Wai.Application.Classic hiding ((</>), (+++))
+import Network.Wai.Application.Classic hiding ((</>))
 import System.Directory (getCurrentDirectory)
 import System.Environment (getArgs)
 import System.Exit (exitFailure)

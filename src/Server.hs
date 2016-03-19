@@ -9,7 +9,7 @@ import qualified Data.ByteString.Char8 as BS
 import Data.Streaming.Network (bindPortTCP)
 import Network (Socket, sClose)
 import qualified Network.HTTP.Client as H
-import Network.Wai.Application.Classic hiding ((</>), (+++))
+import Network.Wai.Application.Classic hiding ((</>))
 import Network.Wai.Handler.Warp
 import Network.Wai.Logger
 import System.Exit (ExitCode(..), exitSuccess)
