@@ -1,15 +1,15 @@
 % Mighttpd2YetanotherWebSer-KM.tex
 \begin{hcarentry}[updated]{Mighttpd2 --- Yet another Web Server}
 \label{mighttpd2}
-\report{Kazu Yamamoto}%11/15
+\report{Kazu Yamamoto}%05/16
 \status{open source, actively developed}
 \makeheader
 
-Mighttpd (called mighty) version 3 is a simple but practical Web server in Haskell.
+Mighttpd (called mighty) version 3 is a simple but practical HTTP1.1/HTTP2 server in Haskell.
 It provides features to handle static files, redirection, CGI, reverse proxy, reloading
-configuration files and graceful shutdown. Also TLS is experimentally supported.
+configuration files and graceful shutdown. Also TLS is supported.
 
-Since Warp supports HTTP/2, Mighttpd 3 is able to serve in HTTP/2 (if TLS is enabled) as well as HTTP/1.1.
+The logic to handle static files are transferred to Warp, a HTTP server library. So, Mighttpd became a simpler web application on this point.
 
 You can install Mighttpd 3 ({\it mighttpd2}) from HackageDB. Note that the package name
 is {\it mighttpd2}, not {\it mighttpd3}, for historical reasons.
@@ -17,6 +17,5 @@ is {\it mighttpd2}, not {\it mighttpd3}, for historical reasons.
 \FurtherReading
 \begin{compactitem}
 \item \url{http://www.mew.org/~kazu/proj/mighttpd/en/}
-\item \url{http://www.yesodweb.com/blog/2015/07/http2}
 \end{compactitem}
 \end{hcarentry}
