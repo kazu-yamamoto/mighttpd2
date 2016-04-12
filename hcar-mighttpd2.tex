@@ -1,7 +1,7 @@
 % Mighttpd2YetanotherWebSer-KM.tex
 \begin{hcarentry}[updated]{Mighttpd2 --- Yet another Web Server}
 \label{mighttpd2}
-\report{Kazu Yamamoto}%05/15
+\report{Kazu Yamamoto}%11/15
 \status{open source, actively developed}
 \makeheader
 
@@ -9,18 +9,14 @@ Mighttpd (called mighty) version 3 is a simple but practical Web server in Haske
 It provides features to handle static files, redirection, CGI, reverse proxy, reloading
 configuration files and graceful shutdown. Also TLS is experimentally supported.
 
-Mighttpd 3 is now based on WAI 3.0. It also adopts the auto-update
-library to reduce CPU power consumption at no connection.
+Since Warp supports HTTP/2, Mighttpd 3 is able to serve in HTTP/2 (if TLS is enabled) as well as HTTP/1.1.
 
 You can install Mighttpd 3 ({\it mighttpd2}) from HackageDB. Note that the package name
 is {\it mighttpd2}, not {\it mighttpd3}, for historical reasons.
 
-Mighttpd 3 now supports GHC 7.10.
-
 \FurtherReading
 \begin{compactitem}
 \item \url{http://www.mew.org/~kazu/proj/mighttpd/en/}
-\item \url{http://www.yesodweb.com/blog/2014/01/new-fast-logger}
-\item \url{http://www.yesodweb.com/blog/2014/02/new-warp}
+\item \url{http://www.yesodweb.com/blog/2015/07/http2}
 \end{compactitem}
 \end{hcarentry}
