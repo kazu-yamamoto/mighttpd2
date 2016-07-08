@@ -242,4 +242,4 @@ getManager opt = H.newManager H.defaultManagerSettings {
   where
     responseTimeout
       | opt_proxy_timeout opt == 0 = H.managerResponseTimeout H.defaultManagerSettings
-      | otherwise                  = Just (opt_proxy_timeout opt * 1000000) -- micro seconds
+      | otherwise                  = H.responseTimeoutMicro (opt_proxy_timeout opt * 1000000) -- micro seconds
