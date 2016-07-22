@@ -21,7 +21,7 @@ import System.Posix.Signals (sigCHLD)
 import Program.Mighty
 import WaiApp
 
-import Network.Wai.Middleware.Push.Referer
+import qualified Network.Wai.Middleware.Push.Referer as P
 
 #ifdef HTTP_OVER_TLS
 import Control.Concurrent.Async (concurrently)
@@ -160,8 +160,8 @@ mighty opt rpt svc lgr pushlgr mgr rdr _tlsSetting
     _ -> error "never reach"
 #endif
   where
-    app = pushOnReferer defaultMakePushPromise
-                        (fileCgiApp cspec filespec cgispec revproxyspec rdr)
+    app = P.pushOnReferer P.defaultSettings
+                          (fileCgiApp cspec filespec cgispec revproxyspec rdr)
     debug = opt_debug_mode opt
     -- We don't use setInstallShutdownHandler because we may use
     -- two sockets for HTTP and HTTPS.
