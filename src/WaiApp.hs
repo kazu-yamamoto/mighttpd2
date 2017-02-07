@@ -3,8 +3,8 @@
 module WaiApp (fileCgiApp) where
 
 import Data.ByteString (ByteString)
-import qualified Data.ByteString.Char8 as BS (isPrefixOf, length)
-import Network.HTTP.Types (preconditionFailed412, movedPermanently301, urlDecode)
+import qualified Data.ByteString.Char8 as BS
+import Network.HTTP.Types (preconditionFailed412, movedPermanently301, urlDecode, badRequest400)
 import Network.Wai (Application, responseLBS)
 import Network.Wai.Internal
 import Network.Wai.Application.Classic
@@ -15,7 +15,11 @@ data Perhaps a = Found a | Redirect | Fail
 
 fileCgiApp :: ClassicAppSpec -> FileAppSpec -> CgiAppSpec -> RevProxyAppSpec
            -> RouteDBRef -> Application
-fileCgiApp cspec filespec cgispec revproxyspec rdr req respond = do
+fileCgiApp cspec filespec cgispec revproxyspec rdr req respond
+  | dotFile = do
+        let st = badRequest400
+        fastResponse respond st defaultHeader "Bad Request\r\n"
+  | otherwise = do
     um <- readRouteDBRef rdr
     case mmp um of
         Fail -> do
@@ -35,7 +39,9 @@ fileCgiApp cspec filespec cgispec revproxyspec rdr req respond = do
             revProxyApp cspec revproxyspec (RevProxyRoute src dst dom prt) req respond
   where
     (host, _) = hostPort req
-    path = urlDecode False $ rawPathInfo req
+    rawpath = rawPathInfo req
+    path = urlDecode False rawpath
+    dotFile = BS.isPrefixOf "." rawpath || BS.isInfixOf "/." rawpath
     mmp um = case getBlock host um of
         Nothing  -> Fail
         Just blk -> getRoute path blk
