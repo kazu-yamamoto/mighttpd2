@@ -6,6 +6,8 @@ import Control.Concurrent (runInUnboundThread)
 import Control.Exception (try)
 import Control.Monad (unless, when)
 import qualified Data.ByteString.Char8 as BS
+import Data.Char (isSpace)
+import Data.List (dropWhile, dropWhileEnd, break)
 import Data.Streaming.Network (bindPortTCP)
 import Network (Socket, sClose)
 import qualified Network.HTTP.Client as H
@@ -126,8 +128,16 @@ getTlsSetting _opt =
     case opt_service _opt of
         0 -> return defaultTlsSettings -- this is dummy
         _ -> do cert <- BS.readFile $ opt_tls_cert_file _opt
+                let strip = dropWhileEnd isSpace . dropWhile isSpace
+                    split "" = []
+                    split s = case break (',' ==) s of
+                      ("",r)  -> split (tail r)
+                      (s',"") -> [s']
+                      (s',r)  -> s' : split (tail r)
+                    chain_files = map strip $ split $ opt_tls_chain_files _opt
+                chains <- mapM BS.readFile chain_files
                 key  <- BS.readFile $ opt_tls_key_file _opt
-                return $ tlsSettingsMemory cert key
+                return $ tlsSettingsChainMemory cert chains key
 #else
     return TLSSettings
 #endif

@@ -42,7 +42,8 @@ defaultOption svrnm = Option {
   , opt_server_name = svrnm
   , opt_routing_file = Nothing
   , opt_tls_port = 443
-  , opt_tls_cert_file = "certificate.pem"
+  , opt_tls_cert_file = "cert.pem"
+  , opt_tls_chain_files = "chain.pem"
   , opt_tls_key_file = "key.pem"
   , opt_service = 0
   , opt_report_file = "/tmp/mighty_report"
@@ -69,6 +70,7 @@ data Option = Option {
   , opt_routing_file :: !(Maybe FilePath)
   , opt_tls_port :: !Int
   , opt_tls_cert_file :: !FilePath
+  , opt_tls_chain_files :: !FilePath
   , opt_tls_key_file :: !FilePath
   , opt_service :: !Int
   , opt_report_file :: !FilePath
@@ -104,6 +106,7 @@ makeOpt def conf = Option {
   , opt_routing_file       = Nothing
   , opt_tls_port           = get "Tls_Port" opt_tls_port
   , opt_tls_cert_file      = get "Tls_Cert_File" opt_tls_cert_file
+  , opt_tls_chain_files    = get "Tls_Chain_Files" opt_tls_chain_files
   , opt_tls_key_file       = get "Tls_Key_File" opt_tls_key_file
   , opt_service            = get "Service" opt_service
   , opt_report_file        = get "ReportFile" opt_report_file
