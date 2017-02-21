@@ -168,4 +168,4 @@ cv_bool = CV_Bool True  <$ string "Yes" <* trailing <|>
           CV_Bool False <$ string "No"   <* trailing
 
 cv_string :: Parser ConfValue
-cv_string = CV_String <$> many1 (noneOf " \t\n") <* trailing
+cv_string = CV_String <$> many (noneOf " \t\n") <* trailing
