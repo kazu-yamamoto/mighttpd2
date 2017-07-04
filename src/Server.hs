@@ -29,6 +29,7 @@ import qualified Network.Wai.Middleware.Push.Referer as P
 import Control.Concurrent.Async (concurrently)
 import Control.Monad (void)
 import Network.Wai.Handler.WarpTLS
+import Network.TLS.SessionManager
 #else
 data TLSSettings = TLSSettings
 #endif
@@ -137,7 +138,11 @@ getTlsSetting _opt =
                     chain_files = map strip $ split $ opt_tls_chain_files _opt
                 chains <- mapM BS.readFile chain_files
                 key  <- BS.readFile $ opt_tls_key_file _opt
-                return $ tlsSettingsChainMemory cert chains key
+                let settings0 = tlsSettingsChainMemory cert chains key
+                    settings = settings0 {
+                        tlsSessionManagerConfig = Just defaultConfig
+                      }
+                return settings
 #else
     return TLSSettings
 #endif

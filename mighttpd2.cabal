@@ -67,6 +67,7 @@ Executable mighty
   if flag(tls)
     Cpp-Options:        -DHTTP_OVER_TLS
     Build-Depends:      async
+                      , tls-session-manager
   Build-Depends:        base >= 4.0 && < 5
                       , bytestring
                       , directory
