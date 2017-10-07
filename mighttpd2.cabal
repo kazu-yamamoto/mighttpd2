@@ -89,8 +89,7 @@ Executable mighty
   if flag(tls)
     Build-Depends:      tls
                       , warp-tls >= 3.2 && < 3.3
-  Other-Modules:        Mighty
-                        Server
+  Other-Modules:        Server
                         WaiApp
                         Paths_mighttpd2
 
