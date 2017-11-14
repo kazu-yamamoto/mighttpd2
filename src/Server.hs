@@ -6,8 +6,10 @@ import Control.Concurrent (runInUnboundThread)
 import Control.Exception (try)
 import Control.Monad (unless, when)
 import qualified Data.ByteString.Char8 as BS
+#ifdef HTTP_OVER_TLS
 import Data.Char (isSpace)
 import Data.List (dropWhile, dropWhileEnd, break)
+#endif
 import Data.Streaming.Network (bindPortTCP)
 import Network (Socket, sClose)
 import qualified Network.HTTP.Client as H
