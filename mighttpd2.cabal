@@ -37,7 +37,6 @@ Library
                       , array
                       , async
                       , auto-update
-                      , blaze-builder
                       , byteorder
                       , bytestring
                       , case-insensitive
