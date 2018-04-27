@@ -29,6 +29,7 @@ defaultOption svrnm = Option {
   , opt_user = "root"
   , opt_group = "root"
   , opt_pid_file = "/var/run/mighty.pid"
+  , opt_report_file = "/tmp/mighty_report"
   , opt_logging = True
   , opt_log_file = "/var/log/mighty"
   , opt_log_file_size = 16777216
@@ -44,9 +45,8 @@ defaultOption svrnm = Option {
   , opt_tls_port = 443
   , opt_tls_cert_file = "cert.pem"
   , opt_tls_chain_files = "chain.pem"
-  , opt_tls_key_file = "key.pem"
+  , opt_tls_key_file = "privkey.pem"
   , opt_service = 0
-  , opt_report_file = "/tmp/mighty_report"
 }
 
 data Option = Option {
@@ -56,6 +56,7 @@ data Option = Option {
   , opt_user :: !String
   , opt_group :: !String
   , opt_pid_file :: !FilePath
+  , opt_report_file :: !FilePath
   , opt_logging :: !Bool
   , opt_log_file :: !FilePath
   , opt_log_file_size :: !Int
@@ -73,7 +74,6 @@ data Option = Option {
   , opt_tls_chain_files :: !FilePath
   , opt_tls_key_file :: !FilePath
   , opt_service :: !Int
-  , opt_report_file :: !FilePath
 } deriving (Eq,Show)
 
 ----------------------------------------------------------------
@@ -92,6 +92,7 @@ makeOpt def conf = Option {
   , opt_user               = get "User" opt_user
   , opt_group              = get "Group" opt_group
   , opt_pid_file           = get "Pid_File" opt_pid_file
+  , opt_report_file        = get "Report_File" opt_report_file
   , opt_logging            = get "Logging" opt_logging
   , opt_log_file           = get "Log_File" opt_log_file
   , opt_log_file_size      = get "Log_File_Size" opt_log_file_size
@@ -109,7 +110,6 @@ makeOpt def conf = Option {
   , opt_tls_chain_files    = get "Tls_Chain_Files" opt_tls_chain_files
   , opt_tls_key_file       = get "Tls_Key_File" opt_tls_key_file
   , opt_service            = get "Service" opt_service
-  , opt_report_file        = get "ReportFile" opt_report_file
   }
   where
     get k func = maybe (func def) fromConf $ lookup k conf
