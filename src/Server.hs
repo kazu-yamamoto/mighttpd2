@@ -11,7 +11,7 @@ import Data.Char (isSpace)
 import Data.List (dropWhile, dropWhileEnd, break)
 #endif
 import Data.Streaming.Network (bindPortTCP)
-import Network (Socket, sClose)
+import Network.Socket (Socket, close)
 import qualified Network.HTTP.Client as H
 import Network.Wai.Application.Classic hiding ((</>))
 import Network.Wai.Handler.Warp
@@ -243,9 +243,9 @@ openService opt
 ----------------------------------------------------------------
 
 closeService :: Service -> IO ()
-closeService (HttpOnly s)         = sClose s
-closeService (HttpsOnly s)        = sClose s
-closeService (HttpAndHttps s1 s2) = sClose s1 >> sClose s2
+closeService (HttpOnly s)         = close s
+closeService (HttpsOnly s)        = close s
+closeService (HttpAndHttps s1 s2) = close s1 >> close s2
 
 ----------------------------------------------------------------
 
