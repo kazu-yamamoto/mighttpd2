@@ -218,17 +218,17 @@ openService :: Option -> IO Service
 openService opt
   | service == 1 = do
       s <- bindPortTCP httpsPort hostpref
-      debugMessage $ "HTTP/TLS service on port " ++ show httpsPort ++ "."
+      debugMessage $ urlForHTTPS httpsPort
       return $ HttpsOnly s
   | service == 2 = do
       s1 <- bindPortTCP httpPort hostpref
       s2 <- bindPortTCP httpsPort hostpref
-      debugMessage $ "HTTP service on port " ++ show httpPort ++ " and "
-                  ++ "HTTP/TLS service on port " ++ show httpsPort ++ "."
+      debugMessage $ urlForHTTP httpPort
+      debugMessage $ urlForHTTPS httpsPort
       return $ HttpAndHttps s1 s2
   | otherwise = do
       s <- bindPortTCP httpPort hostpref
-      debugMessage $ "HTTP service on port " ++ show httpPort ++ "."
+      debugMessage $ urlForHTTP httpPort
       return $ HttpOnly s
   where
     httpPort  = opt_port opt
@@ -239,6 +239,11 @@ openService opt
     debugMessage msg = when debug $ do
         putStrLn msg
         hFlush stdout
+    urlForHTTP  80  =  "http://localhost/"
+    urlForHTTP  p   =  "http://localhost:" ++ show p ++ "/"
+    urlForHTTPS 443 = "https://localhost/"
+    urlForHTTPS p   = "https://localhost:" ++ show p ++ "/"
+
 
 ----------------------------------------------------------------
 
