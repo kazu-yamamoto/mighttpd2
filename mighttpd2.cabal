@@ -56,6 +56,8 @@ Library
                       , wai >= 3.2 && < 3.3
                       , wai-app-file-cgi >= 3.1.1 && < 3.2
                       , warp >= 3.2.21 && < 3.3
+  if impl(ghc >= 8)
+    Default-Extensions:  Strict StrictData
 
 Executable mighty
   Default-Language:     Haskell2010
@@ -90,6 +92,8 @@ Executable mighty
   Other-Modules:        Server
                         WaiApp
                         Paths_mighttpd2
+  if impl(ghc >= 8)
+    Default-Extensions:  Strict StrictData
 
 Executable mighty-mkindex
   Default-Language:     Haskell2010
@@ -110,6 +114,8 @@ Executable mightyctl
   Build-Depends:        base >= 4 && < 5
                       , unix
                       , mighttpd2
+  if impl(ghc >= 8)
+    Default-Extensions:  Strict StrictData
 
 Test-Suite spec
   Default-Language:     Haskell2010
@@ -125,6 +131,8 @@ Test-Suite spec
   if flag(tls)
     Build-Depends:      tls
                       , warp-tls >= 3.2 && < 3.3
+  if impl(ghc >= 8)
+    Default-Extensions:  Strict StrictData
 
 Source-Repository head
   Type:                 git
