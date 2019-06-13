@@ -142,7 +142,7 @@ getTlsSetting _opt =
                 key  <- BS.readFile $ opt_tls_key_file _opt
                 let settings0 = tlsSettingsChainMemory cert chains key
                     settings = settings0 {
-                        tlsSessionManagerConfig = Just defaultConfig
+                        tlsSessionManagerConfig = Just defaultConfig { dbMaxSize = 1000 }
                       }
                 return settings
 #else
