@@ -1,5 +1,5 @@
 Name:                   mighttpd2
-Version:                3.4.5
+Version:                3.4.6
 Author:                 Kazu Yamamoto <kazu@iij.ad.jp>
 Maintainer:             Kazu Yamamoto <kazu@iij.ad.jp>
 License:                BSD3
@@ -54,8 +54,8 @@ Library
                       , unix-time
                       , unordered-containers
                       , wai >= 3.2 && < 3.3
-                      , wai-app-file-cgi >= 3.1.1 && < 3.2
-                      , warp >= 3.2.21 && < 3.3
+                      , wai-app-file-cgi >= 3.1.9 && < 3.2
+                      , warp >= 3.3 && < 3.4
   if impl(ghc >= 8)
     Default-Extensions:  Strict StrictData
 
@@ -67,7 +67,7 @@ Executable mighty
   if flag(tls)
     Cpp-Options:        -DHTTP_OVER_TLS
     Build-Depends:      async
-                      , tls-session-manager
+                      , tls-session-manager >= 0.0.2.0
   Build-Depends:        base >= 4.0 && < 5
                       , bytestring
                       , directory
@@ -82,13 +82,13 @@ Executable mighty
                       , unix
                       , streaming-commons
                       , wai >= 3.2 && < 3.3
-                      , wai-app-file-cgi >= 3.1.1 && < 3.2
+                      , wai-app-file-cgi >= 3.1.9 && < 3.2
                       , wai-logger >= 2.3.0
-                      , warp >= 3.2.7 && < 3.3
+                      , warp >= 3.3 && < 3.4
                       , wai-http2-extra >= 0.1
   if flag(tls)
     Build-Depends:      tls
-                      , warp-tls >= 3.2 && < 3.3
+                      , warp-tls >= 3.2.7 && < 3.3
   Other-Modules:        Server
                         WaiApp
                         Paths_mighttpd2
@@ -130,7 +130,7 @@ Test-Suite spec
                       , http-client >= 0.5
   if flag(tls)
     Build-Depends:      tls
-                      , warp-tls >= 3.2 && < 3.3
+                      , warp-tls >= 3.2.7 && < 3.3
   if impl(ghc >= 8)
     Default-Extensions:  Strict StrictData
 
