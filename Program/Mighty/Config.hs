@@ -4,6 +4,7 @@
 module Program.Mighty.Config (
   -- * Parsing a configuration file.
     parseOption
+  , parseOptionDhall
   -- * Creating 'Option'.
   , defaultOption
   -- * Types
@@ -14,9 +15,10 @@ module Program.Mighty.Config (
 import Control.Applicative hiding (many,optional,(<|>))
 #endif
 import Program.Mighty.Parser
+import Data.String (fromString)
 import Text.Parsec
 import Text.Parsec.ByteString.Lazy
-import Dhall(Generic, Natural)
+import Dhall(Generic, FromDhall, Natural, input, auto)
 
 ----------------------------------------------------------------
 
@@ -77,12 +79,16 @@ data Option = Option {
   , opt_service :: !Natural
 } deriving (Generic, Eq,Show)
 
+instance FromDhall Option 
 
 ----------------------------------------------------------------
 
 -- | Parsing a configuration file to get an 'Option'.
 parseOption :: FilePath -> String -> IO Option
 parseOption file svrnm = makeOpt (defaultOption svrnm) <$> parseConfig file
+
+parseOptionDhall :: FilePath -> IO Option
+parseOptionDhall = input auto . fromString
 
 ----------------------------------------------------------------
 

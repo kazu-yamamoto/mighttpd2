@@ -5,6 +5,8 @@ module Main where
 #ifndef HTTP_OVER_TLS
 import Control.Monad (when)
 #endif
+import Control.Applicative ((<|>))
+
 import Data.Version (showVersion)
 import Network.Wai.Application.Classic hiding ((</>))
 import System.Directory (getCurrentDirectory)
@@ -52,7 +54,7 @@ main = do
       | n == 2 = do
           let config_file = args !! 0
           routing_file <- getAbsoluteFile (args !! 1)
-          opt   <- parseOption config_file svrnm
+          opt   <- parseOption config_file svrnm <|> (parseOptionDhall config_file)
           route <- parseRoute  routing_file defaultDomain defaultPort
           let opt' = opt {opt_routing_file = Just routing_file}
           return (opt',route)

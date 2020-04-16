@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module ConfigSpec where
 
 import Program.Mighty
@@ -8,6 +9,15 @@ spec = do
     describe "parseConfig" $ do
         it "parses example.conf correctly" $ do
             res <- parseOption "conf/example.conf" "foo"
+            res `shouldBe` ans
+
+    describe "parseDhall" $ do
+        it "parses example.dhall correctly" $ do
+            res <- parseOptionDhall "./conf/example.dhall"
+            res `shouldBe` ans
+
+        it "parses literal dhall correctly" $ do
+            res <- parseOptionDhall "let x = ./conf/example.dhall in x"
             res `shouldBe` ans
 
 ans :: Option
