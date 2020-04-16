@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, TypeSynonymInstances, OverloadedStrings #-}
+{-# LANGUAGE FlexibleInstances, TypeSynonymInstances, OverloadedStrings, DeriveGeneric #-}
 {-# LANGUAGE CPP #-}
 
 module Program.Mighty.Config (
@@ -16,7 +16,7 @@ import Control.Applicative hiding (many,optional,(<|>))
 import Program.Mighty.Parser
 import Text.Parsec
 import Text.Parsec.ByteString.Lazy
-import Dhall(Natural)
+import Dhall(Generic, Natural)
 
 ----------------------------------------------------------------
 
@@ -75,7 +75,8 @@ data Option = Option {
   , opt_tls_chain_files :: !FilePath
   , opt_tls_key_file :: !FilePath
   , opt_service :: !Natural
-} deriving (Eq,Show)
+} deriving (Generic, Eq,Show)
+
 
 ----------------------------------------------------------------
 
