@@ -11,6 +11,7 @@ import Data.Char (isSpace)
 import Data.List (dropWhile, dropWhileEnd, break)
 #endif
 import Data.Streaming.Network (bindPortTCP)
+import GHC.Natural (Natural, naturalToInt)
 import Network.Socket (Socket, close)
 import qualified Network.HTTP.Client as H
 import Network.Wai.Application.Classic hiding ((</>))
@@ -41,13 +42,13 @@ data TLSSettings = TLSSettings
 defaultDomain :: Domain
 defaultDomain = "localhost"
 
-defaultPort :: Int
+defaultPort :: Natural
 defaultPort = 80
 
 openFileNumber :: Integer
 openFileNumber = 10000
 
-logBufferSize :: Int
+logBufferSize :: Natural
 logBufferSize = 4 * 1024 * 10
 
 managerNumber :: Int
@@ -95,12 +96,12 @@ server opt rpt route = reportDo rpt $ do
     logspec = FileLogSpec {
         log_file          = opt_log_file opt
       , log_file_size     = fromIntegral $ opt_log_file_size opt
-      , log_backup_number = opt_log_backup_number opt
+      , log_backup_number = naturalToInt $ opt_log_backup_number opt
       }
     logtype
       | not (opt_logging opt) = LogNone
-      | debug                 = LogStdout logBufferSize
-      | otherwise             = LogFile logspec logBufferSize
+      | debug                 = LogStdout $ naturalToInt logBufferSize
+      | otherwise             = LogFile logspec $ naturalToInt logBufferSize
 
 setHandlers :: Option -> Reporter -> Service -> LogRemover -> RouteDBRef -> IO ()
 setHandlers opt rpt svc remover rdr = do
@@ -182,11 +183,11 @@ mighty opt rpt svc lgr pushlgr mgr rdr _tlsSetting
     debug = opt_debug_mode opt
     -- We don't use setInstallShutdownHandler because we may use
     -- two sockets for HTTP and HTTPS.
-    setting = setPort            (opt_port opt) -- just in case
+    setting = setPort            (naturalToInt $ opt_port opt) -- just in case
             $ setHost            (fromString (opt_host opt))  -- just in case
             $ setOnException     (if debug then printStdout else warpHandler rpt)
-            $ setTimeout         (opt_connection_timeout opt) -- seconds
-            $ setFdCacheDuration (opt_fd_cache_duration opt)
+            $ setTimeout         (naturalToInt $ opt_connection_timeout opt) -- seconds
+            $ setFdCacheDuration (naturalToInt $ opt_fd_cache_duration opt)
             $ setFileInfoCacheDuration 10
             $ setServerName      serverName
             $ setLogger          lgr
@@ -231,8 +232,8 @@ openService opt
       debugMessage $ urlForHTTP httpPort
       return $ HttpOnly s
   where
-    httpPort  = opt_port opt
-    httpsPort = opt_tls_port opt
+    httpPort  = naturalToInt $ opt_port opt
+    httpsPort = naturalToInt $ opt_tls_port opt
     hostpref  = fromString $ opt_host opt
     service = opt_service opt
     debug = opt_debug_mode opt
@@ -264,4 +265,4 @@ getManager opt = H.newManager H.defaultManagerSettings {
   where
     responseTimeout
       | opt_proxy_timeout opt == 0 = H.managerResponseTimeout H.defaultManagerSettings
-      | otherwise                  = H.responseTimeoutMicro (opt_proxy_timeout opt * 1000000) -- micro seconds
+      | otherwise                  = H.responseTimeoutMicro (naturalToInt $ opt_proxy_timeout opt * 1000000) -- micro seconds
