@@ -14,6 +14,7 @@ module Program.Mighty.Config (
 #if __GLASGOW_HASKELL__ < 709
 import Control.Applicative hiding (many,optional,(<|>))
 #endif
+import qualified Control.Applicative as A
 import Program.Mighty.Parser
 import Data.String (fromString)
 import Text.Parsec
@@ -82,10 +83,12 @@ data Option = Option {
 instance FromDhall Option
 
 ----------------------------------------------------------------
-
 -- | Parsing a configuration file to get an 'Option'.
 parseOption :: FilePath -> String -> IO Option
-parseOption file svrnm = makeOpt (defaultOption svrnm) <$> parseConfig file
+parseOption file svrnm = (parseOptionTrad file svrnm) A.<|> (parseOptionDhall file)
+
+parseOptionTrad :: FilePath -> String -> IO Option
+parseOptionTrad file svrnm = makeOpt (defaultOption svrnm) <$> parseConfig file
 
 parseOptionDhall :: FilePath -> IO Option
 parseOptionDhall = input auto . fromString
