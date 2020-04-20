@@ -1,4 +1,4 @@
-let default = ./configDefault.dhall
+let default = ./optionDefault.dhall
 in
     (default "foo")
     //

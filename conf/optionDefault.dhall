@@ -1,4 +1,4 @@
-let Config = ./Config.dhall
+let Option = ./Option.dhall
 in
   λ(svrnm : Text)
     → { opt_connection_timeout = 30
@@ -25,4 +25,4 @@ in
     , opt_tls_key_file = "privkey.pem"
     , opt_tls_port = 443
     , opt_user = "root"
-    } : Config
+    } : Option
