@@ -79,7 +79,7 @@ data Option = Option {
   , opt_service :: !Natural
 } deriving (Generic, Eq,Show)
 
-instance FromDhall Option 
+instance FromDhall Option
 
 ----------------------------------------------------------------
 
