@@ -51,6 +51,7 @@ Library
                       , parsec >= 3
                       , resourcet
                       , streaming-commons
+                      , text
                       , unix
                       , unix-time
                       , unordered-containers
@@ -81,6 +82,7 @@ Executable mighty
                       , network
                       , conduit-extra
                       , transformers
+                      , text
                       , unix
                       , streaming-commons
                       , wai >= 3.2 && < 3.3

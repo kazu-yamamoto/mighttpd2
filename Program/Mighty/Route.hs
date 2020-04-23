@@ -23,9 +23,9 @@ module Program.Mighty.Route (
 import Control.Applicative hiding (many,(<|>))
 #endif
 import Control.Monad
-import Data.ByteString
 import qualified Data.ByteString.Char8 as BS
 import Data.IORef
+import Data.Text
 import GHC.Natural (Natural)
 import Network.Wai.Application.Classic
 import Text.Parsec
@@ -39,7 +39,7 @@ import Program.Mighty.Parser
 type Src      = Path
 -- | A physical path in a file system.
 type Dst      = Path
-type Domain   = ByteString
+type Domain   = Text
 type Port     = Natural
 
 data Block    = Block [Domain] [Route] deriving (Eq,Show)
@@ -74,7 +74,7 @@ domains = open *> doms <* close <* trailing
     open  = () <$ char '[' *> spcs
     close = () <$ char ']' *> spcs
     doms = (domain `sepBy1` sep) <* spcs
-    domain = BS.pack <$> many1 (noneOf "[], \t\n")
+    domain = Data.Text.pack <$> many1 (noneOf "[], \t\n")
     sep = () <$ spcs1
 
 data Op = OpFile | OpCGI | OpRevProxy | OpRedirect
@@ -115,7 +115,7 @@ domPortDst ddom dport = (ddom,,) <$> port <*> path
                     <|> try((,,) <$> domain <*> port <*> path)
                     <|> (,dport,) <$> domain <*> path
   where
-    domain = BS.pack <$> many1 (noneOf ":/[], \t\n")
+    domain = Data.Text.pack <$> many1 (noneOf ":/[], \t\n")
     port = do
         void $ char ':'
         read <$> many1 (oneOf ['0'..'9'])

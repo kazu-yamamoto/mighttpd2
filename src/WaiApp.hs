@@ -2,9 +2,10 @@
 
 module WaiApp (fileCgiApp) where
 
+import GHC.Natural (naturalToInt)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
-import GHC.Natural (naturalToInt)
+import Data.Text.Encoding (encodeUtf8, decodeUtf8)
 import Network.HTTP.Types (preconditionFailed412, movedPermanently301, urlDecode, badRequest400)
 import Network.Wai (Application, responseLBS)
 import Network.Wai.Internal
@@ -37,7 +38,7 @@ fileCgiApp cspec filespec cgispec revproxyspec rdr req respond
         Found (RouteCGI   src dst) ->
             cgiApp cspec cgispec (CgiRoute src dst) req' respond
         Found (RouteRevProxy src dst dom prt) ->
-            revProxyApp cspec revproxyspec (RevProxyRoute src dst dom (naturalToInt prt)) req respond
+            revProxyApp cspec revproxyspec (RevProxyRoute src dst (encodeUtf8 dom) (naturalToInt prt)) req respond
   where
     (host, _) = hostPort req
     rawpath = rawPathInfo req
@@ -54,13 +55,13 @@ getBlock :: ByteString -> RouteDB -> Maybe [Route]
 getBlock _ [] = Nothing
 getBlock key (Block doms maps : ms)
   | "*" `elem` doms = Just maps
-  | key `elem` doms = Just maps
+  | (decodeUtf8 key) `elem` doms = Just maps
   | otherwise       = getBlock key ms
 
 getRoute :: ByteString -> [Route] -> Perhaps Route
 getRoute _ []                = Fail
 getRoute key (m:ms)
-  | src `isPrefixOf` key     = Found m
+  | src `WaiApp.isPrefixOf` key     = Found m
   | src `isMountPointOf` key = Redirect
   | otherwise                = getRoute key ms
   where
