@@ -5,7 +5,8 @@ module WaiApp (fileCgiApp) where
 import GHC.Natural (naturalToInt)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
-import Data.Text.Encoding (encodeUtf8, decodeUtf8)
+import Data.Text.Punycode as Puny
+import Data.Text.Encoding (decodeUtf8)
 import Network.HTTP.Types (preconditionFailed412, movedPermanently301, urlDecode, badRequest400)
 import Network.Wai (Application, responseLBS)
 import Network.Wai.Internal
@@ -38,7 +39,7 @@ fileCgiApp cspec filespec cgispec revproxyspec rdr req respond
         Found (RouteCGI   src dst) ->
             cgiApp cspec cgispec (CgiRoute src dst) req' respond
         Found (RouteRevProxy src dst dom prt) ->
-            revProxyApp cspec revproxyspec (RevProxyRoute src dst (encodeUtf8 dom) (naturalToInt prt)) req respond
+            revProxyApp cspec revproxyspec (RevProxyRoute src dst (Puny.encode dom) (naturalToInt prt)) req respond
   where
     (host, _) = hostPort req
     rawpath = rawPathInfo req

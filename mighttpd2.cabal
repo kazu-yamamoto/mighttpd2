@@ -49,6 +49,7 @@ Library
                       , http-types
                       , network
                       , parsec >= 3
+                      , punycode
                       , resourcet
                       , streaming-commons
                       , text
@@ -80,6 +81,7 @@ Executable mighty
                       , http-types
                       , mighttpd2
                       , network
+                      , punycode
                       , conduit-extra
                       , transformers
                       , text
