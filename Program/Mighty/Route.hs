@@ -22,24 +22,27 @@ module Program.Mighty.Route (
 #if __GLASGOW_HASKELL__ < 709
 import Control.Applicative hiding (many,(<|>))
 #endif
+import qualified Control.Applicative as A
 import Control.Monad
-import Data.ByteString
 import qualified Data.ByteString.Char8 as BS
 import Data.IORef
+import Data.Text
+import Data.Text.Encoding (encodeUtf8)
 import GHC.Natural (Natural)
 import Network.Wai.Application.Classic
 import Text.Parsec
 import Text.Parsec.ByteString.Lazy
+import Dhall (auto, input)
 
 import Program.Mighty.Parser
-
+import qualified Program.Mighty.Dhall.Route as DR
 ----------------------------------------------------------------
 
 -- | A logical path specified in URL.
 type Src      = Path
 -- | A physical path in a file system.
 type Dst      = Path
-type Domain   = ByteString
+type Domain   = Text
 type Port     = Natural
 
 data Block    = Block [Domain] [Route] deriving (Eq,Show)
@@ -51,13 +54,40 @@ data Route    = RouteFile     Src Dst
 type RouteDB  = [Block]
 
 ----------------------------------------------------------------
+-- | Dhall conversions.
+
+routeFromDhall :: DR.Route -> Route
+routeFromDhall (DR.File dst src) = RouteFile (encodeUtf8 src) (encodeUtf8 dst)
+routeFromDhall (DR.Redirect dst src) = RouteRedirect (encodeUtf8 src) (encodeUtf8 dst)
+routeFromDhall (DR.Cgi dst src) = RouteCGI (encodeUtf8 src) (encodeUtf8 dst)
+routeFromDhall (DR.RevProxy domain dst port src) = RouteRevProxy (encodeUtf8 src) (encodeUtf8 dst) domain port
+
+blockFromDhall :: DR.Block -> Block
+blockFromDhall (DR.MakeBlock doms routes) = Block doms (routeFromDhall <$> routes)
+
+routeDbFromDhall :: DR.RouteDB -> RouteDB
+routeDbFromDhall (DR.MakeRouteDB blocks) = fmap blockFromDhall blocks
+
+----------------------------------------------------------------
 
 -- | Parsing a route file.
 parseRoute :: FilePath
            -> Domain -- ^ A default domain, typically \"localhost\"
            -> Port   -- ^ A default port, typically 80.
            -> IO RouteDB
-parseRoute file ddom dport = parseFile (routeDB ddom dport) file
+parseRoute file ddom dport = parseRoutesTrad file ddom dport A.<|> parseRoutesDhall file
+
+parseRoutesTrad :: FilePath
+           -> Domain -- ^ A default domain, typically \"localhost\"
+           -> Port   -- ^ A default port, typically 80.
+           -> IO RouteDB
+parseRoutesTrad file ddom dport = parseFile (routeDB ddom dport) file
+
+parseRoutesDhall :: FilePath -> IO RouteDB
+parseRoutesDhall = (fmap routeDbFromDhall) . parseRoutesDbDhall
+
+parseRoutesDbDhall :: FilePath -> IO DR.RouteDB
+parseRoutesDbDhall = input auto . fromString
 
 routeDB :: Domain -> Port -> Parser RouteDB
 routeDB ddom dport = commentLines *> many1 (block ddom dport) <* eof
@@ -74,7 +104,7 @@ domains = open *> doms <* close <* trailing
     open  = () <$ char '[' *> spcs
     close = () <$ char ']' *> spcs
     doms = (domain `sepBy1` sep) <* spcs
-    domain = BS.pack <$> many1 (noneOf "[], \t\n")
+    domain = Data.Text.pack <$> many1 (noneOf "[], \t\n")
     sep = () <$ spcs1
 
 data Op = OpFile | OpCGI | OpRevProxy | OpRedirect
@@ -115,7 +145,7 @@ domPortDst ddom dport = (ddom,,) <$> port <*> path
                     <|> try((,,) <$> domain <*> port <*> path)
                     <|> (,dport,) <$> domain <*> path
   where
-    domain = BS.pack <$> many1 (noneOf ":/[], \t\n")
+    domain = Data.Text.pack <$> many1 (noneOf ":/[], \t\n")
     port = do
         void $ char ':'
         read <$> many1 (oneOf ['0'..'9'])

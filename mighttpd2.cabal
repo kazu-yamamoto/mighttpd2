@@ -33,6 +33,7 @@ Library
                         Program.Mighty.Resource
                         Program.Mighty.Route
                         Program.Mighty.Signal
+                        Program.Mighty.Dhall.Route
   Build-Depends:        base >= 4.9 && < 5
                       , array
                       , async
@@ -49,8 +50,10 @@ Library
                       , http-types
                       , network
                       , parsec >= 3
+                      , punycode
                       , resourcet
                       , streaming-commons
+                      , text
                       , unix
                       , unix-time
                       , unordered-containers
@@ -79,8 +82,10 @@ Executable mighty
                       , http-types
                       , mighttpd2
                       , network
+                      , punycode
                       , conduit-extra
                       , transformers
+                      , text
                       , unix
                       , streaming-commons
                       , wai >= 3.2 && < 3.3
