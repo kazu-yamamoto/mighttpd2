@@ -1,9 +1,10 @@
-{-# LANGUAGE FlexibleInstances, TypeSynonymInstances, OverloadedStrings #-}
+{-# LANGUAGE FlexibleInstances, TypeSynonymInstances, OverloadedStrings, DeriveGeneric #-}
 {-# LANGUAGE CPP #-}
 
 module Program.Mighty.Config (
   -- * Parsing a configuration file.
     parseOption
+  , parseOptionDhall
   -- * Creating 'Option'.
   , defaultOption
   -- * Types
@@ -13,9 +14,12 @@ module Program.Mighty.Config (
 #if __GLASGOW_HASKELL__ < 709
 import Control.Applicative hiding (many,optional,(<|>))
 #endif
+import qualified Control.Applicative as A
 import Program.Mighty.Parser
+import Data.String (fromString)
 import Text.Parsec
 import Text.Parsec.ByteString.Lazy
+import Dhall(Generic, FromDhall, Natural, input, auto)
 
 ----------------------------------------------------------------
 
@@ -50,7 +54,7 @@ defaultOption svrnm = Option {
 }
 
 data Option = Option {
-    opt_port :: !Int
+    opt_port :: !Natural
   , opt_host :: !String
   , opt_debug_mode :: !Bool
   , opt_user :: !String
@@ -59,28 +63,35 @@ data Option = Option {
   , opt_report_file :: !FilePath
   , opt_logging :: !Bool
   , opt_log_file :: !FilePath
-  , opt_log_file_size :: !Int
-  , opt_log_backup_number :: !Int
+  , opt_log_file_size :: !Natural
+  , opt_log_backup_number :: !Natural
   , opt_index_file :: !FilePath
   , opt_index_cgi  :: !FilePath
   , opt_status_file_dir :: !FilePath
-  , opt_connection_timeout :: !Int
-  , opt_proxy_timeout :: !Int
-  , opt_fd_cache_duration :: !Int
+  , opt_connection_timeout :: !Natural
+  , opt_proxy_timeout :: !Natural
+  , opt_fd_cache_duration :: !Natural
   , opt_server_name :: !String
   , opt_routing_file :: !(Maybe FilePath)
-  , opt_tls_port :: !Int
+  , opt_tls_port :: !Natural
   , opt_tls_cert_file :: !FilePath
   , opt_tls_chain_files :: !FilePath
   , opt_tls_key_file :: !FilePath
-  , opt_service :: !Int
-} deriving (Eq,Show)
+  , opt_service :: !Natural
+} deriving (Generic, Eq,Show)
+
+instance FromDhall Option
 
 ----------------------------------------------------------------
-
 -- | Parsing a configuration file to get an 'Option'.
 parseOption :: FilePath -> String -> IO Option
-parseOption file svrnm = makeOpt (defaultOption svrnm) <$> parseConfig file
+parseOption file svrnm = (parseOptionTrad file svrnm) A.<|> (parseOptionDhall file)
+
+parseOptionTrad :: FilePath -> String -> IO Option
+parseOptionTrad file svrnm = makeOpt (defaultOption svrnm) <$> parseConfig file
+
+parseOptionDhall :: FilePath -> IO Option
+parseOptionDhall = input auto . fromString
 
 ----------------------------------------------------------------
 
@@ -118,13 +129,13 @@ makeOpt def conf = Option {
 
 type Conf = (String, ConfValue)
 
-data ConfValue = CV_Int Int | CV_Bool Bool | CV_String String deriving (Eq,Show)
+data ConfValue = CV_Natural Natural | CV_Bool Bool | CV_String String deriving (Eq,Show)
 
 class FromConf a where
     fromConf :: ConfValue -> a
 
-instance FromConf Int where
-    fromConf (CV_Int n) = n
+instance FromConf Natural where
+    fromConf (CV_Natural n) = n
     fromConf _ = error "fromConf int"
 
 instance FromConf Bool where
@@ -157,11 +168,11 @@ sep :: Parser ()
 sep = () <$ char ':' *> spcs
 
 value :: Parser ConfValue
-value = choice [try cv_int, try cv_bool, cv_string]
+value = choice [try cv_natural, try cv_bool, cv_string]
 
 -- Trailing should be included in try to allow IP addresses.
-cv_int :: Parser ConfValue
-cv_int = CV_Int . read <$> many1 digit <* trailing
+cv_natural :: Parser ConfValue
+cv_natural = CV_Natural . read <$> many1 digit <* trailing
 
 cv_bool :: Parser ConfValue
 cv_bool = CV_Bool True  <$ string "Yes" <* trailing <|>

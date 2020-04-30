@@ -5,6 +5,8 @@ module Main where
 #ifndef HTTP_OVER_TLS
 import Control.Monad (when)
 #endif
+import Control.Applicative ((<|>))
+
 import Data.Version (showVersion)
 import Network.Wai.Application.Classic hiding ((</>))
 import System.Directory (getCurrentDirectory)
