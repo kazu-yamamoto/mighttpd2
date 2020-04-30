@@ -33,6 +33,7 @@ Library
                         Program.Mighty.Resource
                         Program.Mighty.Route
                         Program.Mighty.Signal
+                        Program.Mighty.Dhall.Route
   Build-Depends:        base >= 4.9 && < 5
                       , array
                       , async
