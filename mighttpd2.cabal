@@ -33,6 +33,7 @@ Library
                         Program.Mighty.Resource
                         Program.Mighty.Route
                         Program.Mighty.Signal
+                        Program.Mighty.Dhall.Option
   Build-Depends:        base >= 4.9 && < 5
                       , array
                       , async
@@ -51,6 +52,7 @@ Library
                       , parsec >= 3
                       , resourcet
                       , streaming-commons
+                      , text
                       , unix
                       , unix-time
                       , unordered-containers
