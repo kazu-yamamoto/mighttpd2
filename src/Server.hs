@@ -5,6 +5,7 @@ module Server (server, defaultDomain, defaultPort) where
 import Control.Concurrent (runInUnboundThread)
 import Control.Exception (try)
 import Control.Monad (unless, when)
+import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
 #ifdef HTTP_OVER_TLS
 import Data.Char (isSpace)
@@ -29,10 +30,16 @@ import WaiApp
 import qualified Network.Wai.Middleware.Push.Referer as P
 
 #ifdef HTTP_OVER_TLS
-import Control.Concurrent.Async (concurrently)
+import Control.Concurrent.Async (concurrently_)
 import Control.Monad (void)
 import Network.Wai.Handler.WarpTLS
 import Network.TLS.SessionManager
+#ifdef HTTP_OVER_QUIC
+import Control.Concurrent.Async (mapConcurrently_)
+import qualified Network.QUIC as Q
+import Network.Wai.Handler.WarpQUIC
+import qualified Network.TLS.SessionManager as SM
+#endif
 #else
 data TLSSettings = TLSSettings
 #endif
@@ -171,9 +178,17 @@ mighty opt rpt svc lgr pushlgr mgr rdr _tlsSetting
     HttpOnly s  -> runSettingsSocket setting s app
 #ifdef HTTP_OVER_TLS
     HttpsOnly s -> runTLSSocket _tlsSetting setting s app
-    HttpAndHttps s1 s2 -> void $ concurrently
+    HttpAndHttps s1 s2 -> concurrently_
         (runSettingsSocket setting s1 app)
         (runTLSSocket _tlsSetting setting s2 app)
+#ifdef HTTP_OVER_QUIC
+    QUIC s1 s2 -> do
+        smgr <- SM.newSessionManager SM.defaultConfig
+        mapConcurrently_ id [runSettingsSocket setting s1 app
+                            ,runTLSSocket _tlsSetting setting s2 app
+                            ,runQUIC (qconf smgr) setting app
+                            ]
+#endif
 #else
     _ -> error "never reach"
 #endif
@@ -208,10 +223,30 @@ mighty opt rpt svc lgr pushlgr mgr rdr _tlsSetting
     revproxyspec = RevProxyAppSpec {
         revProxyManager = mgr
       }
+    qconf smgr = Q.defaultServerConfig {
+            Q.scAddresses      = [("127.0.0.1",4433)]
+          , Q.scKey            = opt_tls_key_file opt
+          , Q.scCert           = opt_tls_cert_file opt
+          , Q.scALPN           = Just chooseALPN
+          , Q.scRequireRetry   = False
+          , Q.scSessionManager = smgr
+          , Q.scEarlyDataSize  = 1024
+          , Q.scConfig     = Q.defaultConfig {
+                Q.confParameters = Q.exampleParameters
+              }
+          }
+
+chooseALPN :: Q.Version -> [ByteString] -> IO ByteString
+chooseALPN _ver protos
+  | "h3-27" `elem` protos = return "h3-27"
+  | otherwise             = return ""
 
 ----------------------------------------------------------------
 
-data Service = HttpOnly Socket | HttpsOnly Socket | HttpAndHttps Socket Socket
+data Service = HttpOnly Socket
+             | HttpsOnly Socket
+             | HttpAndHttps Socket Socket
+             | QUIC Socket Socket
 
 ----------------------------------------------------------------
 
@@ -227,6 +262,12 @@ openService opt
       debugMessage $ urlForHTTP httpPort
       debugMessage $ urlForHTTPS httpsPort
       return $ HttpAndHttps s1 s2
+  | service == 3 = do
+      s1 <- bindPortTCP httpPort hostpref
+      s2 <- bindPortTCP httpsPort hostpref
+      debugMessage $ urlForHTTP httpPort
+      debugMessage $ urlForHTTPS httpsPort
+      return $ QUIC s1 s2
   | otherwise = do
       s <- bindPortTCP httpPort hostpref
       debugMessage $ urlForHTTP httpPort
@@ -252,6 +293,7 @@ closeService :: Service -> IO ()
 closeService (HttpOnly s)         = close s
 closeService (HttpsOnly s)        = close s
 closeService (HttpAndHttps s1 s2) = close s1 >> close s2
+closeService (QUIC s1 s2)         = close s1 >> close s2
 
 ----------------------------------------------------------------
 

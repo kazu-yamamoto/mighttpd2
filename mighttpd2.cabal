@@ -17,7 +17,11 @@ Data-Dir:               conf
 Data-Files:             example.conf example.route
 
 Flag tls
-  Description:          Support http over tls (https).
+  Description:          Support HTTP over TLS (HTTPS).
+  Default:              False
+
+Flag quic
+  Description:          Support HTTP over QUIC (HTTP/3).
   Default:              False
 
 Library
@@ -70,6 +74,9 @@ Executable mighty
   if flag(tls)
     Cpp-Options:        -DHTTP_OVER_TLS
     Build-Depends:      async
+  if flag(quic)
+    Cpp-Options:        -DHTTP_OVER_QUIC
+    Build-Depends:      async
                       , tls-session-manager >= 0.0.2.0
   Build-Depends:        base >= 4.0 && < 5
                       , bytestring
@@ -93,6 +100,9 @@ Executable mighty
   if flag(tls)
     Build-Depends:      tls
                       , warp-tls >= 3.2.7 && < 3.3
+  if flag(quic)
+    Build-Depends:      quic
+                      , warp-quic
   Other-Modules:        Server
                         WaiApp
                         Paths_mighttpd2
