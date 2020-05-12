@@ -184,9 +184,10 @@ mighty opt rpt svc lgr pushlgr mgr rdr _tlsSetting
 #ifdef HTTP_OVER_QUIC
     QUIC s1 s2 -> do
         smgr <- SM.newSessionManager SM.defaultConfig
-        mapConcurrently_ id [runSettingsSocket setting s1 app
-                            ,runTLSSocket _tlsSetting setting s2 app
-                            ,runQUIC (qconf smgr) setting app
+        let settingT = setAltSvc "h3-27=\":4433\"" setting
+        mapConcurrently_ id [runSettingsSocket        setting  s1 app
+                            ,runTLSSocket _tlsSetting settingT s2 app
+                            ,runQUIC (qconf smgr)     setting     app
                             ]
 #endif
 #else
@@ -267,6 +268,7 @@ openService opt
       s2 <- bindPortTCP httpsPort hostpref
       debugMessage $ urlForHTTP httpPort
       debugMessage $ urlForHTTPS httpsPort
+      debugMessage $ "QUIC is also available via Alt-Svc"
       return $ QUIC s1 s2
   | otherwise = do
       s <- bindPortTCP httpPort hostpref
