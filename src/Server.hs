@@ -35,10 +35,14 @@ import Control.Monad (void)
 import Network.Wai.Handler.WarpTLS
 import Network.TLS.SessionManager
 #ifdef HTTP_OVER_QUIC
+import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async (mapConcurrently_)
+import qualified Control.Exception as E
+import Data.ByteString.Base16 (encode)
 import qualified Network.QUIC as Q
-import Network.Wai.Handler.WarpQUIC
 import qualified Network.TLS.SessionManager as SM
+import Network.Wai.Handler.WarpQUIC
+import System.FilePath
 #endif
 #else
 data TLSSettings = TLSSettings
@@ -224,6 +228,7 @@ mighty opt rpt svc lgr pushlgr mgr rdr _tlsSetting
     revproxyspec = RevProxyAppSpec {
         revProxyManager = mgr
       }
+#ifdef HTTP_OVER_QUIC
     qconf smgr = Q.defaultServerConfig {
             Q.scAddresses      = [("127.0.0.1",4433)]
           , Q.scKey            = opt_tls_key_file opt
@@ -234,6 +239,8 @@ mighty opt rpt svc lgr pushlgr mgr rdr _tlsSetting
           , Q.scEarlyDataSize  = 1024
           , Q.scConfig     = Q.defaultConfig {
                 Q.confParameters = Q.exampleParameters
+              , Q.confDebugLog   = dirLogger (opt_quic_debug_dir opt) ".txt"
+              , Q.confQLog       = dirLogger (opt_quic_qlog_dir opt) ".qlog"
               }
           }
 
@@ -241,6 +248,16 @@ chooseALPN :: Q.Version -> [ByteString] -> IO ByteString
 chooseALPN _ver protos
   | "h3-27" `elem` protos = return "h3-27"
   | otherwise             = return ""
+
+dirLogger :: FilePath -> String -> (Q.CID -> String -> IO ())
+dirLogger "" _ = \_ _ -> return ()
+dirLogger dir suffix = \cid msg -> do
+    let filename = BS.unpack (encode (Q.fromCID cid)) ++ suffix
+        logfile = dir </> filename
+    appendFile logfile msg `E.catch` \(E.SomeException _) -> do
+        threadDelay 1000
+        appendFile logfile msg
+#endif
 
 ----------------------------------------------------------------
 

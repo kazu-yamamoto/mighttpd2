@@ -54,6 +54,8 @@ defaultOption svrnm = Option {
   , opt_tls_chain_files = "chain.pem"
   , opt_tls_key_file = "privkey.pem"
   , opt_service = 0
+  , opt_quic_debug_dir = ""
+  , opt_quic_qlog_dir = ""
 }
 
 data Option = Option {
@@ -81,6 +83,8 @@ data Option = Option {
   , opt_tls_chain_files :: !FilePath
   , opt_tls_key_file :: !FilePath
   , opt_service :: !Natural
+  , opt_quic_debug_dir :: !FilePath
+  , opt_quic_qlog_dir :: !FilePath
 } deriving (Generic, Eq,Show)
 
 ----------------------------------------------------------------
@@ -150,6 +154,8 @@ makeOpt def conf = Option {
   , opt_tls_chain_files    = get "Tls_Chain_Files" opt_tls_chain_files
   , opt_tls_key_file       = get "Tls_Key_File" opt_tls_key_file
   , opt_service            = get "Service" opt_service
+  , opt_quic_debug_dir     = get "Quic_Debug_Dir" opt_quic_debug_dir
+  , opt_quic_qlog_dir      = get "Quic_Qlog_Dir" opt_quic_qlog_dir
   }
   where
     get k func = maybe (func def) fromConf $ lookup k conf
