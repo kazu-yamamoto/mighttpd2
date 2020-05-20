@@ -188,7 +188,8 @@ mighty opt rpt svc lgr pushlgr mgr rdr _tlsSetting
 #ifdef HTTP_OVER_QUIC
     QUIC s1 s2 -> do
         smgr <- SM.newSessionManager SM.defaultConfig
-        let settingT = setAltSvc "h3-27=\":4433\"" setting
+        let quicPort = BS.pack $ show $ opt_quic_port opt
+            settingT = setAltSvc (BS.concat ["h3-27=\":",quicPort,"\""]) setting
         mapConcurrently_ id [runSettingsSocket        setting  s1 app
                             ,runTLSSocket _tlsSetting settingT s2 app
                             ,runQUIC (qconf smgr)     setting     app
@@ -230,7 +231,7 @@ mighty opt rpt svc lgr pushlgr mgr rdr _tlsSetting
       }
 #ifdef HTTP_OVER_QUIC
     qconf smgr = Q.defaultServerConfig {
-            Q.scAddresses      = [("127.0.0.1",4433)]
+            Q.scAddresses      = [(read (opt_quic_addr opt), fromIntegral (opt_quic_port opt))]
           , Q.scKey            = opt_tls_key_file opt
           , Q.scCert           = opt_tls_cert_file opt
           , Q.scALPN           = Just chooseALPN
