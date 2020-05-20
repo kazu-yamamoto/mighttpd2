@@ -245,9 +245,11 @@ mighty opt rpt svc lgr pushlgr mgr rdr _tlsSetting
           }
 
 chooseALPN :: Q.Version -> [ByteString] -> IO ByteString
-chooseALPN _ver protos
-  | "h3-27" `elem` protos = return "h3-27"
-  | otherwise             = return ""
+chooseALPN ver protos
+  | h3 `elem` protos = return h3
+  | otherwise        = return ""
+  where
+    h3 = "h3-" `BS.append` BS.pack (show (Q.fromVersion ver))
 
 dirLogger :: FilePath -> String -> (Q.CID -> String -> IO ())
 dirLogger "" _ = \_ _ -> return ()
