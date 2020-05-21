@@ -5,16 +5,11 @@ module Server (server, defaultDomain, defaultPort) where
 import Control.Concurrent (runInUnboundThread)
 import Control.Exception (try)
 import Control.Monad (unless, when)
-import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
-#ifdef HTTP_OVER_TLS
-import Data.Char (isSpace)
-import Data.List (dropWhile, dropWhileEnd, break)
-#endif
 import Data.Streaming.Network (bindPortTCP)
 import GHC.Natural (Natural, naturalToInt)
-import Network.Socket (Socket, close)
 import qualified Network.HTTP.Client as H
+import Network.Socket (Socket, close)
 import Network.Wai.Application.Classic hiding ((</>))
 import Network.Wai.Handler.Warp
 import Network.Wai.Logger
@@ -31,21 +26,27 @@ import qualified Network.Wai.Middleware.Push.Referer as P
 
 #ifdef HTTP_OVER_TLS
 import Control.Concurrent.Async (concurrently_)
-import Control.Monad (void)
-import Network.Wai.Handler.WarpTLS
+import Data.Char (isSpace)
+import Data.List (dropWhileEnd)
+import Network.TLS (Credentials(..),SessionManager)
+import qualified Network.TLS as TLS
 import Network.TLS.SessionManager
+import qualified Network.TLS.SessionManager as SM
+import Network.Wai.Handler.WarpTLS
 #ifdef HTTP_OVER_QUIC
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async (mapConcurrently_)
 import qualified Control.Exception as E
+import Data.ByteString (ByteString)
 import Data.ByteString.Base16 (encode)
+import Data.Maybe (fromJust)
 import qualified Network.QUIC as Q
-import qualified Network.TLS.SessionManager as SM
 import Network.Wai.Handler.WarpQUIC
 import System.FilePath
 #endif
 #else
-data TLSSettings = TLSSettings
+data Credentials
+data SessionManager
 #endif
 
 ----------------------------------------------------------------
@@ -77,7 +78,13 @@ server opt rpt route = reportDo rpt $ do
     svc <- openService opt
     unless debug writePidFile
     rdr <- newRouteDBRef route
-    tlsSetting <- getTlsSetting opt
+#ifdef HTTP_OVER_TLS
+    mcred <- Just <$> loadCredentials opt
+    smgr <- Just <$> SM.newSessionManager SM.defaultConfig { dbMaxSize = 1000 }
+#else
+    let mcred = Nothing
+        smgr = Nothing
+#endif
     setGroupUser (opt_user opt) (opt_group opt)
     logCheck logtype
     (zdater,_) <- clockDateCacher
@@ -89,7 +96,7 @@ server opt rpt route = reportDo rpt $ do
     setHandlers opt rpt svc remover rdr
 
     report rpt "Mighty started"
-    runInUnboundThread $ mighty opt rpt svc lgr pushlgr mgr rdr tlsSetting
+    runInUnboundThread $ mighty opt rpt svc lgr pushlgr mgr rdr mcred smgr
     report rpt "Mighty retired"
     finReporter rpt
     remover
@@ -137,28 +144,22 @@ setHandlers opt rpt svc remover rdr = do
             writeRouteDBRef rdr newroute
             report rpt "Mighty reloaded"
 
-getTlsSetting :: Option -> IO TLSSettings
-getTlsSetting _opt =
 #ifdef HTTP_OVER_TLS
-    case opt_service _opt of
-        0 -> return defaultTlsSettings -- this is dummy
-        _ -> do cert <- BS.readFile $ opt_tls_cert_file _opt
-                let strip = dropWhileEnd isSpace . dropWhile isSpace
-                    split "" = []
-                    split s = case break (',' ==) s of
-                      ("",r)  -> split (tail r)
-                      (s',"") -> [s']
-                      (s',r)  -> s' : split (tail r)
-                    chain_files = map strip $ split $ opt_tls_chain_files _opt
-                chains <- mapM BS.readFile chain_files
-                key  <- BS.readFile $ opt_tls_key_file _opt
-                let settings0 = tlsSettingsChainMemory cert chains key
-                    settings = settings0 {
-                        tlsSessionManagerConfig = Just defaultConfig { dbMaxSize = 1000 }
-                      }
-                return settings
-#else
-    return TLSSettings
+loadCredentials :: Option -> IO Credentials
+loadCredentials opt = do
+    cert   <- BS.readFile $ opt_tls_cert_file opt
+    chains <- mapM BS.readFile chain_files
+    key    <- BS.readFile $ opt_tls_key_file opt
+    let Right cred = TLS.credentialLoadX509ChainFromMemory cert chains key
+    return $ Credentials [cred]
+  where
+    strip = dropWhileEnd isSpace . dropWhile isSpace
+    split "" = []
+    split s = case break (',' ==) s of
+      ("",r)  -> split (tail r)
+      (s',"") -> [s']
+      (s',r)  -> s' : split (tail r)
+    chain_files = map strip $ split $ opt_tls_chain_files opt
 #endif
 
 ----------------------------------------------------------------
@@ -175,26 +176,27 @@ ifRouteFileIsValid rpt opt act = case opt_routing_file opt of
 mighty :: Option -> Reporter -> Service
        -> ApacheLogger -> ServerPushLogger
        -> ConnPool -> RouteDBRef
-       -> TLSSettings
+       -> Maybe Credentials -> Maybe SessionManager
        -> IO ()
-mighty opt rpt svc lgr pushlgr mgr rdr _tlsSetting
+mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr
   = reportDo rpt $ case svc of
     HttpOnly s  -> runSettingsSocket setting s app
 #ifdef HTTP_OVER_TLS
-    HttpsOnly s -> runTLSSocket _tlsSetting setting s app
+    HttpsOnly s -> runTLSSocket tlsSetting setting s app
     HttpAndHttps s1 s2 -> concurrently_
         (runSettingsSocket setting s1 app)
-        (runTLSSocket _tlsSetting setting s2 app)
+        (runTLSSocket tlsSetting setting s2 app)
 #ifdef HTTP_OVER_QUIC
     QUIC s1 s2 -> do
-        smgr <- SM.newSessionManager SM.defaultConfig
         let quicPort' = BS.pack $ show quicPort
             quicDraft = BS.pack $ show quicVersion
             settingT = setAltSvc (BS.concat ["h3-",quicDraft,"=\":",quicPort',"\""]) setting
         mapConcurrently_ id [runSettingsSocket        setting  s1 app
-                            ,runTLSSocket _tlsSetting settingT s2 app
-                            ,runQUIC (qconf smgr)     setting     app
+                            ,runTLSSocket  tlsSetting settingT s2 app
+                            ,runQUIC qconf            setting     app
                             ]
+#else
+    _ -> error "never reach"
 #endif
 #else
     _ -> error "never reach"
@@ -215,6 +217,12 @@ mighty opt rpt svc lgr pushlgr mgr rdr _tlsSetting
             $ setLogger          lgr
             $ setServerPushLogger pushlgr
             defaultSettings
+#ifdef HTTP_OVER_TLS
+    tlsSetting = defaultTlsSettings {
+        tlsCredentials    = _mcreds
+      , tlsSessionManager = _msmgr
+      }
+#endif
     serverName = BS.pack $ opt_server_name opt
     cspec = ClassicAppSpec {
         softwareName = serverName
@@ -234,18 +242,17 @@ mighty opt rpt svc lgr pushlgr mgr rdr _tlsSetting
     quicAddr = read  $ opt_quic_addr opt
     quicPort = fromIntegral $ opt_quic_port opt
     quicVersion = Q.fromVersion $ head $ Q.confVersions $ Q.defaultConfig -- fixme head
-    qconf smgr = Q.defaultServerConfig {
+    qconf = Q.defaultServerConfig {
             Q.scAddresses      = [(quicAddr, quicPort)]
-          , Q.scKey            = opt_tls_key_file opt
-          , Q.scCert           = opt_tls_cert_file opt
           , Q.scALPN           = Just chooseALPN
           , Q.scRequireRetry   = False
-          , Q.scSessionManager = smgr
+          , Q.scSessionManager = fromJust _msmgr
           , Q.scEarlyDataSize  = 1024
           , Q.scConfig     = Q.defaultConfig {
-                Q.confParameters = Q.exampleParameters
-              , Q.confDebugLog   = dirLogger (opt_quic_debug_dir opt) ".txt"
-              , Q.confQLog       = dirLogger (opt_quic_qlog_dir opt) ".qlog"
+                Q.confParameters  = Q.exampleParameters
+              , Q.confDebugLog    = dirLogger (opt_quic_debug_dir opt) ".txt"
+              , Q.confQLog        = dirLogger (opt_quic_qlog_dir opt) ".qlog"
+              , Q.confCredentials = fromJust _mcreds
               }
           }
 

@@ -2,10 +2,9 @@
 
 module Main where
 
-#ifndef HTTP_OVER_TLS
+#ifndef HTTP_OVER_QUIC
 import Control.Monad (when)
 #endif
-import Control.Applicative ((<|>))
 
 import Data.Version (showVersion)
 import Network.Wai.Application.Classic hiding ((</>))
