@@ -40,6 +40,7 @@ import qualified Control.Exception as E
 import Data.ByteString (ByteString)
 import Data.ByteString.Base16 (encode)
 import Data.Maybe (fromJust)
+import Data.IORef
 import qualified Network.QUIC as Q
 import Network.Wai.Handler.WarpQUIC
 import System.FilePath
@@ -189,11 +190,15 @@ mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr
 #ifdef HTTP_OVER_QUIC
     QUIC s1 s2 -> do
         let quicPort' = BS.pack $ show quicPort
-            quicDraft = BS.pack $ show quicVersion
-            settingT = setAltSvc (BS.concat ["h3-",quicDraft,"=\":",quicPort',"\""]) setting
-        mapConcurrently_ id [runSettingsSocket        setting  s1 app
-                            ,runTLSSocket  tlsSetting settingT s2 app
-                            ,runQUIC qconf            setting     app
+            quicDrafts = map (BS.pack . show) quicVersions
+            value v = BS.concat ["h3-",v,"=\":",quicPort',"\""]
+            altsvc = BS.intercalate "," $ map value quicDrafts
+            settingT = setAltSvc altsvc setting
+        dLog <- dirLogger (opt_quic_debug_dir opt) ".txt"
+        qLog <- dirLogger (opt_quic_qlog_dir opt) ".qlog"
+        mapConcurrently_ id [runSettingsSocket         setting  s1 app
+                            ,runTLSSocket  tlsSetting  settingT s2 app
+                            ,runQUIC (qconf dLog qLog) setting     app
                             ]
 #else
     _ -> error "never reach"
@@ -241,8 +246,8 @@ mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr
 #ifdef HTTP_OVER_QUIC
     quicAddr = read  $ opt_quic_addr opt
     quicPort = fromIntegral $ opt_quic_port opt
-    quicVersion = Q.fromVersion $ head $ Q.confVersions $ Q.defaultConfig -- fixme head
-    qconf = Q.defaultServerConfig {
+    quicVersions = map Q.fromVersion $ Q.confVersions $ Q.defaultConfig
+    qconf dLog qLog = Q.defaultServerConfig {
             Q.scAddresses      = [(quicAddr, quicPort)]
           , Q.scALPN           = Just chooseALPN
           , Q.scRequireRetry   = False
@@ -250,8 +255,8 @@ mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr
           , Q.scEarlyDataSize  = 1024
           , Q.scConfig     = Q.defaultConfig {
                 Q.confParameters  = Q.exampleParameters
-              , Q.confDebugLog    = dirLogger (opt_quic_debug_dir opt) ".txt"
-              , Q.confQLog        = dirLogger (opt_quic_qlog_dir opt) ".qlog"
+              , Q.confDebugLog    = dLog
+              , Q.confQLog        = qLog
               , Q.confCredentials = fromJust _mcreds
               }
           }
@@ -263,14 +268,22 @@ chooseALPN ver protos
   where
     h3 = "h3-" `BS.append` BS.pack (show (Q.fromVersion ver))
 
-dirLogger :: FilePath -> String -> (Q.CID -> String -> IO ())
-dirLogger "" _ = \_ _ -> return ()
-dirLogger dir suffix = \cid msg -> do
-    let filename = BS.unpack (encode (Q.fromCID cid)) ++ suffix
-        logfile = dir </> filename
-    appendFile logfile msg `E.catch` \(E.SomeException _) -> do
-        threadDelay 1000
-        appendFile logfile msg
+maxLogLine :: Int
+maxLogLine = 1000
+
+dirLogger :: FilePath -> String -> IO (Q.CID -> String -> IO ())
+dirLogger "" _ = return $ \_ _ -> return ()
+dirLogger dir suffix = do
+    ref <- newIORef 0
+    return $ \cid msg -> do
+        n <- readIORef ref
+        when (n < maxLogLine) $ do
+            let filename = BS.unpack (encode (Q.fromCID cid)) ++ suffix
+                logfile = dir </> filename
+            appendFile logfile msg `E.catch` \(E.SomeException _) -> do
+                threadDelay 1000
+                appendFile logfile msg
+        writeIORef ref (n + 1)
 #endif
 
 ----------------------------------------------------------------
