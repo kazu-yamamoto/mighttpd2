@@ -18,7 +18,6 @@ module Program.Mighty.Config (
 #if __GLASGOW_HASKELL__ < 709
 import Control.Applicative hiding (many,optional,(<|>))
 #endif
-import Program.Mighty.Parser
 import Text.Parsec
 import Text.Parsec.ByteString.Lazy
 #ifdef DHALL
@@ -26,9 +25,10 @@ import qualified Control.Applicative as A
 import Dhall(Generic, Natural, input, auto)
 import qualified Program.Mighty.Dhall.Option as Do
 import Data.String (fromString)
-#else
-type Natural = Int
 #endif
+
+import Program.Mighty.Parser
+import Program.Mighty.Types
 
 ----------------------------------------------------------------
 

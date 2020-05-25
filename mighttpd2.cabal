@@ -42,6 +42,7 @@ Library
                         Program.Mighty.Route
                         Program.Mighty.Signal
                         Program.Mighty.Dhall.Option
+                        Program.Mighty.Types
   Build-Depends:        base >= 4.9 && < 5
                       , array
                       , async

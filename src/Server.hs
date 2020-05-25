@@ -7,9 +7,6 @@ import Control.Exception (try)
 import Control.Monad (unless, when)
 import qualified Data.ByteString.Char8 as BS
 import Data.Streaming.Network (bindPortTCP)
-#ifdef DHALL
-import GHC.Natural (Natural, naturalToInt)
-#endif
 import qualified Network.HTTP.Client as H
 import Network.Socket (Socket, close)
 import Network.Wai.Application.Classic hiding ((</>))
@@ -356,7 +353,3 @@ getManager opt = H.newManager H.defaultManagerSettings {
     responseTimeout
       | opt_proxy_timeout opt == 0 = H.managerResponseTimeout H.defaultManagerSettings
       | otherwise                  = H.responseTimeoutMicro (naturalToInt $ opt_proxy_timeout opt * 1000000) -- micro seconds
-
-#ifndef DHALL
-naturalToInt = id
-#endif

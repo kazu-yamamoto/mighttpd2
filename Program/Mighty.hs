@@ -12,6 +12,7 @@ module Program.Mighty (
   , module Program.Mighty.Process
   , module Program.Mighty.Resource
   , module Program.Mighty.Signal
+  , module Program.Mighty.Types
   ) where
 
 import Program.Mighty.ByteString
@@ -23,3 +24,4 @@ import Program.Mighty.Report
 import Program.Mighty.Resource
 import Program.Mighty.Route
 import Program.Mighty.Signal
+import Program.Mighty.Types

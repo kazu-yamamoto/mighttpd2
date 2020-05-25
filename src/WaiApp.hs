@@ -4,9 +4,6 @@ module WaiApp (fileCgiApp) where
 
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
-#ifdef DHALL
-import GHC.Natural (naturalToInt)
-#endif
 import Network.HTTP.Types (preconditionFailed412, movedPermanently301, urlDecode, badRequest400)
 import Network.Wai (Application, responseLBS)
 import Network.Wai.Internal
@@ -81,7 +78,3 @@ isMountPointOf :: Path -> ByteString -> Bool
 isMountPointOf src key = hasTrailingPathSeparator src
                       && BS.length src - BS.length key == 1
                       && key `BS.isPrefixOf` src
-
-#ifndef DHALL
-naturalToInt = id
-#endif
