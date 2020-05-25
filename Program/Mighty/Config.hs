@@ -4,7 +4,11 @@
 module Program.Mighty.Config (
   -- * Parsing a configuration file.
     parseOption
+#ifdef DHALL
   , parseOptionDhall
+#else
+  , Natural
+#endif
   -- * Creating 'Option'.
   , defaultOption
   -- * Types
@@ -14,15 +18,17 @@ module Program.Mighty.Config (
 #if __GLASGOW_HASKELL__ < 709
 import Control.Applicative hiding (many,optional,(<|>))
 #endif
-import qualified Control.Applicative as A
 import Program.Mighty.Parser
-import Data.String (fromString)
-import qualified Data.Text as T
 import Text.Parsec
 import Text.Parsec.ByteString.Lazy
+#ifdef DHALL
+import qualified Control.Applicative as A
 import Dhall(Generic, Natural, input, auto)
-
 import qualified Program.Mighty.Dhall.Option as Do
+import Data.String (fromString)
+#else
+type Natural = Int
+#endif
 
 ----------------------------------------------------------------
 
@@ -89,16 +95,29 @@ data Option = Option {
   , opt_quic_port :: !Natural
   , opt_quic_debug_dir :: !FilePath
   , opt_quic_qlog_dir :: !FilePath
-} deriving (Generic, Eq,Show)
+#ifdef DHALL
+} deriving (Eq, Show, Generic)
+#else
+} deriving (Eq, Show)
+#endif
+
+#ifdef DHALL
+instance FromDhall Option
+#endif
 
 ----------------------------------------------------------------
 -- | Parsing a configuration file to get an 'Option'.
 parseOption :: FilePath -> String -> IO Option
+#ifdef DHALL
 parseOption file svrnm = (parseOptionTrad file svrnm) A.<|> (parseOptionDhall file)
+#else
+parseOption file svrnm = (parseOptionTrad file svrnm)
+#endif
 
 parseOptionTrad :: FilePath -> String -> IO Option
 parseOptionTrad file svrnm = makeOpt (defaultOption svrnm) <$> parseConfig file
 
+#ifdef DHALL
 parseOptionDhall :: FilePath -> IO Option
 parseOptionDhall = (fmap optionFromDhall) . input auto . fromString
 
@@ -129,6 +148,7 @@ optionFromDhall o = Option
   , opt_tls_key_file = T.unpack $ Do.tlsKeyFile o
   , opt_service = Do.service o
 }
+#endif
 
 ----------------------------------------------------------------
 
