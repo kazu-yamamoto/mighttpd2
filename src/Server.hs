@@ -253,8 +253,7 @@ mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr
           , Q.scSessionManager = fromJust _msmgr
           , Q.scEarlyDataSize  = 1024
           , Q.scConfig     = Q.defaultConfig {
-                Q.confParameters  = Q.exampleParameters
-              , Q.confDebugLog    = dLog
+                Q.confDebugLog    = dLog
               , Q.confQLog        = qLog
               , Q.confCredentials = fromJust _mcreds
               }
