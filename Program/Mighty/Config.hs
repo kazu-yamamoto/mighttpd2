@@ -17,9 +17,12 @@ import Control.Applicative hiding (many,optional,(<|>))
 import qualified Control.Applicative as A
 import Program.Mighty.Parser
 import Data.String (fromString)
+import qualified Data.Text as T
 import Text.Parsec
 import Text.Parsec.ByteString.Lazy
-import Dhall(Generic, FromDhall, Natural, input, auto)
+import Dhall(Generic, Natural, input, auto)
+
+import qualified Program.Mighty.Dhall.Option as Do
 
 ----------------------------------------------------------------
 
@@ -80,8 +83,6 @@ data Option = Option {
   , opt_service :: !Natural
 } deriving (Generic, Eq,Show)
 
-instance FromDhall Option
-
 ----------------------------------------------------------------
 -- | Parsing a configuration file to get an 'Option'.
 parseOption :: FilePath -> String -> IO Option
@@ -91,7 +92,35 @@ parseOptionTrad :: FilePath -> String -> IO Option
 parseOptionTrad file svrnm = makeOpt (defaultOption svrnm) <$> parseConfig file
 
 parseOptionDhall :: FilePath -> IO Option
-parseOptionDhall = input auto . fromString
+parseOptionDhall = (fmap optionFromDhall) . input auto . fromString
+
+optionFromDhall :: Do.Option -> Option
+optionFromDhall o = Option
+  { opt_port = Do.port o
+  , opt_host = T.unpack $ Do.host o
+  , opt_debug_mode = Do.debugMode o
+  , opt_user = T.unpack $ Do.user o
+  , opt_group = T.unpack $ Do.group o
+  , opt_pid_file = T.unpack $ Do.pidFile o
+  , opt_report_file = T.unpack $ Do.reportFile o
+  , opt_logging = Do.logging o
+  , opt_log_file = T.unpack $ Do.logFile o
+  , opt_log_file_size = Do.logFileSize o
+  , opt_log_backup_number = Do.logBackupNumber o
+  , opt_index_file = T.unpack $ Do.indexFile o
+  , opt_index_cgi  = T.unpack $ Do.indexCgi o
+  , opt_status_file_dir = T.unpack $ Do.statusFileDir o
+  , opt_connection_timeout = Do.connectionTimeout o
+  , opt_proxy_timeout = Do.proxyTimeout o
+  , opt_fd_cache_duration = Do.fdCacheDuration o
+  , opt_server_name = T.unpack $ Do.serverName o
+  , opt_routing_file = T.unpack <$> Do.routingFile o
+  , opt_tls_port = Do.tlsPort o
+  , opt_tls_cert_file = T.unpack $ Do.tlsCertFile o
+  , opt_tls_chain_files = T.unpack $ Do.tlsChainFiles o
+  , opt_tls_key_file = T.unpack $ Do.tlsKeyFile o
+  , opt_service = Do.service o
+}
 
 ----------------------------------------------------------------
 
