@@ -267,7 +267,7 @@ chooseALPN ver protos
     h3 = "h3-" `BS.append` BS.pack (show (Q.fromVersion ver))
 
 maxLogLine :: Int
-maxLogLine = 1000
+maxLogLine = 10000
 
 dirLogger :: FilePath -> String -> IO (Q.CID -> String -> IO ())
 dirLogger "" _ = return $ \_ _ -> return ()
