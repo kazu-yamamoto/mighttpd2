@@ -33,16 +33,11 @@ import Network.TLS.SessionManager
 import qualified Network.TLS.SessionManager as SM
 import Network.Wai.Handler.WarpTLS
 #ifdef HTTP_OVER_QUIC
-import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async (mapConcurrently_)
-import qualified Control.Exception as E
 import Data.ByteString (ByteString)
-import Data.ByteString.Base16 (encode)
 import Data.Maybe (fromJust)
-import Data.IORef
 import qualified Network.QUIC as Q
 import Network.Wai.Handler.WarpQUIC
-import System.FilePath
 #endif
 #else
 data Credentials
@@ -193,11 +188,9 @@ mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr
             value v = BS.concat ["h3-",v,"=\":",quicPort',"\""]
             altsvc = BS.intercalate "," $ map value quicDrafts
             settingT = setAltSvc altsvc setting
-        dLog <- dirLogger (opt_quic_debug_dir opt) ".txt"
-        qLog <- dirLogger (opt_quic_qlog_dir opt) ".qlog"
-        mapConcurrently_ id [runSettingsSocket         setting  s1 app
-                            ,runTLSSocket  tlsSetting  settingT s2 app
-                            ,runQUIC (qconf dLog qLog) setting     app
+        mapConcurrently_ id [runSettingsSocket        setting  s1 app
+                            ,runTLSSocket  tlsSetting settingT s2 app
+                            ,runQUIC       qconf      setting     app
                             ]
 #else
     _ -> error "never reach"
@@ -246,15 +239,17 @@ mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr
     quicAddr = read  $ opt_quic_addr opt
     quicPort = fromIntegral $ opt_quic_port opt
     quicVersions = map Q.fromVersion $ Q.confVersions $ Q.defaultConfig
-    qconf dLog qLog = Q.defaultServerConfig {
+    mdir ""  = Nothing
+    mdir dir = Just dir
+    qconf = Q.defaultServerConfig {
             Q.scAddresses      = [(quicAddr, quicPort)]
           , Q.scALPN           = Just chooseALPN
           , Q.scRequireRetry   = False
           , Q.scSessionManager = fromJust _msmgr
           , Q.scEarlyDataSize  = 1024
+          , Q.scDebugLog       = mdir $ opt_quic_debug_dir opt
           , Q.scConfig     = Q.defaultConfig {
-                Q.confDebugLog    = dLog
-              , Q.confQLog        = qLog
+                Q.confQLog        = mdir $ opt_quic_qlog_dir opt
               , Q.confCredentials = fromJust _mcreds
               }
           }
@@ -265,23 +260,6 @@ chooseALPN ver protos
   | otherwise        = return ""
   where
     h3 = "h3-" `BS.append` BS.pack (show (Q.fromVersion ver))
-
-maxLogLine :: Int
-maxLogLine = 1000
-
-dirLogger :: FilePath -> String -> IO (Q.CID -> String -> IO ())
-dirLogger "" _ = return $ \_ _ -> return ()
-dirLogger dir suffix = do
-    ref <- newIORef 0
-    return $ \cid msg -> do
-        n <- readIORef ref
-        when (n < maxLogLine) $ do
-            let filename = BS.unpack (encode (Q.fromCID cid)) ++ suffix
-                logfile = dir </> filename
-            appendFile logfile msg `E.catch` \(E.SomeException _) -> do
-                threadDelay 1000
-                appendFile logfile msg
-        writeIORef ref (n + 1)
 #endif
 
 ----------------------------------------------------------------
