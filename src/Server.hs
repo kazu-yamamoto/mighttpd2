@@ -248,7 +248,7 @@ mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr
           , Q.scSessionManager = fromJust _msmgr
           , Q.scEarlyDataSize  = 1024
           , Q.scDebugLog       = mdir $ opt_quic_debug_dir opt
-          , Q.scConfig     = Q.defaultConfig {
+          , Q.scConfig     = (Q.scConfig Q.defaultServerConfig) {
                 Q.confQLog        = mdir $ opt_quic_qlog_dir opt
               , Q.confCredentials = fromJust _mcreds
               }
