@@ -250,7 +250,7 @@ cv_natural = CV_Natural . read <$> many1 digit <* trailing
 
 cv_bool :: Parser ConfValue
 cv_bool = CV_Bool True  <$ string "Yes" <* trailing <|>
-          CV_Bool False <$ string "No"   <* trailing
+          CV_Bool False <$ string "No"  <* trailing
 
 cv_string :: Parser ConfValue
 cv_string = CV_String <$> many (noneOf " \t\n") <* trailing
