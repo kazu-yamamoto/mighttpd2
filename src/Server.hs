@@ -1,4 +1,6 @@
-{-# LANGUAGE OverloadedStrings, CPP, BangPatterns #-}
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
 
 module Server (server, defaultDomain, defaultPort) where

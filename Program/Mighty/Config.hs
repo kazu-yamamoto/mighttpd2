@@ -1,5 +1,8 @@
-{-# LANGUAGE FlexibleInstances, TypeSynonymInstances, OverloadedStrings, DeriveGeneric #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 module Program.Mighty.Config (
   -- * Parsing a configuration file.
