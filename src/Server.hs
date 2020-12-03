@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
@@ -289,7 +288,7 @@ openService opt
       s2 <- bindPortTCP httpsPort hostpref
       debugMessage $ urlForHTTP httpPort
       debugMessage $ urlForHTTPS httpsPort
-      debugMessage $ "QUIC is also available via Alt-Svc"
+      debugMessage "QUIC is also available via Alt-Svc"
       return $ QUIC s1 s2
   | otherwise = do
       s <- bindPortTCP httpPort hostpref
