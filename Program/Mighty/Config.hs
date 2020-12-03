@@ -67,34 +67,34 @@ defaultOption svrnm = Option {
 }
 
 data Option = Option {
-    opt_port :: !Natural
-  , opt_host :: !String
-  , opt_debug_mode :: !Bool
-  , opt_user :: !String
-  , opt_group :: !String
-  , opt_pid_file :: !FilePath
-  , opt_report_file :: !FilePath
-  , opt_logging :: !Bool
-  , opt_log_file :: !FilePath
-  , opt_log_file_size :: !Natural
-  , opt_log_backup_number :: !Natural
-  , opt_index_file :: !FilePath
-  , opt_index_cgi  :: !FilePath
-  , opt_status_file_dir :: !FilePath
-  , opt_connection_timeout :: !Natural
-  , opt_proxy_timeout :: !Natural
-  , opt_fd_cache_duration :: !Natural
-  , opt_server_name :: !String
-  , opt_routing_file :: !(Maybe FilePath)
-  , opt_tls_port :: !Natural
-  , opt_tls_cert_file :: !FilePath
-  , opt_tls_chain_files :: !FilePath
-  , opt_tls_key_file :: !FilePath
-  , opt_service :: !Natural
-  , opt_quic_addr :: !String
-  , opt_quic_port :: !Natural
-  , opt_quic_debug_dir :: !FilePath
-  , opt_quic_qlog_dir :: !FilePath
+    opt_port :: Natural
+  , opt_host :: String
+  , opt_debug_mode :: Bool
+  , opt_user :: String
+  , opt_group :: String
+  , opt_pid_file :: FilePath
+  , opt_report_file :: FilePath
+  , opt_logging :: Bool
+  , opt_log_file :: FilePath
+  , opt_log_file_size :: Natural
+  , opt_log_backup_number :: Natural
+  , opt_index_file :: FilePath
+  , opt_index_cgi  :: FilePath
+  , opt_status_file_dir :: FilePath
+  , opt_connection_timeout :: Natural
+  , opt_proxy_timeout :: Natural
+  , opt_fd_cache_duration :: Natural
+  , opt_server_name :: String
+  , opt_routing_file :: Maybe FilePath
+  , opt_tls_port :: Natural
+  , opt_tls_cert_file :: FilePath
+  , opt_tls_chain_files :: FilePath
+  , opt_tls_key_file :: FilePath
+  , opt_service :: Natural
+  , opt_quic_addr :: String
+  , opt_quic_port :: Natural
+  , opt_quic_debug_dir :: FilePath
+  , opt_quic_qlog_dir :: FilePath
 #ifdef DHALL
 } deriving (Eq, Show, Generic)
 #else
