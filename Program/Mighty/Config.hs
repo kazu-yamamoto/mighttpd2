@@ -17,9 +17,6 @@ module Program.Mighty.Config (
   , Option(..)
   ) where
 
-#if __GLASGOW_HASKELL__ < 709
-import Control.Applicative hiding (many,optional,(<|>))
-#endif
 import Data.List.Split (splitOn)
 import Text.Parsec
 import Text.Parsec.ByteString.Lazy

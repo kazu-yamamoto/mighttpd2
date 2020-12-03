@@ -6,9 +6,6 @@ module Program.Mighty.Resource (
   , unlimit
   ) where
 
-#if __GLASGOW_HASKELL__ < 709
-import Control.Applicative
-#endif
 import Control.Exception
 import Control.Monad
 import System.Posix

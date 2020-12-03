@@ -20,9 +20,6 @@ module Program.Mighty.Route (
   , writeRouteDBRef
   ) where
 
-#if __GLASGOW_HASKELL__ < 709
-import Control.Applicative hiding (many,(<|>))
-#endif
 import Control.Monad
 import Data.ByteString
 import qualified Data.ByteString.Char8 as BS

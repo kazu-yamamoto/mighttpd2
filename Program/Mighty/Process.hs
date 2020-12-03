@@ -5,9 +5,6 @@ module Program.Mighty.Process (
     getMightyPid
   ) where
 
-#if __GLASGOW_HASKELL__ < 709
-import Control.Applicative
-#endif
 import Control.Monad.Trans.Resource (runResourceT)
 import Data.ByteString.Char8 (ByteString)
 import qualified Data.ByteString.Char8 as BS
