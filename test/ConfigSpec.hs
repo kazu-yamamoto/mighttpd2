@@ -1,4 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE CPP #-}
+
 module ConfigSpec where
 
 import Program.Mighty
@@ -11,6 +13,7 @@ spec = do
             res <- parseOption "conf/example.conf" "foo"
             res `shouldBe` ans
 
+#ifdef DHALL
     describe "parseDhall" $ do
         it "parses example.dhall correctly" $ do
             res <- parseOptionDhall "./conf/example.dhall"
@@ -19,9 +22,10 @@ spec = do
         it "parses literal dhall correctly" $ do
             res <- parseOptionDhall "let x = ./conf/example.dhall in x"
             res `shouldBe` ans
+#endif
 
 ans :: Option
-ans = Option 
+ans = Option
     { opt_port = 80
     , opt_host = "*"
     , opt_debug_mode = True
@@ -46,4 +50,8 @@ ans = Option
     , opt_service = 0
     , opt_report_file = "/tmp/mighty_report"
     , opt_proxy_timeout = 0
+    , opt_quic_addr = "127.0.0.1"
+    , opt_quic_port = 443
+    , opt_quic_debug_dir = ""
+    , opt_quic_qlog_dir = ""
     }

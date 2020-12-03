@@ -61,7 +61,7 @@ defaultOption svrnm = Option {
   , opt_tls_key_file = "privkey.pem"
   , opt_service = 0
   , opt_quic_addr = "127.0.0.1"
-  , opt_quic_port = 4433
+  , opt_quic_port = 443
   , opt_quic_debug_dir = ""
   , opt_quic_qlog_dir = ""
 }
