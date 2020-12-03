@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings, CPP, BangPatterns #-}
+{-# LANGUAGE TupleSections #-}
 
 module Server (server, defaultDomain, defaultPort) where
 
@@ -236,11 +237,11 @@ mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr
         revProxyManager = mgr
       }
 #ifdef HTTP_OVER_QUIC
-    quicAddr = read $ opt_quic_addr opt
+    quicAddr = read <$> opt_quic_addr opt
     quicPort = fromIntegral $ opt_quic_port opt
     quicVersions = map Q.fromVersion $ Q.confVersions $ Q.defaultConfig
     qconf = Q.defaultServerConfig {
-            Q.scAddresses      = [(quicAddr, quicPort)]
+            Q.scAddresses      = (,quicPort) <$> quicAddr
           , Q.scALPN           = Just chooseALPN
           , Q.scRequireRetry   = False
           , Q.scSessionManager = fromJust _msmgr

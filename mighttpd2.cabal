@@ -60,6 +60,7 @@ Library
                       , parsec >= 3
                       , resourcet
                       , streaming-commons
+                      , split
                       , text
                       , unix
                       , unix-time

@@ -18,6 +18,7 @@ module Program.Mighty.Config (
 #if __GLASGOW_HASKELL__ < 709
 import Control.Applicative hiding (many,optional,(<|>))
 #endif
+import Data.List.Split (splitOn)
 import Text.Parsec
 import Text.Parsec.ByteString.Lazy
 #ifdef DHALL
@@ -60,7 +61,7 @@ defaultOption svrnm = Option {
   , opt_tls_chain_files = "chain.pem"
   , opt_tls_key_file = "privkey.pem"
   , opt_service = 0
-  , opt_quic_addr = "127.0.0.1"
+  , opt_quic_addr = ["127.0.0.1"]
   , opt_quic_port = 443
   , opt_quic_debug_dir = Nothing
   , opt_quic_qlog_dir =  Nothing
@@ -91,7 +92,7 @@ data Option = Option {
   , opt_tls_chain_files :: FilePath
   , opt_tls_key_file :: FilePath
   , opt_service :: Natural
-  , opt_quic_addr :: String
+  , opt_quic_addr :: [String]
   , opt_quic_port :: Natural
   , opt_quic_debug_dir :: Maybe FilePath
   , opt_quic_qlog_dir :: Maybe FilePath
@@ -210,6 +211,10 @@ instance FromConf String where
 instance FromConf (Maybe String) where
     fromConf (CV_String "") = Nothing
     fromConf (CV_String s)  = Just s
+    fromConf _ = error "fromConf string"
+
+instance FromConf [String] where
+    fromConf (CV_String s)  = splitOn "," s
     fromConf _ = error "fromConf string"
 
 ----------------------------------------------------------------
