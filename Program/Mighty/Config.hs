@@ -62,8 +62,8 @@ defaultOption svrnm = Option {
   , opt_service = 0
   , opt_quic_addr = "127.0.0.1"
   , opt_quic_port = 443
-  , opt_quic_debug_dir = ""
-  , opt_quic_qlog_dir = ""
+  , opt_quic_debug_dir = Nothing
+  , opt_quic_qlog_dir =  Nothing
 }
 
 data Option = Option {
@@ -93,8 +93,8 @@ data Option = Option {
   , opt_service :: Natural
   , opt_quic_addr :: String
   , opt_quic_port :: Natural
-  , opt_quic_debug_dir :: FilePath
-  , opt_quic_qlog_dir :: FilePath
+  , opt_quic_debug_dir :: Maybe FilePath
+  , opt_quic_qlog_dir :: Maybe FilePath
 #ifdef DHALL
 } deriving (Eq, Show, Generic)
 #else
@@ -205,6 +205,11 @@ instance FromConf Bool where
 
 instance FromConf String where
     fromConf (CV_String s) = s
+    fromConf _ = error "fromConf string"
+
+instance FromConf (Maybe String) where
+    fromConf (CV_String "") = Nothing
+    fromConf (CV_String s)  = Just s
     fromConf _ = error "fromConf string"
 
 ----------------------------------------------------------------
