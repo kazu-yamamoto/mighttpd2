@@ -17,7 +17,6 @@ import qualified Data.Conduit.List as CL
 import Data.Conduit.Process
 import Data.Function
 import Data.List
-import Data.Ord
 import System.Posix.Types
 
 ----------------------------------------------------------------
@@ -65,7 +64,7 @@ findParent ps = deleteAloneChild $ masters ++ candidates
     candidates = map head
                $ filter (\xs -> length xs == 1) -- master is alone
                $ groupBy ((==) `on` ppid)
-               $ sortBy (comparing ppid) rest
+               $ sortOn ppid rest
 
 
 deleteAloneChild :: [PsResult] -> [PsResult]
@@ -79,7 +78,7 @@ deleteAloneChild (p:ps) = p : deleteAloneChild (filter noParent ps)
 
 -- | Getting the process id of a running Mighty.
 getMightyPid :: IO [ProcessID]
-getMightyPid = (map pid . findParent) <$> runPS
+getMightyPid = map pid . findParent <$> runPS
 
 ----------------------------------------------------------------
 

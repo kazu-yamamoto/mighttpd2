@@ -2,7 +2,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 
 module Program.Mighty.Config (
   -- * Parsing a configuration file.
@@ -113,9 +112,9 @@ instance FromDhall Option
 -- | Parsing a configuration file to get an 'Option'.
 parseOption :: FilePath -> String -> IO Option
 #ifdef DHALL
-parseOption file svrnm = (parseOptionTrad file svrnm) A.<|> (parseOptionDhall file)
+parseOption file svrnm = parseOptionTrad file svrnm A.<|> parseOptionDhall file
 #else
-parseOption file svrnm = (parseOptionTrad file svrnm)
+parseOption file svrnm = parseOptionTrad file svrnm
 #endif
 
 parseOptionTrad :: FilePath -> String -> IO Option
