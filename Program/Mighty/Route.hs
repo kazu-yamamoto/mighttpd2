@@ -1,5 +1,6 @@
-{-# LANGUAGE OverloadedStrings, TupleSections #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections #-}
 
 module Program.Mighty.Route (
   -- * Paring a routing file
