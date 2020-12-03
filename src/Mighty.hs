@@ -2,10 +2,9 @@
 
 module Main where
 
-#ifndef HTTP_OVER_TLS
+#ifndef HTTP_OVER_QUIC
 import Control.Monad (when)
 #endif
-import Control.Applicative ((<|>))
 
 import Data.Version (showVersion)
 import Network.Wai.Application.Classic hiding ((</>))
@@ -75,7 +74,13 @@ main = do
         hPrint stderr e
         exitFailure
 #ifdef HTTP_OVER_TLS
+#ifdef HTTP_OVER_QUIC
     checkTLS _ = return ()
+#else
+    checkTLS opt = when (opt_service opt > 2) $ do
+        hPutStrLn stderr "This mighty does not support QUIC"
+        exitFailure
+#endif
 #else
     checkTLS opt = when (opt_service opt > 1) $ do
         hPutStrLn stderr "This mighty does not support TLS"

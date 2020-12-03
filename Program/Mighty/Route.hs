@@ -26,7 +26,9 @@ import Control.Monad
 import Data.ByteString
 import qualified Data.ByteString.Char8 as BS
 import Data.IORef
+#ifdef DHALL
 import GHC.Natural (Natural)
+#endif
 import Network.Wai.Application.Classic
 import Text.Parsec
 import Text.Parsec.ByteString.Lazy
@@ -40,7 +42,11 @@ type Src      = Path
 -- | A physical path in a file system.
 type Dst      = Path
 type Domain   = ByteString
+#ifdef DHALL
 type Port     = Natural
+#else
+type Port     = Int
+#endif
 
 data Block    = Block [Domain] [Route] deriving (Eq,Show)
 data Route    = RouteFile     Src Dst

@@ -4,7 +4,6 @@ module WaiApp (fileCgiApp) where
 
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
-import GHC.Natural (naturalToInt)
 import Network.HTTP.Types (preconditionFailed412, movedPermanently301, urlDecode, badRequest400)
 import Network.Wai (Application, responseLBS)
 import Network.Wai.Internal

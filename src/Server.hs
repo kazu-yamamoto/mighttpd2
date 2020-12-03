@@ -6,14 +6,9 @@ import Control.Concurrent (runInUnboundThread)
 import Control.Exception (try)
 import Control.Monad (unless, when)
 import qualified Data.ByteString.Char8 as BS
-#ifdef HTTP_OVER_TLS
-import Data.Char (isSpace)
-import Data.List (dropWhile, dropWhileEnd, break)
-#endif
 import Data.Streaming.Network (bindPortTCP)
-import GHC.Natural (Natural, naturalToInt)
-import Network.Socket (Socket, close)
 import qualified Network.HTTP.Client as H
+import Network.Socket (Socket, close)
 import Network.Wai.Application.Classic hiding ((</>))
 import Network.Wai.Handler.Warp
 import Network.Wai.Logger
@@ -29,12 +24,24 @@ import WaiApp
 import qualified Network.Wai.Middleware.Push.Referer as P
 
 #ifdef HTTP_OVER_TLS
-import Control.Concurrent.Async (concurrently)
-import Control.Monad (void)
-import Network.Wai.Handler.WarpTLS
+import Control.Concurrent.Async (concurrently_)
+import Data.Char (isSpace)
+import Data.List (dropWhileEnd)
+import Network.TLS (Credentials(..),SessionManager)
+import qualified Network.TLS as TLS
 import Network.TLS.SessionManager
+import qualified Network.TLS.SessionManager as SM
+import Network.Wai.Handler.WarpTLS
+#ifdef HTTP_OVER_QUIC
+import Control.Concurrent.Async (mapConcurrently_)
+import Data.ByteString (ByteString)
+import Data.Maybe (fromJust)
+import qualified Network.QUIC as Q
+import Network.Wai.Handler.WarpQUIC
+#endif
 #else
-data TLSSettings = TLSSettings
+data Credentials
+data SessionManager
 #endif
 
 ----------------------------------------------------------------
@@ -66,7 +73,13 @@ server opt rpt route = reportDo rpt $ do
     svc <- openService opt
     unless debug writePidFile
     rdr <- newRouteDBRef route
-    tlsSetting <- getTlsSetting opt
+#ifdef HTTP_OVER_TLS
+    mcred <- Just <$> loadCredentials opt
+    smgr <- Just <$> SM.newSessionManager SM.defaultConfig { dbMaxSize = 1000 }
+#else
+    let mcred = Nothing
+        smgr = Nothing
+#endif
     setGroupUser (opt_user opt) (opt_group opt)
     logCheck logtype
     (zdater,_) <- clockDateCacher
@@ -78,7 +91,7 @@ server opt rpt route = reportDo rpt $ do
     setHandlers opt rpt svc remover rdr
 
     report rpt "Mighty started"
-    runInUnboundThread $ mighty opt rpt svc lgr pushlgr mgr rdr tlsSetting
+    runInUnboundThread $ mighty opt rpt svc lgr pushlgr mgr rdr mcred smgr
     report rpt "Mighty retired"
     finReporter rpt
     remover
@@ -126,28 +139,22 @@ setHandlers opt rpt svc remover rdr = do
             writeRouteDBRef rdr newroute
             report rpt "Mighty reloaded"
 
-getTlsSetting :: Option -> IO TLSSettings
-getTlsSetting _opt =
 #ifdef HTTP_OVER_TLS
-    case opt_service _opt of
-        0 -> return defaultTlsSettings -- this is dummy
-        _ -> do cert <- BS.readFile $ opt_tls_cert_file _opt
-                let strip = dropWhileEnd isSpace . dropWhile isSpace
-                    split "" = []
-                    split s = case break (',' ==) s of
-                      ("",r)  -> split (tail r)
-                      (s',"") -> [s']
-                      (s',r)  -> s' : split (tail r)
-                    chain_files = map strip $ split $ opt_tls_chain_files _opt
-                chains <- mapM BS.readFile chain_files
-                key  <- BS.readFile $ opt_tls_key_file _opt
-                let settings0 = tlsSettingsChainMemory cert chains key
-                    settings = settings0 {
-                        tlsSessionManagerConfig = Just defaultConfig { dbMaxSize = 1000 }
-                      }
-                return settings
-#else
-    return TLSSettings
+loadCredentials :: Option -> IO Credentials
+loadCredentials opt = do
+    cert   <- BS.readFile $ opt_tls_cert_file opt
+    chains <- mapM BS.readFile chain_files
+    key    <- BS.readFile $ opt_tls_key_file opt
+    let Right cred = TLS.credentialLoadX509ChainFromMemory cert chains key
+    return $ Credentials [cred]
+  where
+    strip = dropWhileEnd isSpace . dropWhile isSpace
+    split "" = []
+    split s = case break (',' ==) s of
+      ("",r)  -> split (tail r)
+      (s',"") -> [s']
+      (s',r)  -> s' : split (tail r)
+    chain_files = map strip $ split $ opt_tls_chain_files opt
 #endif
 
 ----------------------------------------------------------------
@@ -164,16 +171,30 @@ ifRouteFileIsValid rpt opt act = case opt_routing_file opt of
 mighty :: Option -> Reporter -> Service
        -> ApacheLogger -> ServerPushLogger
        -> ConnPool -> RouteDBRef
-       -> TLSSettings
+       -> Maybe Credentials -> Maybe SessionManager
        -> IO ()
-mighty opt rpt svc lgr pushlgr mgr rdr _tlsSetting
+mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr
   = reportDo rpt $ case svc of
     HttpOnly s  -> runSettingsSocket setting s app
 #ifdef HTTP_OVER_TLS
-    HttpsOnly s -> runTLSSocket _tlsSetting setting s app
-    HttpAndHttps s1 s2 -> void $ concurrently
+    HttpsOnly s -> runTLSSocket tlsSetting setting s app
+    HttpAndHttps s1 s2 -> concurrently_
         (runSettingsSocket setting s1 app)
-        (runTLSSocket _tlsSetting setting s2 app)
+        (runTLSSocket tlsSetting setting s2 app)
+#ifdef HTTP_OVER_QUIC
+    QUIC s1 s2 -> do
+        let quicPort' = BS.pack $ show quicPort
+            quicDrafts = map (BS.pack . show) quicVersions
+            value v = BS.concat ["h3-",v,"=\":",quicPort',"\""]
+            altsvc = BS.intercalate "," $ map value quicDrafts
+            settingT = setAltSvc altsvc setting
+        mapConcurrently_ id [runSettingsSocket        setting  s1 app
+                            ,runTLSSocket  tlsSetting settingT s2 app
+                            ,runQUIC       qconf      setting     app
+                            ]
+#else
+    _ -> error "never reach"
+#endif
 #else
     _ -> error "never reach"
 #endif
@@ -193,6 +214,12 @@ mighty opt rpt svc lgr pushlgr mgr rdr _tlsSetting
             $ setLogger          lgr
             $ setServerPushLogger pushlgr
             defaultSettings
+#ifdef HTTP_OVER_TLS
+    tlsSetting = defaultTlsSettings {
+        tlsCredentials    = _mcreds
+      , tlsSessionManager = _msmgr
+      }
+#endif
     serverName = BS.pack $ opt_server_name opt
     cspec = ClassicAppSpec {
         softwareName = serverName
@@ -208,10 +235,39 @@ mighty opt rpt svc lgr pushlgr mgr rdr _tlsSetting
     revproxyspec = RevProxyAppSpec {
         revProxyManager = mgr
       }
+#ifdef HTTP_OVER_QUIC
+    quicAddr = read  $ opt_quic_addr opt
+    quicPort = fromIntegral $ opt_quic_port opt
+    quicVersions = map Q.fromVersion $ Q.confVersions $ Q.defaultConfig
+    mdir ""  = Nothing
+    mdir dir = Just dir
+    qconf = Q.defaultServerConfig {
+            Q.scAddresses      = [(quicAddr, quicPort)]
+          , Q.scALPN           = Just chooseALPN
+          , Q.scRequireRetry   = False
+          , Q.scSessionManager = fromJust _msmgr
+          , Q.scEarlyDataSize  = 1024
+          , Q.scDebugLog       = mdir $ opt_quic_debug_dir opt
+          , Q.scConfig     = (Q.scConfig Q.defaultServerConfig) {
+                Q.confQLog        = mdir $ opt_quic_qlog_dir opt
+              , Q.confCredentials = fromJust _mcreds
+              }
+          }
+
+chooseALPN :: Q.Version -> [ByteString] -> IO ByteString
+chooseALPN ver protos
+  | h3 `elem` protos = return h3
+  | otherwise        = return ""
+  where
+    h3 = "h3-" `BS.append` BS.pack (show (Q.fromVersion ver))
+#endif
 
 ----------------------------------------------------------------
 
-data Service = HttpOnly Socket | HttpsOnly Socket | HttpAndHttps Socket Socket
+data Service = HttpOnly Socket
+             | HttpsOnly Socket
+             | HttpAndHttps Socket Socket
+             | QUIC Socket Socket
 
 ----------------------------------------------------------------
 
@@ -227,6 +283,13 @@ openService opt
       debugMessage $ urlForHTTP httpPort
       debugMessage $ urlForHTTPS httpsPort
       return $ HttpAndHttps s1 s2
+  | service == 3 = do
+      s1 <- bindPortTCP httpPort hostpref
+      s2 <- bindPortTCP httpsPort hostpref
+      debugMessage $ urlForHTTP httpPort
+      debugMessage $ urlForHTTPS httpsPort
+      debugMessage $ "QUIC is also available via Alt-Svc"
+      return $ QUIC s1 s2
   | otherwise = do
       s <- bindPortTCP httpPort hostpref
       debugMessage $ urlForHTTP httpPort
@@ -252,6 +315,7 @@ closeService :: Service -> IO ()
 closeService (HttpOnly s)         = close s
 closeService (HttpsOnly s)        = close s
 closeService (HttpAndHttps s1 s2) = close s1 >> close s2
+closeService (QUIC s1 s2)         = close s1 >> close s2
 
 ----------------------------------------------------------------
 

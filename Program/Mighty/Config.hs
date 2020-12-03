@@ -4,7 +4,11 @@
 module Program.Mighty.Config (
   -- * Parsing a configuration file.
     parseOption
+#ifdef DHALL
   , parseOptionDhall
+#else
+  , Natural
+#endif
   -- * Creating 'Option'.
   , defaultOption
   -- * Types
@@ -14,15 +18,17 @@ module Program.Mighty.Config (
 #if __GLASGOW_HASKELL__ < 709
 import Control.Applicative hiding (many,optional,(<|>))
 #endif
-import qualified Control.Applicative as A
-import Program.Mighty.Parser
-import Data.String (fromString)
-import qualified Data.Text as T
 import Text.Parsec
 import Text.Parsec.ByteString.Lazy
+#ifdef DHALL
+import qualified Control.Applicative as A
 import Dhall(Generic, Natural, input, auto)
-
 import qualified Program.Mighty.Dhall.Option as Do
+import Data.String (fromString)
+#endif
+
+import Program.Mighty.Parser
+import Program.Mighty.Types
 
 ----------------------------------------------------------------
 
@@ -54,6 +60,10 @@ defaultOption svrnm = Option {
   , opt_tls_chain_files = "chain.pem"
   , opt_tls_key_file = "privkey.pem"
   , opt_service = 0
+  , opt_quic_addr = "127.0.0.1"
+  , opt_quic_port = 443
+  , opt_quic_debug_dir = ""
+  , opt_quic_qlog_dir = ""
 }
 
 data Option = Option {
@@ -81,16 +91,33 @@ data Option = Option {
   , opt_tls_chain_files :: !FilePath
   , opt_tls_key_file :: !FilePath
   , opt_service :: !Natural
-} deriving (Generic, Eq,Show)
+  , opt_quic_addr :: !String
+  , opt_quic_port :: !Natural
+  , opt_quic_debug_dir :: !FilePath
+  , opt_quic_qlog_dir :: !FilePath
+#ifdef DHALL
+} deriving (Eq, Show, Generic)
+#else
+} deriving (Eq, Show)
+#endif
+
+#ifdef DHALL
+instance FromDhall Option
+#endif
 
 ----------------------------------------------------------------
 -- | Parsing a configuration file to get an 'Option'.
 parseOption :: FilePath -> String -> IO Option
+#ifdef DHALL
 parseOption file svrnm = (parseOptionTrad file svrnm) A.<|> (parseOptionDhall file)
+#else
+parseOption file svrnm = (parseOptionTrad file svrnm)
+#endif
 
 parseOptionTrad :: FilePath -> String -> IO Option
 parseOptionTrad file svrnm = makeOpt (defaultOption svrnm) <$> parseConfig file
 
+#ifdef DHALL
 parseOptionDhall :: FilePath -> IO Option
 parseOptionDhall = (fmap optionFromDhall) . input auto . fromString
 
@@ -121,6 +148,7 @@ optionFromDhall o = Option
   , opt_tls_key_file = T.unpack $ Do.tlsKeyFile o
   , opt_service = Do.service o
 }
+#endif
 
 ----------------------------------------------------------------
 
@@ -150,6 +178,10 @@ makeOpt def conf = Option {
   , opt_tls_chain_files    = get "Tls_Chain_Files" opt_tls_chain_files
   , opt_tls_key_file       = get "Tls_Key_File" opt_tls_key_file
   , opt_service            = get "Service" opt_service
+  , opt_quic_addr          = get "Quic_Addr" opt_quic_addr
+  , opt_quic_port          = get "Quic_Port" opt_quic_port
+  , opt_quic_debug_dir     = get "Quic_Debug_Dir" opt_quic_debug_dir
+  , opt_quic_qlog_dir      = get "Quic_Qlog_Dir" opt_quic_qlog_dir
   }
   where
     get k func = maybe (func def) fromConf $ lookup k conf
