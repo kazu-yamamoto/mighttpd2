@@ -7,7 +7,6 @@ module Program.Mighty.Resource (
   ) where
 
 import Control.Exception
-import Control.Monad
 import System.Posix
 
 ----------------------------------------------------------------
@@ -21,12 +20,15 @@ amIrootUser = (== 0) <$> getRealUserID
 -- | Setting user and group.
 setGroupUser :: String -- ^ User
              -> String -- ^ Group
-             -> IO ()
+             -> IO Bool
 setGroupUser user group = do
     root <- amIrootUser
-    when root $ do
+    if root then do
         getGroupEntryForName group >>= setGroupID . groupID
         getUserEntryForName user >>= setUserID . userID
+        return True
+      else
+        return False
 
 ----------------------------------------------------------------
 

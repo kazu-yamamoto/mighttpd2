@@ -84,6 +84,10 @@ Executable mighty
     Cpp-Options:        -DHTTP_OVER_QUIC
     Build-Depends:      async
                       , base16-bytestring
+    if os(linux)
+      C-sources:        cbits/setcap.c
+      Cpp-Options:      -DDROP_EXCEPT_BIND
+
   if flag(dhall)
     Cpp-Options:        -DDHALL
     Build-Depends:      dhall

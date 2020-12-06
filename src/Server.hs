@@ -40,6 +40,12 @@ import Data.ByteString (ByteString)
 import Data.Maybe (fromJust)
 import qualified Network.QUIC as Q
 import Network.Wai.Handler.WarpQUIC
+#ifdef DROP_EXCEPT_BIND
+import Control.Monad (forM_)
+import Foreign.C.Types (CInt(..))
+import System.Directory (listDirectory)
+import System.Posix.Signals (sigUSR1)
+#endif
 #endif
 #else
 data Credentials
@@ -82,7 +88,10 @@ server opt rpt route = reportDo rpt $ do
     let mcred = Nothing
         smgr = Nothing
 #endif
-    setGroupUser (opt_user opt) (opt_group opt)
+    _changed <- setGroupUser (opt_user opt) (opt_group opt)
+#ifdef DROP_EXCEPT_BIND
+    when _changed dropExceptBind
+#endif
     logCheck logtype
     (zdater,_) <- clockDateCacher
     ap <- initLogger FromSocket logtype zdater
@@ -201,8 +210,7 @@ mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr
     _ -> error "never reach"
 #endif
   where
-    app = P.pushOnReferer P.defaultSettings
-                          (fileCgiApp cspec filespec cgispec revproxyspec rdr)
+    app = P.pushOnReferer P.defaultSettings $ fileCgiApp cspec filespec cgispec revproxyspec rdr
     debug = opt_debug_mode opt
     -- We don't use setInstallShutdownHandler because we may use
     -- two sockets for HTTP and HTTPS.
@@ -330,3 +338,15 @@ getManager opt = H.newManager H.defaultManagerSettings {
     responseTimeout
       | opt_proxy_timeout opt == 0 = H.managerResponseTimeout H.defaultManagerSettings
       | otherwise                  = H.responseTimeoutMicro (naturalToInt $ opt_proxy_timeout opt * 1000000) -- micro seconds
+
+#ifdef DROP_EXCEPT_BIND
+foreign import ccall unsafe "send_signal"
+  c_send_signal :: CInt -> CInt -> IO ()
+
+dropExceptBind :: IO ()
+dropExceptBind = do
+    pid <- getProcessID
+    strtids <- listDirectory ("/proc/" ++ show pid ++ "/task")
+    let tids = map read strtids :: [Int]
+    forM_ tids $ \tid -> c_send_signal (fromIntegral tid) sigUSR1
+#endif
