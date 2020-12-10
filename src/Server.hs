@@ -144,7 +144,7 @@ setHandlers opt rpt svc remover rdr = do
     retireHandler = Catch $ do
         report rpt "Mighty retiring"
         closeService svc -- this lets warp break
-    infoHandler = Catch $ report rpt "obsolted"
+    infoHandler = Catch $ report rpt "obsoleted"
     reloadHandler = Catch $ do
         ifRouteFileIsValid rpt opt $ \newroute -> do
             writeRouteDBRef rdr newroute
