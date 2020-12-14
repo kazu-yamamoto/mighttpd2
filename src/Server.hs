@@ -195,8 +195,10 @@ mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr
 #ifdef HTTP_OVER_QUIC
     QUIC s1 s2 -> do
         let quicPort' = BS.pack $ show quicPort
-            quicDrafts = map (BS.pack . show) quicVersions
-            value v = BS.concat ["h3-",v,"=\":",quicPort',"\""]
+            strver Q.Version1 = ""
+            strver v = BS.append "-" $ BS.pack $ show $ Q.fromVersion v
+            quicDrafts = map strver quicVersions
+            value v = BS.concat ["h3",v,"=\":",quicPort',"\""]
             altsvc = BS.intercalate "," $ map value quicDrafts
             settingT = setAltSvc altsvc setting
         mapConcurrently_ id [runSettingsSocket        setting  s1 app
@@ -248,7 +250,7 @@ mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr
 #ifdef HTTP_OVER_QUIC
     quicAddr = read <$> opt_quic_addr opt
     quicPort = fromIntegral $ opt_quic_port opt
-    quicVersions = map Q.fromVersion $ Q.confVersions $ Q.defaultConfig
+    quicVersions = Q.confVersions $ Q.defaultConfig
     qconf = Q.defaultServerConfig {
             Q.scAddresses      = (,quicPort) <$> quicAddr
           , Q.scALPN           = Just chooseALPN
@@ -267,7 +269,8 @@ chooseALPN ver protos
   | h3 `elem` protos = return h3
   | otherwise        = return ""
   where
-    h3 = "h3-" `BS.append` BS.pack (show (Q.fromVersion ver))
+    h3 | ver == Q.Version1 = "h3"
+       | otherwise = "h3-" `BS.append` BS.pack (show (Q.fromVersion ver))
 #endif
 
 ----------------------------------------------------------------
