@@ -104,6 +104,7 @@ Executable mighty
                       , transformers
                       , unix
                       , streaming-commons
+                      , time-manager
                       , wai >= 3.2 && < 3.3
                       , wai-app-file-cgi >= 3.1.9 && < 3.2
                       , wai-logger >= 2.3.0

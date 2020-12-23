@@ -19,6 +19,7 @@ import System.IO
 import System.IO.Error (ioeGetErrorString)
 import System.Posix (exitImmediately, Handler(..), getProcessID, setFileMode)
 import System.Posix.Signals (sigCHLD)
+import qualified System.TimeManager as T
 
 import Program.Mighty
 import WaiApp
@@ -82,6 +83,7 @@ server opt rpt route = reportDo rpt $ do
     svc <- openService opt
     unless debug writePidFile
     rdr <- newRouteDBRef route
+    tmgr <- T.initialize (naturalToInt (opt_connection_timeout opt) * 1000000)
 #ifdef HTTP_OVER_TLS
     mcred <- Just <$> loadCredentials opt
     smgr <- Just <$> SM.newSessionManager SM.defaultConfig { dbMaxSize = 1000 }
@@ -103,7 +105,7 @@ server opt rpt route = reportDo rpt $ do
     setHandlers opt rpt svc remover rdr
 
     report rpt "Mighty started"
-    runInUnboundThread $ mighty opt rpt svc lgr pushlgr mgr rdr mcred smgr
+    runInUnboundThread $ mighty opt rpt svc lgr pushlgr mgr rdr mcred smgr tmgr
     report rpt "Mighty retired"
     finReporter rpt
     remover
@@ -183,9 +185,9 @@ ifRouteFileIsValid rpt opt act = case opt_routing_file opt of
 mighty :: Option -> Reporter -> Service
        -> ApacheLogger -> ServerPushLogger
        -> ConnPool -> RouteDBRef
-       -> Maybe Credentials -> Maybe SessionManager
+       -> Maybe Credentials -> Maybe SessionManager -> T.Manager
        -> IO ()
-mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr
+mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr tmgr
   = reportDo rpt $ case svc of
     HttpOnly s  -> runSettingsSocket setting s app
 #ifdef HTTP_OVER_TLS
@@ -220,7 +222,7 @@ mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr
     setting = setPort            (naturalToInt $ opt_port opt) -- just in case
             $ setHost            (fromString (opt_host opt))  -- just in case
             $ setOnException     (if debug then printStdout else warpHandler rpt)
-            $ setTimeout         (naturalToInt $ opt_connection_timeout opt) -- seconds
+            $ setManager         tmgr
             $ setFdCacheDuration (naturalToInt $ opt_fd_cache_duration opt)
             $ setFileInfoCacheDuration 10
             $ setServerName      serverName
