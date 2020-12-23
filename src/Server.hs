@@ -37,6 +37,7 @@ import Network.Wai.Handler.WarpTLS
 #ifdef HTTP_OVER_QUIC
 import Control.Concurrent.Async (mapConcurrently_)
 import Data.ByteString (ByteString)
+import Data.List (find)
 import Data.Maybe (fromJust)
 import qualified Network.QUIC as Q
 import Network.Wai.Handler.WarpQUIC
@@ -265,12 +266,14 @@ mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr
           }
 
 chooseALPN :: Q.Version -> [ByteString] -> IO ByteString
-chooseALPN ver protos
-  | h3 `elem` protos = return h3
-  | otherwise        = return ""
+chooseALPN ver protos = case find (\x -> x == h3 || x == hq) protos of
+  Nothing    -> return ""
+  Just proto -> return proto
   where
     h3 | ver == Q.Version1 = "h3"
        | otherwise = "h3-" `BS.append` BS.pack (show (Q.fromVersion ver))
+    hq | ver == Q.Version1 = "hq-interop"
+       | otherwise = "hq-" `BS.append` BS.pack (show (Q.fromVersion ver))
 #endif
 
 ----------------------------------------------------------------
