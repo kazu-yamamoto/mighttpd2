@@ -91,7 +91,7 @@ Executable mighty
   if flag(dhall)
     Cpp-Options:        -DDHALL
     Build-Depends:      dhall
-  Build-Depends:        base >= 4.0 && < 5
+  Build-Depends:        base >= 4.9 && < 5
                       , bytestring
                       , directory
                       , filepath
@@ -127,7 +127,7 @@ Executable mighty-mkindex
   HS-Source-Dirs:       utils, src
   Main-Is:              mkindex.hs
   GHC-Options:          -Wall
-  Build-Depends:        base >= 4 && < 5
+  Build-Depends:        base >= 4.9 && < 5
                       , directory
                       , old-locale
                       , time
@@ -138,7 +138,7 @@ Executable mightyctl
   HS-Source-Dirs:       utils, src
   Main-Is:              mightyctl.hs
   GHC-Options:          -Wall
-  Build-Depends:        base >= 4 && < 5
+  Build-Depends:        base >= 4.9 && < 5
                       , unix
                       , mighttpd2
   if impl(ghc >= 8)
@@ -151,7 +151,7 @@ Test-Suite spec
   Type:                 exitcode-stdio-1.0
   Other-Modules:        ConfigSpec
                         RouteSpec
-  Build-Depends:        base >= 4 && < 5
+  Build-Depends:        base >= 4.9 && < 5
                       , hspec >= 1.3
                       , mighttpd2
                       , http-client >= 0.5
