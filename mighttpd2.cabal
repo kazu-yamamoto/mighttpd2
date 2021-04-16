@@ -67,7 +67,7 @@ Library
                       , unordered-containers
                       , wai >= 3.2 && < 3.3
                       , wai-app-file-cgi >= 3.1.9 && < 3.2
-                      , warp >= 3.3.13 && < 3.4
+                      , warp >= 3.3.15 && < 3.4
   if impl(ghc >= 8)
     Default-Extensions:  Strict StrictData
 
