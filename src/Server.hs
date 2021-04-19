@@ -107,7 +107,6 @@ server opt rpt route = reportDo rpt $ do
     report rpt "Mighty started"
     runInUnboundThread $ mighty opt rpt svc lgr pushlgr mgr rdr mcred smgr tmgr
     report rpt "Mighty retired"
-    finReporter rpt
     remover
     exitSuccess
   where
@@ -140,7 +139,6 @@ setHandlers opt rpt svc remover rdr = do
   where
     stopHandler = Catch $ do
         report rpt "Mighty finished"
-        finReporter rpt
         closeService svc
         remover
         exitImmediately ExitSuccess

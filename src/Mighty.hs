@@ -36,8 +36,8 @@ main = do
     checkTLS opt
     let reportFile = reportFileName opt
         debug = opt_debug_mode opt
-    rpt <- initReporter debug reportFile >>= checkReporter reportFile
-    let run = server opt rpt route
+        rpt = initReporter debug reportFile
+        run = server opt rpt route
     if debug then run else background opt run
   where
     getOptRoute = getArgs >>= eachCase
@@ -69,11 +69,6 @@ main = do
       | otherwise       = do
           dir <- getCurrentDirectory
           return $ dir </> normalise file
-    checkReporter _          (Right rpt) = return rpt
-    checkReporter reportFile (Left e)    = do
-        hPutStrLn stderr $ reportFile ++ " is not writable"
-        hPrint stderr e
-        exitFailure
 #ifdef HTTP_OVER_TLS
 #ifdef HTTP_OVER_QUIC
     checkTLS _ = return ()

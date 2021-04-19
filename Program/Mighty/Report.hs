@@ -4,7 +4,6 @@
 module Program.Mighty.Report (
     Reporter
   , initReporter
-  , finReporter
   , report
   , reportDo
   , warpHandler
@@ -31,25 +30,21 @@ import System.Posix (getProcessID)
 import Program.Mighty.ByteString
 
 data Method = FileOnly | FileAndStdout deriving Eq
-data Reporter = Reporter Method Handle
+data Reporter = Reporter Method FilePath
 
-initReporter :: Bool -> FilePath -> IO (Either SomeException Reporter)
-initReporter debug reportFile = try $ Reporter method <$> openFile reportFile AppendMode
+initReporter :: Bool -> FilePath -> Reporter
+initReporter debug reportFile = Reporter method reportFile
   where
     method
       | debug     = FileAndStdout
       | otherwise = FileOnly
 
-finReporter :: Reporter -> IO ()
-finReporter (Reporter _ rpthdl) = hClose rpthdl
-
 report :: Reporter -> ByteString -> IO ()
-report (Reporter method rpthdl) msg = handle (\(SomeException _) -> return ()) $ do
+report (Reporter method reportFile) msg = handle (\(SomeException _) -> return ()) $ do
     pid <- BS.pack . show <$> getProcessID
     tm <- getUnixTime >>= formatUnixTime "%d %b %Y %H:%M:%S"
     let logmsg = BS.concat [tm, ": pid = ", pid, ": ", msg, "\n"]
-    BS.hPutStr rpthdl logmsg
-    hFlush rpthdl
+    BS.appendFile reportFile logmsg
     when (method == FileAndStdout) $ BS.putStr logmsg
 
 ----------------------------------------------------------------
