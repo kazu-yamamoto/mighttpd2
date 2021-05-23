@@ -251,18 +251,16 @@ mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr tmgr
 #ifdef HTTP_OVER_QUIC
     quicAddr = read <$> opt_quic_addr opt
     quicPort = fromIntegral $ opt_quic_port opt
-    quicVersions = Q.confVersions $ Q.defaultConfig
+    quicVersions = Q.scVersions Q.defaultServerConfig
     qconf = Q.defaultServerConfig {
             Q.scAddresses      = (,quicPort) <$> quicAddr
           , Q.scALPN           = Just chooseALPN
           , Q.scRequireRetry   = False
           , Q.scSessionManager = fromJust _msmgr
-          , Q.scEarlyDataSize  = 1024
+          , Q.scUse0RTT        = True
           , Q.scDebugLog       = opt_quic_debug_dir opt
-          , Q.scConfig     = (Q.scConfig Q.defaultServerConfig) {
-                Q.confQLog        = opt_quic_qlog_dir opt
-              , Q.confCredentials = fromJust _mcreds
-              }
+          , Q.scQLog           = opt_quic_qlog_dir opt
+          , Q.scCredentials    = fromJust _mcreds
           }
 
 chooseALPN :: Q.Version -> [ByteString] -> IO ByteString
