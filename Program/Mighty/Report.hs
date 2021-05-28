@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Program.Mighty.Report (
     Reporter
@@ -13,8 +14,6 @@ module Program.Mighty.Report (
 #if __GLASGOW_HASKELL__ < 709
 import Control.Applicative
 #endif
-import Control.Exception
-import qualified Control.Exception as E (catch)
 import Control.Monad
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
@@ -22,10 +21,10 @@ import Data.UnixTime
 import GHC.IO.Exception (IOErrorType(..))
 import Network.Wai
 import Network.Wai.Handler.Warp (InvalidRequest)
-import Network.Wai.Handler.Warp.Internal (TimeoutThread(..))
 import System.IO
 import System.IO.Error (ioeGetErrorType)
 import System.Posix (getProcessID)
+import UnliftIO.Exception
 
 import Program.Mighty.ByteString
 
@@ -50,33 +49,18 @@ report (Reporter method reportFile) msg = handle (\(SomeException _) -> return (
 ----------------------------------------------------------------
 
 reportDo :: Reporter -> IO () -> IO ()
-reportDo rpt act = act `E.catch` warpHandler rpt Nothing
+reportDo rpt act = act `catchAny` warpHandler rpt Nothing
 
 ----------------------------------------------------------------
 
 warpHandler :: Reporter -> Maybe Request -> SomeException -> IO ()
-warpHandler rpt _ e = throwIO e `catches` handlers
-  where
-    handlers = [Handler ah, Handler th, Handler ih, Handler oh, Handler sh]
-    ah :: AsyncException -> IO ()
-    ah ThreadKilled = norecode
-    ah x            = recode x
-    th :: TimeoutThread -> IO ()
-    th TimeoutThread = norecode
-    ih :: InvalidRequest -> IO ()
-    ih _ = norecode
-    oh :: IOException -> IO ()
-    oh x
-      | et `elem` ignEts = norecode
-      | otherwise        = recode x
-      where
-        et = ioeGetErrorType x
-        ignEts = [ResourceVanished, InvalidArgument]
-    sh :: SomeException -> IO ()
-    sh x = recode x
-    norecode = return ()
-    recode :: Exception e => e -> IO ()
-    recode   = report rpt . bshow
+warpHandler rpt _ se
+  | Just (_ :: InvalidRequest) <- fromException se = return ()
+  | Just (e :: IOException)    <- fromException se =
+        if ioeGetErrorType e `elem` [ResourceVanished,InvalidArgument]
+        then return ()
+        else report rpt $ bshow se
+  | otherwise = report rpt $ bshow se
 
 ----------------------------------------------------------------
 

@@ -14,11 +14,11 @@ module Program.Mighty.Parser (
   , comment
   ) where
 
-import Control.Exception
 import qualified Data.ByteString.Lazy.Char8 as BL
 import System.IO
 import Text.Parsec
 import Text.Parsec.ByteString.Lazy
+import UnliftIO.Exception
 
 -- $setup
 -- >>> import Data.Either
