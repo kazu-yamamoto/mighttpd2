@@ -37,10 +37,11 @@ import qualified Network.TLS.SessionManager as SM
 import Network.Wai.Handler.WarpTLS
 #ifdef HTTP_OVER_QUIC
 import Control.Concurrent.Async (mapConcurrently_)
+import Data.Bits
 import Data.ByteString (ByteString)
 import Data.List (find)
 import Data.Maybe (fromJust)
-import qualified Network.QUIC as Q
+import qualified Network.QUIC.Internal as Q
 import Network.Wai.Handler.WarpQUIC
 #ifdef DROP_EXCEPT_BIND
 import Control.Monad (forM_)
@@ -197,7 +198,7 @@ mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr tmgr
     QUIC s1 s2 -> do
         let quicPort' = BS.pack $ show quicPort
             strver Q.Version1 = ""
-            strver v = BS.append "-" $ BS.pack $ show $ Q.fromVersion v
+            strver v = BS.append "-" $ BS.pack $ show $ fromVersion v
             quicDrafts = map strver quicVersions
             value v = BS.concat ["h3",v,"=\":",quicPort',"\""]
             altsvc = BS.intercalate "," $ map value quicDrafts
@@ -269,9 +270,12 @@ chooseALPN ver protos = case find (\x -> x == h3 || x == hq) protos of
   Just proto -> return proto
   where
     h3 | ver == Q.Version1 = "h3"
-       | otherwise = "h3-" `BS.append` BS.pack (show (Q.fromVersion ver))
+       | otherwise = "h3-" `BS.append` BS.pack (show (fromVersion ver))
     hq | ver == Q.Version1 = "hq-interop"
-       | otherwise = "hq-" `BS.append` BS.pack (show (Q.fromVersion ver))
+       | otherwise = "hq-" `BS.append` BS.pack (show (fromVersion ver))
+
+fromVersion :: Q.Version -> Int
+fromVersion (Q.Version ver) = fromIntegral (0x000000ff .&. ver)
 #endif
 
 ----------------------------------------------------------------
