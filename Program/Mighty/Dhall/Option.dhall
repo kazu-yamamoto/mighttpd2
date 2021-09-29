@@ -12,6 +12,10 @@
 , pidFile : Text
 , port : Natural
 , proxyTimeout : Natural
+, quicAddr : List Text
+, quicDebugDir : Optional Text
+, quicPort : Natural
+, quicQlogDir : Optional Text
 , reportFile : Text
 , routingFile : Optional Text
 , serverName : Text

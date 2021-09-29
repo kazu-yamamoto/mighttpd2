@@ -16,6 +16,10 @@ in
     , pidFile = "/var/run/mighty.pid"
     , port = 80
     , proxyTimeout = 0
+    , quicAddr = ["127.0.0.1","::1"]
+    , quicDebugDir = None Text
+    , quicPort = 443
+    , quicQlogDir = None Text
     , reportFile = "/tmp/mighty_report"
     , routingFile = None Text
     , service = 0

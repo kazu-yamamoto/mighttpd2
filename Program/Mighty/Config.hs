@@ -147,6 +147,10 @@ optionFromDhall o = Option
   , opt_tls_chain_files = T.unpack $ Do.tlsChainFiles o
   , opt_tls_key_file = T.unpack $ Do.tlsKeyFile o
   , opt_service = Do.service o
+  , opt_quic_addr = T.unpack <$> Do.quicAddr o
+  , opt_quic_port = Do.quicPort o
+  , opt_quic_debug_dir = T.unpack <$> Do.quicDebugDir o
+  , opt_quic_qlog_dir  = T.unpack <$> Do.quicQlogDir o
 }
 #endif
 

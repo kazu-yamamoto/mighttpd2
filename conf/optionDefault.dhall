@@ -15,6 +15,10 @@ in
     , pidFile = "/var/run/mighty.pid"
     , port = 8080
     , proxyTimeout = 0
+    , quicAddr = ["127.0.0.1"]
+    , quicDebugDir = None Text
+    , quicPort = 443
+    , quicQlogDir = None Text
     , reportFile = "/tmp/mighty_report"
     , routingFile = None Text
     , serverName = svrnm
