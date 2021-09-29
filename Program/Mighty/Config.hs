@@ -22,13 +22,16 @@ import Text.Parsec
 import Text.Parsec.ByteString.Lazy
 #ifdef DHALL
 import qualified Control.Applicative as A
-import Dhall(Generic, Natural, input, auto)
-import qualified Program.Mighty.Dhall.Option as Do
 import Data.String (fromString)
+import qualified Data.Text as T
+import Dhall(Generic, Natural, input, auto, FromDhall)
+import qualified Program.Mighty.Dhall.Option as Do
+
+#else
+import Program.Mighty.Types
 #endif
 
 import Program.Mighty.Parser
-import Program.Mighty.Types
 
 ----------------------------------------------------------------
 
