@@ -21,7 +21,6 @@ import Data.List.Split (splitOn)
 import Text.Parsec
 import Text.Parsec.ByteString.Lazy
 #ifdef DHALL
-import qualified Control.Applicative as A
 import Data.String (fromString)
 import qualified Data.Text as T
 import Dhall(Generic, Natural, input, auto, FromDhall)
@@ -36,9 +35,8 @@ import Program.Mighty.Parser
 ----------------------------------------------------------------
 
 -- | Getting a default 'Option'.
-defaultOption :: String -- ^ A default server name (e.g. \"Mighttpd/3.0.0\")
-              -> Option
-defaultOption svrnm = Option {
+defaultOption :: Option
+defaultOption = Option {
     opt_port = 8080
   , opt_host = "*"
   , opt_debug_mode = True
@@ -56,7 +54,7 @@ defaultOption svrnm = Option {
   , opt_connection_timeout = 30
   , opt_proxy_timeout = 0
   , opt_fd_cache_duration = 10
-  , opt_server_name = svrnm
+  , opt_server_name = "Dummy"
   , opt_routing_file = Nothing
   , opt_tls_port = 443
   , opt_tls_cert_file = "cert.pem"
@@ -110,19 +108,12 @@ instance FromDhall Option
 
 ----------------------------------------------------------------
 -- | Parsing a configuration file to get an 'Option'.
-parseOption :: FilePath -> String -> IO Option
-#ifdef DHALL
-parseOption file svrnm = parseOptionTrad file svrnm A.<|> parseOptionDhall file
-#else
-parseOption file svrnm = parseOptionTrad file svrnm
-#endif
-
-parseOptionTrad :: FilePath -> String -> IO Option
-parseOptionTrad file svrnm = makeOpt (defaultOption svrnm) <$> parseConfig file
+parseOption :: FilePath -> IO Option
+parseOption file = makeOpt defaultOption <$> parseConfig file
 
 #ifdef DHALL
 parseOptionDhall :: FilePath -> IO Option
-parseOptionDhall = (fmap optionFromDhall) . input auto . fromString
+parseOptionDhall = fmap optionFromDhall . input auto . fromString
 
 optionFromDhall :: Do.Option -> Option
 optionFromDhall o = Option
@@ -143,8 +134,8 @@ optionFromDhall o = Option
   , opt_connection_timeout = Do.connectionTimeout o
   , opt_proxy_timeout = Do.proxyTimeout o
   , opt_fd_cache_duration = Do.fdCacheDuration o
-  , opt_server_name = T.unpack $ Do.serverName o
-  , opt_routing_file = T.unpack <$> Do.routingFile o
+  , opt_server_name = "Dummy"
+  , opt_routing_file = Nothing
   , opt_tls_port = Do.tlsPort o
   , opt_tls_cert_file = T.unpack $ Do.tlsCertFile o
   , opt_tls_chain_files = T.unpack $ Do.tlsChainFiles o
@@ -178,7 +169,7 @@ makeOpt def conf = Option {
   , opt_connection_timeout = get "Connection_Timeout" opt_connection_timeout
   , opt_proxy_timeout      = get "Proxy_Timeout" opt_proxy_timeout
   , opt_fd_cache_duration  = get "Fd_Cache_Duration" opt_fd_cache_duration
-  , opt_server_name        = get "Server_Name" opt_server_name
+  , opt_server_name        = "Dummy"
   , opt_routing_file       = Nothing
   , opt_tls_port           = get "Tls_Port" opt_tls_port
   , opt_tls_cert_file      = get "Tls_Cert_File" opt_tls_cert_file

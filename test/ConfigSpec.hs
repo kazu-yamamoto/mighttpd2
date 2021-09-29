@@ -10,18 +10,14 @@ spec :: Spec
 spec = do
     describe "parseConfig" $ do
         it "parses example.conf correctly" $ do
-            res <- parseOption "conf/example.conf" "foo"
-            res `shouldBe` ans
+            res <- parseOption "conf/example.conf"
+            res { opt_server_name = "foo" } `shouldBe` ans
 
 #ifdef DHALL
     describe "parseDhall" $ do
         it "parses example.dhall correctly" $ do
             res <- parseOptionDhall "./conf/example.dhall"
-            res `shouldBe` ans
-
-        it "parses literal dhall correctly" $ do
-            res <- parseOptionDhall "let x = ./conf/example.dhall in x"
-            res `shouldBe` ans
+            res { opt_server_name = "foo" } `shouldBe` ans
 #endif
 
 ans :: Option
