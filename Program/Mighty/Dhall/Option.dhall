@@ -1,27 +1,27 @@
-{ connectionTimeout : Natural
-, debugMode : Bool
-, fdCacheDuration : Natural
-, group : Text
+{ port : Natural
 , host : Text
-, indexCgi : Text
-, indexFile : Text
-, logBackupNumber : Natural
+, debugMode : Bool
+, user  : Text
+, group : Text
+, pidFile    : Text
+, reportFile : Text
+, logging : Bool
 , logFile : Text
 , logFileSize : Natural
-, logging : Bool
-, pidFile : Text
-, port : Natural
-, proxyTimeout : Natural
+, logBackupNumber : Natural
+, indexFile : Text
+, indexCgi  : Text
+, statusFileDir : Text
+, connectionTimeout : Natural
+, proxyTimeout      : Natural
+, fdCacheDuration   : Natural
+, service : Natural
+, tlsPort : Natural
+, tlsCertFile   : Text
+, tlsChainFiles : Text
+, tlsKeyFile    : Text
+, quicPort : Natural
 , quicAddr : List Text
 , quicDebugDir : Optional Text
-, quicPort : Natural
-, quicQlogDir : Optional Text
-, reportFile : Text
-, service : Natural
-, statusFileDir : Text
-, tlsCertFile : Text
-, tlsChainFiles : Text
-, tlsKeyFile : Text
-, tlsPort : Natural
-, user : Text
+, quicQlogDir  : Optional Text
 }

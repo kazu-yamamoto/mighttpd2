@@ -34,46 +34,13 @@ import Program.Mighty.Parser
 
 ----------------------------------------------------------------
 
--- | Getting a default 'Option'.
-defaultOption :: Option
-defaultOption = Option {
-    opt_port = 8080
-  , opt_host = "*"
-  , opt_debug_mode = True
-  , opt_user = "root"
-  , opt_group = "root"
-  , opt_pid_file = "/var/run/mighty.pid"
-  , opt_report_file = "/tmp/mighty_report"
-  , opt_logging = True
-  , opt_log_file = "/var/log/mighty"
-  , opt_log_file_size = 16777216
-  , opt_log_backup_number = 10
-  , opt_index_file = "index.html"
-  , opt_index_cgi = "index.cgi"
-  , opt_status_file_dir = "/usr/local/share/mighty/status"
-  , opt_connection_timeout = 30
-  , opt_proxy_timeout = 0
-  , opt_fd_cache_duration = 10
-  , opt_server_name = "Dummy"
-  , opt_routing_file = Nothing
-  , opt_tls_port = 443
-  , opt_tls_cert_file = "cert.pem"
-  , opt_tls_chain_files = "chain.pem"
-  , opt_tls_key_file = "privkey.pem"
-  , opt_service = 0
-  , opt_quic_addr = ["127.0.0.1"]
-  , opt_quic_port = 443
-  , opt_quic_debug_dir = Nothing
-  , opt_quic_qlog_dir =  Nothing
-}
-
 data Option = Option {
     opt_port :: Natural
   , opt_host :: String
   , opt_debug_mode :: Bool
-  , opt_user :: String
+  , opt_user  :: String
   , opt_group :: String
-  , opt_pid_file :: FilePath
+  , opt_pid_file    :: FilePath
   , opt_report_file :: FilePath
   , opt_logging :: Bool
   , opt_log_file :: FilePath
@@ -83,19 +50,19 @@ data Option = Option {
   , opt_index_cgi  :: FilePath
   , opt_status_file_dir :: FilePath
   , opt_connection_timeout :: Natural
-  , opt_proxy_timeout :: Natural
-  , opt_fd_cache_duration :: Natural
-  , opt_server_name :: String
-  , opt_routing_file :: Maybe FilePath
-  , opt_tls_port :: Natural
-  , opt_tls_cert_file :: FilePath
-  , opt_tls_chain_files :: FilePath
-  , opt_tls_key_file :: FilePath
+  , opt_proxy_timeout      :: Natural
+  , opt_fd_cache_duration  :: Natural
   , opt_service :: Natural
-  , opt_quic_addr :: [String]
+  , opt_tls_port :: Natural
+  , opt_tls_cert_file   :: FilePath
+  , opt_tls_chain_files :: FilePath
+  , opt_tls_key_file    :: FilePath
   , opt_quic_port :: Natural
+  , opt_quic_addr :: [String]
   , opt_quic_debug_dir :: Maybe FilePath
-  , opt_quic_qlog_dir :: Maybe FilePath
+  , opt_quic_qlog_dir  :: Maybe FilePath
+  , opt_server_name :: String
+  , opt_routing_file :: Maybe String
 #ifdef DHALL
 } deriving (Eq, Show, Generic)
 #else
@@ -105,6 +72,39 @@ data Option = Option {
 #ifdef DHALL
 instance FromDhall Option
 #endif
+
+-- | Getting a default 'Option'.
+defaultOption :: Option
+defaultOption = Option {
+    opt_port = 8080
+  , opt_host = "*"
+  , opt_debug_mode = True
+  , opt_user  = "root"
+  , opt_group = "root"
+  , opt_pid_file    = "/var/run/mighty.pid"
+  , opt_report_file = "/tmp/mighty_report"
+  , opt_logging = True
+  , opt_log_file = "/var/log/mighty"
+  , opt_log_file_size = 16777216
+  , opt_log_backup_number = 10
+  , opt_index_file = "index.html"
+  , opt_index_cgi  = "index.cgi"
+  , opt_status_file_dir = "/usr/local/share/mighty/status"
+  , opt_connection_timeout = 30
+  , opt_proxy_timeout      = 0
+  , opt_fd_cache_duration  = 10
+  , opt_service = 0
+  , opt_tls_port = 443
+  , opt_tls_cert_file   = "cert.pem"
+  , opt_tls_chain_files = "chain.pem"
+  , opt_tls_key_file    = "privkey.pem"
+  , opt_quic_port = 443
+  , opt_quic_addr = ["127.0.0.1"]
+  , opt_quic_debug_dir = Nothing
+  , opt_quic_qlog_dir  = Nothing
+  , opt_server_name = "Dummy"
+  , opt_routing_file = Nothing
+}
 
 ----------------------------------------------------------------
 -- | Parsing a configuration file to get an 'Option'.
@@ -120,9 +120,9 @@ optionFromDhall o = Option
   { opt_port = Do.port o
   , opt_host = T.unpack $ Do.host o
   , opt_debug_mode = Do.debugMode o
-  , opt_user = T.unpack $ Do.user o
+  , opt_user  = T.unpack $ Do.user o
   , opt_group = T.unpack $ Do.group o
-  , opt_pid_file = T.unpack $ Do.pidFile o
+  , opt_pid_file    = T.unpack $ Do.pidFile o
   , opt_report_file = T.unpack $ Do.reportFile o
   , opt_logging = Do.logging o
   , opt_log_file = T.unpack $ Do.logFile o
@@ -132,19 +132,19 @@ optionFromDhall o = Option
   , opt_index_cgi  = T.unpack $ Do.indexCgi o
   , opt_status_file_dir = T.unpack $ Do.statusFileDir o
   , opt_connection_timeout = Do.connectionTimeout o
-  , opt_proxy_timeout = Do.proxyTimeout o
-  , opt_fd_cache_duration = Do.fdCacheDuration o
-  , opt_server_name = "Dummy"
-  , opt_routing_file = Nothing
-  , opt_tls_port = Do.tlsPort o
-  , opt_tls_cert_file = T.unpack $ Do.tlsCertFile o
-  , opt_tls_chain_files = T.unpack $ Do.tlsChainFiles o
-  , opt_tls_key_file = T.unpack $ Do.tlsKeyFile o
+  , opt_proxy_timeout      = Do.proxyTimeout o
+  , opt_fd_cache_duration  = Do.fdCacheDuration o
   , opt_service = Do.service o
+  , opt_tls_port = Do.tlsPort o
+  , opt_tls_cert_file   = T.unpack $ Do.tlsCertFile o
+  , opt_tls_chain_files = T.unpack $ Do.tlsChainFiles o
+  , opt_tls_key_file    = T.unpack $ Do.tlsKeyFile o
   , opt_quic_addr = T.unpack <$> Do.quicAddr o
   , opt_quic_port = Do.quicPort o
   , opt_quic_debug_dir = T.unpack <$> Do.quicDebugDir o
   , opt_quic_qlog_dir  = T.unpack <$> Do.quicQlogDir o
+  , opt_server_name = "Dummy"
+  , opt_routing_file = Nothing
 }
 #endif
 
@@ -169,17 +169,17 @@ makeOpt def conf = Option {
   , opt_connection_timeout = get "Connection_Timeout" opt_connection_timeout
   , opt_proxy_timeout      = get "Proxy_Timeout" opt_proxy_timeout
   , opt_fd_cache_duration  = get "Fd_Cache_Duration" opt_fd_cache_duration
-  , opt_server_name        = "Dummy"
-  , opt_routing_file       = Nothing
+  , opt_service            = get "Service" opt_service
   , opt_tls_port           = get "Tls_Port" opt_tls_port
   , opt_tls_cert_file      = get "Tls_Cert_File" opt_tls_cert_file
   , opt_tls_chain_files    = get "Tls_Chain_Files" opt_tls_chain_files
   , opt_tls_key_file       = get "Tls_Key_File" opt_tls_key_file
-  , opt_service            = get "Service" opt_service
   , opt_quic_addr          = get "Quic_Addr" opt_quic_addr
   , opt_quic_port          = get "Quic_Port" opt_quic_port
   , opt_quic_debug_dir     = get "Quic_Debug_Dir" opt_quic_debug_dir
   , opt_quic_qlog_dir      = get "Quic_Qlog_Dir" opt_quic_qlog_dir
+  , opt_server_name        = "Dummy"
+  , opt_routing_file       = Nothing
   }
   where
     get k func = maybe (func def) fromConf $ lookup k conf
