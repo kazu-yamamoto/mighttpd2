@@ -71,6 +71,9 @@ Library
                       , unliftio
   if impl(ghc >= 8)
     Default-Extensions:  Strict StrictData
+  if flag(dhall)
+    Cpp-Options:        -DDHALL
+    Build-Depends:      dhall
 
 Executable mighty
   Default-Language:     Haskell2010
@@ -161,6 +164,9 @@ Test-Suite spec
                       , warp-tls >= 3.2.12 && < 3.4
   if impl(ghc >= 8)
     Default-Extensions:  Strict StrictData
+  if flag(dhall)
+    Cpp-Options:        -DDHALL
+    Build-Depends:      dhall
 
 Source-Repository head
   Type:                 git
