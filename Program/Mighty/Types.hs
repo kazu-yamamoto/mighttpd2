@@ -1,6 +1,6 @@
 {-# LANGUAGE CPP #-}
 
-module Program.Mighty.Types where
+module Program.Mighty.Types (Natural, naturalToInt) where
 
 #ifdef DHALL
 import GHC.Natural (Natural, naturalToInt)

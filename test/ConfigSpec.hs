@@ -10,18 +10,14 @@ spec :: Spec
 spec = do
     describe "parseConfig" $ do
         it "parses example.conf correctly" $ do
-            res <- parseOption "conf/example.conf" "foo"
-            res `shouldBe` ans
+            res <- parseOption "conf/example.conf"
+            res { opt_server_name = "foo" } `shouldBe` ans
 
 #ifdef DHALL
     describe "parseDhall" $ do
         it "parses example.dhall correctly" $ do
             res <- parseOptionDhall "./conf/example.dhall"
-            res `shouldBe` ans
-
-        it "parses literal dhall correctly" $ do
-            res <- parseOptionDhall "let x = ./conf/example.dhall in x"
-            res `shouldBe` ans
+            res { opt_server_name = "foo" } `shouldBe` ans
 #endif
 
 ans :: Option
@@ -50,8 +46,8 @@ ans = Option
     , opt_service = 0
     , opt_report_file = "/tmp/mighty_report"
     , opt_proxy_timeout = 0
-    , opt_quic_addr = "127.0.0.1"
+    , opt_quic_addr = ["127.0.0.1","::1"]
     , opt_quic_port = 443
-    , opt_quic_debug_dir = ""
-    , opt_quic_qlog_dir = ""
+    , opt_quic_debug_dir = Nothing
+    , opt_quic_qlog_dir = Nothing
     }

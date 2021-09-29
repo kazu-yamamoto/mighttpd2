@@ -7,6 +7,9 @@ module Main where
 import Control.Monad (when)
 #endif
 
+#ifdef DHALL
+import Data.List (isSuffixOf)
+#endif
 import Data.Version (showVersion)
 import Network.Wai.Application.Classic hiding ((</>))
 import System.Directory (getCurrentDirectory)
@@ -45,8 +48,9 @@ main = do
     eachCase args
       | n == 0 = do
           root <- amIrootUser
-          let opt | root      = (defaultOption svrnm) { opt_port = 80 }
-                  | otherwise = defaultOption svrnm
+          let opt0 = defaultOption { opt_server_name = svrnm }
+          let opt | root      = opt0 { opt_port = 80 }
+                  | otherwise = opt0
           dir <- getCurrentDirectory
           let dst = fromString . addTrailingPathSeparator $ dir
               route = [Block ["*"] [RouteFile "/" dst]]
@@ -54,9 +58,18 @@ main = do
       | n == 2 = do
           let config_file = args !! 0
           routing_file <- getAbsoluteFile (args !! 1)
-          opt   <- parseOption config_file svrnm
+#ifdef DHALL
+          let isDhall = ".dhall" `Data.List.isSuffixOf` config_file
+          opt   <- if isDhall
+                   then parseOptionDhall config_file
+                   else parseOption config_file
+#else
+          opt   <- parseOption config_file
+#endif
           route <- parseRoute  routing_file defaultDomain defaultPort
-          let opt' = opt {opt_routing_file = Just routing_file}
+          let opt' = opt { opt_routing_file = Just routing_file
+                         , opt_server_name = svrnm
+                         }
           return (opt',route)
       | otherwise = do
           hPutStrLn stderr "Usage: mighty"
