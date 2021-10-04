@@ -1,5 +1,7 @@
 ---
+layout: default
 title: Installation
+rank: 2
 ---
 
 ## Installation

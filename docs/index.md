@@ -1,5 +1,6 @@
 ---
 title: About
+rank: 1
 ---
 
 ## About
