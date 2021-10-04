@@ -6,7 +6,7 @@ rank: 3
 
 ## Configuration
 
-["Mighttpd2 can be executed without any arguments"](operation.html).
+[Mighttpd2 can be executed without any arguments](operation.html).
 
 Or specify two files to Mighttpd2 at the boot time.
 
@@ -124,13 +124,13 @@ Here is the contents of `example.route`.
 
 - A route file consists of blocks.
 - A block consists of a domain list and route information.
-- A domain list is in form `\[domain1 domain2 ...\]`
+- A domain list is in form `[domain1 domain2 ...]`
 - Route information consists of lines for PATHINFO mapping.
 - Characters after `#` are ignored.
 
-If `*` is specified as a domain, any Host: values are accepted. 
+If `*` is specified as a domain, any `Host:` values are accepted. 
 
-There are three operators to map PATHINFOs (URL parts after "http://domain") to resources:
+There are three operators to map PATHINFOs (URL parts after `http://domain`) to resources:
 
 - `->`: mapping a PATHINFO of normal resource to a file/directory. (Note that `index.html` is automatically added internally for directories. You don&#8217;t have to specify `index.html` in the route file.
 - `=>`: mapping a PATHINFO of CGI path to a directory which contains CGI scripts.

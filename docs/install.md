@@ -6,9 +6,7 @@ rank: 2
 
 ## Installation
 
-Mighttpd2 is registered in [Hackage](http://hackage.haskell.org/packages/hackage.html). So, you can install Mighttpd2 with the `cabal\ command.
-
-To use Glasgow Haskell Compiler and `cabal` command, please install ["The Haskell Platform"](http://hackage.haskell.org/platform/).
+Mighttpd2 is registered in [Hackage](http://hackage.haskell.org/packages/hackage.html). So, you can install Mighttpd2 with the `cabal` command.
 
 ### Updating the index of Hackage
 
