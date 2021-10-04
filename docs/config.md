@@ -22,7 +22,7 @@ You can specify how many cores are used with GHC&#8217;s RTS -N option:
 
 ### Configuration file
 
-Here is the contents of `example.dhall`.
+The old configuration style are still supported. But Mighttpd 2 version 4 or alter offically supports the new Dhall style configuration. Here is the contents of [`example.dhall`](https://github.com/kazu-yamamoto/mighttpd2/blob/master/conf/example.dhall).
 
 ```
 -- { port : Natural
@@ -94,7 +94,7 @@ Here is the contents of `example.dhall`.
 
 ### Route file
 
-Here is the contents of `example.route`.
+Here is the contents of [`example.route`](https://github.com/kazu-yamamoto/mighttpd2/blob/master/conf/example.route).
 
 ```shell
 # Example routing for Mighttpd 2

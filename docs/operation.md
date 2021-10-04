@@ -8,20 +8,20 @@ rank: 4
 
 ### Executing Mighttpd2 without configuration files
 
-If Mighttpd2 is executed without any arguments, it runs in the debug mode
+If Mighttpd2 without TLS and QUIC is executed without any arguments, it runs in the debug mode
 taking the current directory as document root. If executed with 
 the root privilege, it binds to the port 80. 
 
 ```shell
 % sudo mighty
-Serving on port 80.
+http://localhost/
 ```
 
 Otherwise, it binds to the port 8080.
 
 ```shell
 % mighty
-Serving on port 8080.
+http://localhost:8080/
 ```
 
 ### Executing Mighttpd2 with configuration files

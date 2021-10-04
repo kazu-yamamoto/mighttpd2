@@ -16,7 +16,7 @@ Mighttpd2 is now implemented as a [WAI](http://hackage.haskell.org/package/wai) 
 
 [mew.org](https://mew.org/) is provided with Mighttpd2.
 
-## Features
+### Features
 
 - Redirection and language negotiation
 - CGI: GET and POST
