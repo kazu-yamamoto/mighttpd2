@@ -15,7 +15,7 @@ You should download the updated index of Hackage.
 % cabal update
 ```
 
-Note that "cabal" uses the "http_proxy" environment variable.
+Note that `cabal` uses the `http_proxy` environment variable.
 
 ### Installing Mighttpd2
 
@@ -27,10 +27,16 @@ The following command installs mighttpd2 with HTTP, CGI, Reverse Proxy and URL r
 
 Note that the `-jN` option enables parallel installation to save time.
 
-Mighttpd2 supports HTTPS (HTTP over SSL/TLS) experimentally. To use it, type:
+Here is a lift of installation flags:
+
+- `tls`: TLS support
+- `quic`: QUIC support
+- `dhall`" Dhall configration support
+
+To use them, type:
 
 ```shell
-% cabal install --flags="tls" mighttpd2
+% cabal install --flags="tls" --flags="quic" --flags="dhall" mighttpd2
 ```
 
 ### Files installed
