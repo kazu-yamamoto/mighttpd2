@@ -1,3 +1,3 @@
-# Mighttpd
+# Mighttpd2
 
-Home page: http://mew.org/~kazu/proj/mighttpd/
+Home page: https://kazu-yamamoto.github.io/mighttpd2/
