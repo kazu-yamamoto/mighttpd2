@@ -28,7 +28,7 @@ Here is a lift of installation flags:
 
 - `tls`: TLS support
 - `quic`: QUIC support
-- `dhall`" Dhall configration support
+- `dhall`: Dhall configration support
 
 To use them, type:
 
