@@ -1,4 +1,8 @@
-## Installing Mighttpd2
+---
+title: Installation
+---
+
+## Installation
 
 Mighttpd2 is registered in [Hackage](http://hackage.haskell.org/packages/hackage.html). So, you can install Mighttpd2 with the `cabal\ command.
 

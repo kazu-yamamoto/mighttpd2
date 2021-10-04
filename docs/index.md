@@ -1,3 +1,9 @@
+---
+title: About
+---
+
+## About
+
 Mighttpd2 (called mighty) is a simple but practical HTTP server
 written in [Haskell](http://www.haskell.org).
 It handles static files and CGI scripts.
