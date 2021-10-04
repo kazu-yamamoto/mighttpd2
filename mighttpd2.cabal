@@ -9,7 +9,7 @@ Description:            High performance web server to handle static
                         files and CGI on WAI/warp.
                         Reverse proxy functionality is also provided
                         to connect web applications behind.
-Homepage:               http://www.mew.org/~kazu/proj/mighttpd/
+Homepage:               https://kazu-yamamoto.github.io/mighttpd2/
 Category:               Network, Web
 Cabal-Version:          >= 1.10
 Build-Type:             Simple
