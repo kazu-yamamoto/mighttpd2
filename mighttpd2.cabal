@@ -1,5 +1,5 @@
 Name:                   mighttpd2
-Version:                4.0.0
+Version:                4.0.1
 Author:                 Kazu Yamamoto <kazu@iij.ad.jp>
 Maintainer:             Kazu Yamamoto <kazu@iij.ad.jp>
 License:                BSD3
@@ -15,6 +15,7 @@ Cabal-Version:          >= 1.10
 Build-Type:             Simple
 Data-Dir:               conf
 Data-Files:             example.conf example.route
+Extra-Source-Files:     Program/Mighty/Dhall/Option.dhall
 
 Flag tls
   Description:          Support HTTP over TLS (HTTPS).
