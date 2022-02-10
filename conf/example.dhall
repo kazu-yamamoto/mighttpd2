@@ -20,7 +20,6 @@
 -- , tlsCertFile   : Text
 -- , tlsChainFiles : Text
 -- , tlsKeyFile    : Text
--- , quicAddr : List Text
 -- , quicPort : Natural
 -- , quicDebugDir : Optional Text
 -- , quicQlogDir  : Optional Text
@@ -59,7 +58,6 @@
 -- Currently, tlsKeyFile must not be encrypted
 , tlsKeyFile    = "privkey.pem"
 , quicPort = 443
-, quicAddr = ["127.0.0.1","::1"]
 , quicDebugDir = None Text
 , quicQlogDir  = None Text
 }
