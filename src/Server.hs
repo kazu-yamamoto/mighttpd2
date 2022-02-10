@@ -198,6 +198,7 @@ mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr tmgr
     QUIC s1 s2 -> do
         let quicPort' = BS.pack $ show quicPort
             strver Q.Version1 = ""
+            strver Q.Version2 = ""
             strver v = BS.append "-" $ BS.pack $ show $ fromVersion v
             quicDrafts = map strver quicVersions
             value v = BS.concat ["h3",v,"=\":",quicPort',"\""]
@@ -252,7 +253,7 @@ mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr tmgr
 #ifdef HTTP_OVER_QUIC
     quicAddr = read <$> opt_quic_addr opt
     quicPort = fromIntegral $ opt_quic_port opt
-    quicVersions = Q.scVersions Q.defaultServerConfig
+    quicVersions = Q.otherVersions $ Q.scVersionInfo Q.defaultServerConfig
     qconf = Q.defaultServerConfig {
             Q.scAddresses      = (,quicPort) <$> quicAddr
           , Q.scALPN           = Just chooseALPN
@@ -270,8 +271,10 @@ chooseALPN ver protos = case find (\x -> x == h3 || x == hq) protos of
   Just proto -> return proto
   where
     h3 | ver == Q.Version1 = "h3"
+       | ver == Q.Version2 = "h3"
        | otherwise = "h3-" `BS.append` BS.pack (show (fromVersion ver))
     hq | ver == Q.Version1 = "hq-interop"
+       | ver == Q.Version2 = "hq-interop"
        | otherwise = "hq-" `BS.append` BS.pack (show (fromVersion ver))
 
 fromVersion :: Q.Version -> Int
