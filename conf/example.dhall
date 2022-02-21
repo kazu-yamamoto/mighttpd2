@@ -59,7 +59,7 @@
 -- Currently, tlsKeyFile must not be encrypted
 , tlsKeyFile    = "privkey.pem"
 , quicPort = 443
-, quicAddr = ["127.0.0.1","::1"]
+, quicAddr = ["0.0.0.0","::"]
 , quicDebugDir = None Text
 , quicQlogDir  = None Text
 }
