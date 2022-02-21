@@ -58,6 +58,7 @@ data Option = Option {
   , opt_tls_chain_files :: FilePath
   , opt_tls_key_file    :: FilePath
   , opt_quic_port :: Natural
+  , opt_quic_addr :: [String]
   , opt_quic_debug_dir :: Maybe FilePath
   , opt_quic_qlog_dir  :: Maybe FilePath
   , opt_server_name :: String
@@ -98,6 +99,7 @@ defaultOption = Option {
   , opt_tls_chain_files = "chain.pem"
   , opt_tls_key_file    = "privkey.pem"
   , opt_quic_port = 443
+  , opt_quic_addr = ["127.0.0.1"]
   , opt_quic_debug_dir = Nothing
   , opt_quic_qlog_dir  = Nothing
   , opt_server_name = "Dummy"
@@ -137,6 +139,7 @@ optionFromDhall o = Option
   , opt_tls_cert_file   = T.unpack $ Do.tlsCertFile o
   , opt_tls_chain_files = T.unpack $ Do.tlsChainFiles o
   , opt_tls_key_file    = T.unpack $ Do.tlsKeyFile o
+  , opt_quic_addr = T.unpack <$> Do.quicAddr o
   , opt_quic_port = Do.quicPort o
   , opt_quic_debug_dir = T.unpack <$> Do.quicDebugDir o
   , opt_quic_qlog_dir  = T.unpack <$> Do.quicQlogDir o
@@ -171,6 +174,7 @@ makeOpt def conf = Option {
   , opt_tls_cert_file      = get "Tls_Cert_File" opt_tls_cert_file
   , opt_tls_chain_files    = get "Tls_Chain_Files" opt_tls_chain_files
   , opt_tls_key_file       = get "Tls_Key_File" opt_tls_key_file
+  , opt_quic_addr          = get "Quic_Addr" opt_quic_addr
   , opt_quic_port          = get "Quic_Port" opt_quic_port
   , opt_quic_debug_dir     = get "Quic_Debug_Dir" opt_quic_debug_dir
   , opt_quic_qlog_dir      = get "Quic_Qlog_Dir" opt_quic_qlog_dir

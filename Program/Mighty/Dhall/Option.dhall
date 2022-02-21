@@ -21,6 +21,7 @@
 , tlsChainFiles : Text
 , tlsKeyFile    : Text
 , quicPort : Natural
+, quicAddr : List Text
 , quicDebugDir : Optional Text
 , quicQlogDir  : Optional Text
 }
