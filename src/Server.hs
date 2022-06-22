@@ -24,8 +24,6 @@ import qualified System.TimeManager as T
 import Program.Mighty
 import WaiApp
 
-import qualified Network.Wai.Middleware.Push.Referer as P
-
 #ifdef HTTP_OVER_TLS
 import Control.Concurrent.Async (concurrently_)
 import Data.Char (isSpace)
@@ -215,7 +213,7 @@ mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr tmgr
     _ -> error "never reach"
 #endif
   where
-    app = P.pushOnReferer P.defaultSettings $ fileCgiApp cspec filespec cgispec revproxyspec rdr
+    app = fileCgiApp cspec filespec cgispec revproxyspec rdr
     debug = opt_debug_mode opt
     -- We don't use setInstallShutdownHandler because we may use
     -- two sockets for HTTP and HTTPS.
