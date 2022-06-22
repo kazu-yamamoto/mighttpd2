@@ -7,6 +7,7 @@ module Server (server, defaultDomain, defaultPort) where
 import Control.Concurrent (runInUnboundThread)
 import Control.Exception (try)
 import Control.Monad (unless, when)
+import Data.Either (fromRight)
 import qualified Data.ByteString.Char8 as BS
 import Data.Streaming.Network (bindPortTCP)
 import qualified Network.HTTP.Client as H
@@ -156,7 +157,7 @@ loadCredentials opt = do
     cert   <- BS.readFile $ opt_tls_cert_file opt
     chains <- mapM BS.readFile chain_files
     key    <- BS.readFile $ opt_tls_key_file opt
-    let Right cred = TLS.credentialLoadX509ChainFromMemory cert chains key
+    let cred = fromRight (error "loadCredentials") $ TLS.credentialLoadX509ChainFromMemory cert chains key
     return $ Credentials [cred]
   where
     strip = dropWhileEnd isSpace . dropWhile isSpace
