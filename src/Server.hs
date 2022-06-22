@@ -232,6 +232,7 @@ mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr tmgr
     tlsSetting = defaultTlsSettings {
         tlsCredentials    = _mcreds
       , tlsSessionManager = _msmgr
+      , tlsAllowedVersions = [TLS.TLS13,TLS.TLS12]
       }
 #endif
     serverName = BS.pack $ opt_server_name opt
