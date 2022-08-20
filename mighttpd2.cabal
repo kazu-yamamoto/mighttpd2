@@ -15,7 +15,7 @@ Cabal-Version:          >= 1.10
 Build-Type:             Simple
 Data-Dir:               conf
 Data-Files:             example.conf example.route
-Extra-Source-Files:     Program/Mighty/Dhall/Option.dhall
+Extra-Source-Files:     Program/Mighty/Dhall/Option.dhall conf/example.dhall
 
 Flag tls
   Description:          Support HTTP over TLS (HTTPS).
