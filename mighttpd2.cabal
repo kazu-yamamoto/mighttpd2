@@ -1,173 +1,208 @@
-Name:                   mighttpd2
-Version:                4.0.3
-Author:                 Kazu Yamamoto <kazu@iij.ad.jp>
-Maintainer:             Kazu Yamamoto <kazu@iij.ad.jp>
-License:                BSD3
-License-File:           LICENSE
-Synopsis:               High performance web server on WAI/warp
-Description:            High performance web server to handle static
-                        files and CGI on WAI/warp.
-                        Reverse proxy functionality is also provided
-                        to connect web applications behind.
-Homepage:               https://kazu-yamamoto.github.io/mighttpd2/
-Category:               Network, Web
-Cabal-Version:          >= 1.10
-Build-Type:             Simple
-Data-Dir:               conf
-Data-Files:             example.conf example.route
-Extra-Source-Files:     Program/Mighty/Dhall/Option.dhall conf/example.dhall
+cabal-version:      >=1.10
+name:               mighttpd2
+version:            4.0.3
+license:            BSD3
+license-file:       LICENSE
+maintainer:         Kazu Yamamoto <kazu@iij.ad.jp>
+author:             Kazu Yamamoto <kazu@iij.ad.jp>
+homepage:           https://kazu-yamamoto.github.io/mighttpd2/
+synopsis:           High performance web server on WAI/warp
+description:
+    High performance web server to handle static
+    files and CGI on WAI/warp.
+    Reverse proxy functionality is also provided
+    to connect web applications behind.
 
-Flag tls
-  Description:          Support HTTP over TLS (HTTPS).
-  Default:              False
+category:           Network, Web
+build-type:         Simple
+data-files:
+    example.conf
+    example.route
 
-Flag quic
-  Description:          Support HTTP over QUIC (HTTP/3).
-  Default:              False
+data-dir:           conf
+extra-source-files:
+    Program/Mighty/Dhall/Option.dhall
+    conf/example.dhall
 
-Flag dhall
-  Description:          Support Dhall
-  Default:              False
+source-repository head
+    type:     git
+    location: git://github.com/kazu-yamamoto/mighttpd2.git
 
-Library
-  Default-Language:     Haskell2010
-  GHC-Options:          -Wall
-  Exposed-Modules:      Program.Mighty
-                        Program.Mighty.ByteString
-                        Program.Mighty.Config
-                        Program.Mighty.Network
-                        Program.Mighty.Parser
-                        Program.Mighty.Process
-                        Program.Mighty.Report
-                        Program.Mighty.Resource
-                        Program.Mighty.Route
-                        Program.Mighty.Signal
-                        Program.Mighty.Dhall.Option
-                        Program.Mighty.Types
-  Build-Depends:        base >= 4.9 && < 5
-                      , array
-                      , async
-                      , auto-update
-                      , byteorder
-                      , bytestring
-                      , case-insensitive
-                      , conduit >= 1.1
-                      , conduit-extra
-                      , directory
-                      , filepath
-                      , http-date
-                      , http-types
-                      , network
-                      , parsec >= 3
-                      , resourcet
-                      , streaming-commons
-                      , split
-                      , text
-                      , unix
-                      , unix-time
-                      , unordered-containers
-                      , wai >= 3.2 && < 3.3
-                      , wai-app-file-cgi >= 3.1.9 && < 3.2
-                      , warp >= 3.3.15 && < 3.4
-                      , unliftio
-  if impl(ghc >= 8)
-    Default-Extensions:  Strict StrictData
-  if flag(dhall)
-    Cpp-Options:        -DDHALL
-    Build-Depends:      dhall
+flag tls
+    description: Support HTTP over TLS (HTTPS).
+    default:     False
 
-Executable mighty
-  Default-Language:     Haskell2010
-  HS-Source-Dirs:       src
-  Main-Is:              Mighty.hs
-  GHC-Options:          -Wall -threaded -rtsopts
-  if flag(tls)
-    Cpp-Options:        -DHTTP_OVER_TLS
-    Build-Depends:      async
-                      , tls-session-manager >= 0.0.2.0
-  if flag(quic)
-    Cpp-Options:        -DHTTP_OVER_QUIC
-    Build-Depends:      async
-                      , base16-bytestring
-    if os(linux)
-      C-sources:        cbits/setcap.c
-      Cpp-Options:      -DDROP_EXCEPT_BIND
+flag quic
+    description: Support HTTP over QUIC (HTTP/3).
+    default:     False
 
-  if flag(dhall)
-    Cpp-Options:        -DDHALL
-    Build-Depends:      dhall
-  Build-Depends:        base >= 4.9 && < 5
-                      , bytestring
-                      , directory
-                      , filepath
-                      , http-client >= 0.5
-                      , http-date
-                      , http-types
-                      , mighttpd2
-                      , network
-                      , conduit-extra
-                      , transformers
-                      , unix
-                      , streaming-commons
-                      , time-manager
-                      , wai >= 3.2 && < 3.3
-                      , wai-app-file-cgi >= 3.1.9 && < 3.2
-                      , wai-logger >= 2.3.0
-                      , warp >= 3.3.13 && < 3.4
-  if flag(tls)
-    Build-Depends:      tls
-                      , warp-tls >= 3.2.12 && < 3.5
-  if flag(quic)
-    Build-Depends:      quic
-                      , warp-quic
-  Other-Modules:        Server
-                        WaiApp
-                        Paths_mighttpd2
-  if impl(ghc >= 8)
-    Default-Extensions:  Strict StrictData
+flag dhall
+    description: Support Dhall
+    default:     False
 
-Executable mighty-mkindex
-  Default-Language:     Haskell2010
-  HS-Source-Dirs:       utils, src
-  Main-Is:              mkindex.hs
-  GHC-Options:          -Wall
-  Build-Depends:        base >= 4.9 && < 5
-                      , directory
-                      , old-locale
-                      , time
-                      , unix
+library
+    exposed-modules:
+        Program.Mighty
+        Program.Mighty.ByteString
+        Program.Mighty.Config
+        Program.Mighty.Network
+        Program.Mighty.Parser
+        Program.Mighty.Process
+        Program.Mighty.Report
+        Program.Mighty.Resource
+        Program.Mighty.Route
+        Program.Mighty.Signal
+        Program.Mighty.Dhall.Option
+        Program.Mighty.Types
 
-Executable mightyctl
-  Default-Language:     Haskell2010
-  HS-Source-Dirs:       utils, src
-  Main-Is:              mightyctl.hs
-  GHC-Options:          -Wall
-  Build-Depends:        base >= 4.9 && < 5
-                      , unix
-                      , mighttpd2
-  if impl(ghc >= 8)
-    Default-Extensions:  Strict StrictData
+    default-language: Haskell2010
+    ghc-options:      -Wall
+    build-depends:
+        base >=4.9 && <5,
+        array,
+        async,
+        auto-update,
+        byteorder,
+        bytestring,
+        case-insensitive,
+        conduit >=1.1,
+        conduit-extra,
+        directory,
+        filepath,
+        http-date,
+        http-types,
+        network,
+        parsec >=3,
+        resourcet,
+        streaming-commons,
+        split,
+        text,
+        unix,
+        unix-time,
+        unordered-containers,
+        wai >=3.2 && <3.3,
+        wai-app-file-cgi >=3.1.9 && <3.2,
+        warp >=3.3.15 && <3.4,
+        unliftio
 
-Test-Suite spec
-  Default-Language:     Haskell2010
-  Main-Is:              Spec.hs
-  Hs-Source-Dirs:       test, src
-  Type:                 exitcode-stdio-1.0
-  Other-Modules:        ConfigSpec
-                        RouteSpec
-  Build-Depends:        base >= 4.9 && < 5
-                      , hspec >= 1.3
-                      , mighttpd2
-                      , http-client >= 0.5
-  if flag(tls)
-    Build-Depends:      tls
-                      , warp-tls >= 3.2.12 && < 3.5
-  if impl(ghc >= 8)
-    Default-Extensions:  Strict StrictData
-  if flag(dhall)
-    Cpp-Options:        -DDHALL
-    Build-Depends:      dhall
+    if impl(ghc >=8)
+        default-extensions: Strict StrictData
 
-Source-Repository head
-  Type:                 git
-  Location:             git://github.com/kazu-yamamoto/mighttpd2.git
+    if flag(dhall)
+        cpp-options:   -DDHALL
+        build-depends: dhall
+
+executable mighty
+    main-is:          Mighty.hs
+    hs-source-dirs:   src
+    other-modules:
+        Server
+        WaiApp
+        Paths_mighttpd2
+
+    default-language: Haskell2010
+    ghc-options:      -Wall -threaded -rtsopts
+    build-depends:
+        base >=4.9 && <5,
+        bytestring,
+        directory,
+        filepath,
+        http-client >=0.5,
+        http-date,
+        http-types,
+        mighttpd2,
+        network,
+        conduit-extra,
+        transformers,
+        unix,
+        streaming-commons,
+        time-manager,
+        wai >=3.2 && <3.3,
+        wai-app-file-cgi >=3.1.9 && <3.2,
+        wai-logger >=2.3.0,
+        warp >=3.3.13 && <3.4
+
+    if flag(tls)
+        cpp-options:   -DHTTP_OVER_TLS
+        build-depends:
+            async,
+            tls-session-manager >=0.0.2.0
+
+    if flag(quic)
+        cpp-options:   -DHTTP_OVER_QUIC
+        build-depends:
+            async,
+            base16-bytestring
+
+        if os(linux)
+            cpp-options: -DDROP_EXCEPT_BIND
+            c-sources:   cbits/setcap.c
+
+    if flag(dhall)
+        cpp-options:   -DDHALL
+        build-depends: dhall
+
+    if flag(tls)
+        build-depends:
+            tls,
+            warp-tls >=3.2.12 && <3.5
+
+    if flag(quic)
+        build-depends:
+            quic,
+            warp-quic
+
+    if impl(ghc >=8)
+        default-extensions: Strict StrictData
+
+executable mighty-mkindex
+    main-is:          mkindex.hs
+    hs-source-dirs:   utils src
+    default-language: Haskell2010
+    ghc-options:      -Wall
+    build-depends:
+        base >=4.9 && <5,
+        directory,
+        old-locale,
+        time,
+        unix
+
+executable mightyctl
+    main-is:          mightyctl.hs
+    hs-source-dirs:   utils src
+    default-language: Haskell2010
+    ghc-options:      -Wall
+    build-depends:
+        base >=4.9 && <5,
+        unix,
+        mighttpd2
+
+    if impl(ghc >=8)
+        default-extensions: Strict StrictData
+
+test-suite spec
+    type:             exitcode-stdio-1.0
+    main-is:          Spec.hs
+    hs-source-dirs:   test src
+    other-modules:
+        ConfigSpec
+        RouteSpec
+
+    default-language: Haskell2010
+    build-depends:
+        base >=4.9 && <5,
+        hspec >=1.3,
+        mighttpd2,
+        http-client >=0.5
+
+    if flag(tls)
+        build-depends:
+            tls,
+            warp-tls >=3.2.12 && <3.5
+
+    if impl(ghc >=8)
+        default-extensions: Strict StrictData
+
+    if flag(dhall)
+        cpp-options:   -DDHALL
+        build-depends: dhall
