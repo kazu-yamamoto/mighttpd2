@@ -1,5 +1,19 @@
 # ChangeLog for mighttpd2
 
+## 4.0.3
+
+* IMPORTANT: using TLS 1.2 and TLS 1.3 only.
+* IMPORTANT: stop using server push.
+* Supporting QUIC v2.
+
+## 4.0.2
+
+* Supporting GHC 9.0.
+
+## 4.0.1
+
+* Including Program/Mighty/Dhall/Option.dhall.
+
 ## 4.0.0
 
 * HTTP/3 on QUIC support: the "Service" field should be 3.
