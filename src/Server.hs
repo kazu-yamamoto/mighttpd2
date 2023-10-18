@@ -288,6 +288,12 @@ data Service = HttpOnly Socket
              | HttpAndHttps Socket Socket
              | QUIC Socket Socket
 
+instance Show Service where
+    show HttpOnly{}     = "HttpOnly"
+    show HttpsOnly{}    = "HttpOnlys"
+    show HttpAndHttps{} = "HttpAndHttps"
+    show QUIC{}         = "QUIC"
+
 ----------------------------------------------------------------
 
 openService :: Option -> IO Service
