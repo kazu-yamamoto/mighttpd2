@@ -84,13 +84,7 @@ server opt rpt route = reportDo rpt $ do
     unless debug writePidFile
     rdr <- newRouteDBRef route
     tmgr <- T.initialize (naturalToInt (opt_connection_timeout opt) * 1000000)
-#ifdef HTTP_OVER_TLS
-    mcred <- Just <$> loadCredentials opt
-    smgr <- Just <$> SM.newSessionManager SM.defaultConfig { dbMaxSize = 1000 }
-#else
-    let mcred = Nothing
-        smgr = Nothing
-#endif
+    (mcred, smgr) <- setup opt
     _changed <- setGroupUser (opt_user opt) (opt_group opt)
 #ifdef DROP_EXCEPT_BIND
     when _changed dropExceptBind
@@ -229,7 +223,7 @@ mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr tmgr
             $ setServerPushLogger pushlgr
             defaultSettings
 #ifdef HTTP_OVER_TLS
-    tlsSetting = defaultTlsSettings {
+    ~tlsSetting = defaultTlsSettings {
         tlsCredentials    = _mcreds
       , tlsSessionManager = _msmgr
       , tlsAllowedVersions = [TLS.TLS13,TLS.TLS12]
@@ -251,10 +245,12 @@ mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr tmgr
         revProxyManager = mgr
       }
 #ifdef HTTP_OVER_QUIC
-    quicAddr = read <$> opt_quic_addr opt
-    quicPort = fromIntegral $ opt_quic_port opt
-    quicVersions = Q.scVersions Q.defaultServerConfig
-    qconf = Q.defaultServerConfig {
+    ~quicAddr = read <$> opt_quic_addr opt
+    ~quicPort = fromIntegral $ opt_quic_port opt
+    ~quicVersions = Q.scVersions Q.defaultServerConfig
+    -- Lazy binding for opt_service == 0 so that
+    -- 'fromJust' is not called.
+    ~qconf = Q.defaultServerConfig {
             Q.scAddresses      = (,quicPort) <$> quicAddr
           , Q.scALPN           = Just chooseALPN
           , Q.scRequireRetry   = False
@@ -366,4 +362,20 @@ dropExceptBind = do
     strtids <- listDirectory ("/proc/" ++ show pid ++ "/task")
     let tids = map read strtids :: [Int]
     forM_ tids $ \tid -> c_send_signal (fromIntegral tid) sigUSR1
+#endif
+
+----------------------------------------------------------------
+
+setup :: Option -> IO (Maybe Credentials, Maybe SessionManager)
+#ifdef HTTP_OVER_TLS
+setup opt
+  | 1 <= service && service <= 3 = do
+        mcred <- Just <$> loadCredentials opt
+        smgr <- Just <$> SM.newSessionManager SM.defaultConfig { dbMaxSize = 1000 }
+        return (mcred, smgr)
+  | otherwise = return (Nothing, Nothing)
+  where
+    service = opt_service opt
+#else
+setup _ = return (Nothing, Nothing)
 #endif
