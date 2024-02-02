@@ -1,6 +1,6 @@
 cabal-version:      >=1.10
 name:               mighttpd2
-version:            4.0.3
+version:            4.0.4
 license:            BSD3
 license-file:       LICENSE
 maintainer:         Kazu Yamamoto <kazu@iij.ad.jp>
