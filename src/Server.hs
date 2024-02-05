@@ -31,8 +31,7 @@ import Data.Char (isSpace)
 import Data.List (dropWhileEnd)
 import Network.TLS (Credentials(..),SessionManager)
 import qualified Network.TLS as TLS
-import Network.TLS.SessionManager
-import qualified Network.TLS.SessionManager as SM
+import qualified Network.TLS.SessionTicket as SM
 import Network.Wai.Handler.WarpTLS
 #ifdef HTTP_OVER_QUIC
 import Control.Concurrent.Async (mapConcurrently_)
@@ -371,7 +370,7 @@ setup :: Option -> IO (Maybe Credentials, Maybe SessionManager)
 setup opt
   | 1 <= service && service <= 3 = do
         mcred <- Just <$> loadCredentials opt
-        smgr <- Just <$> SM.newSessionManager SM.defaultConfig { dbMaxSize = 1000 }
+        smgr <- Just <$> SM.newSessionTicketManager SM.defaultConfig
         return (mcred, smgr)
   | otherwise = return (Nothing, Nothing)
   where
