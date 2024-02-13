@@ -1,5 +1,15 @@
 # ChangeLog for mighttpd2
 
+## 4.0.5
+
+* Using session tickets instead of in-memory session DB.
+
+## 4.0.4
+
+* Proper RTS options.
+* Fix for "-f tls" but opt_service is 0.
+  [#27](https://github.com/kazu-yamamoto/mighttpd2/pull/27)
+
 ## 4.0.3
 
 * IMPORTANT: using TLS 1.2 and TLS 1.3 only.
