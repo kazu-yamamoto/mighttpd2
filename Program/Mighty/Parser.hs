@@ -1,18 +1,18 @@
 {-# LANGUAGE CPP #-}
 
 -- | Parsers for Mighty
-
 module Program.Mighty.Parser (
-  -- * Utilities
-    parseFile
-  -- * Parsers
-  , spcs
-  , spcs1
-  , spc
-  , commentLines
-  , trailing
-  , comment
-  ) where
+    -- * Utilities
+    parseFile,
+
+    -- * Parsers
+    spcs,
+    spcs1,
+    spc,
+    commentLines,
+    trailing,
+    comment,
+) where
 
 import qualified Data.ByteString.Lazy.Char8 as BL
 import System.IO
@@ -33,7 +33,7 @@ parseFile p file = do
     bs <- BL.hGetContents hdl
     case parse p "parseFile" bs of
         Right x -> return x
-        Left  e -> throwIO . userError . show $ e
+        Left e -> throwIO . userError . show $ e
 
 -- | 'Parser' to consume zero or more white spaces
 --

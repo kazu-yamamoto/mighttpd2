@@ -3,13 +3,13 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Program.Mighty.Report (
-    Reporter
-  , initReporter
-  , report
-  , reportDo
-  , warpHandler
-  , printStdout
-  ) where
+    Reporter,
+    initReporter,
+    report,
+    reportDo,
+    warpHandler,
+    printStdout,
+) where
 
 #if __GLASGOW_HASKELL__ < 709
 import Control.Applicative
@@ -18,7 +18,7 @@ import Control.Monad
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
 import Data.UnixTime
-import GHC.IO.Exception (IOErrorType(..))
+import GHC.IO.Exception (IOErrorType (..))
 import Network.Wai
 import Network.Wai.Handler.Warp (InvalidRequest)
 import System.IO
@@ -28,15 +28,15 @@ import UnliftIO.Exception
 
 import Program.Mighty.ByteString
 
-data Method = FileOnly | FileAndStdout deriving Eq
+data Method = FileOnly | FileAndStdout deriving (Eq)
 data Reporter = Reporter Method FilePath
 
 initReporter :: Bool -> FilePath -> Reporter
 initReporter debug reportFile = Reporter method reportFile
   where
     method
-      | debug     = FileAndStdout
-      | otherwise = FileOnly
+        | debug = FileAndStdout
+        | otherwise = FileOnly
 
 report :: Reporter -> ByteString -> IO ()
 report (Reporter method reportFile) msg = handle (\(SomeException _) -> return ()) $ do
@@ -55,12 +55,12 @@ reportDo rpt act = act `catchAny` warpHandler rpt Nothing
 
 warpHandler :: Reporter -> Maybe Request -> SomeException -> IO ()
 warpHandler rpt _ se
-  | Just (_ :: InvalidRequest) <- fromException se = return ()
-  | Just (e :: IOException)    <- fromException se =
-        if ioeGetErrorType e `elem` [ResourceVanished,InvalidArgument]
-        then return ()
-        else report rpt $ bshow se
-  | otherwise = report rpt $ bshow se
+    | Just (_ :: InvalidRequest) <- fromException se = return ()
+    | Just (e :: IOException) <- fromException se =
+        if ioeGetErrorType e `elem` [ResourceVanished, InvalidArgument]
+            then return ()
+            else report rpt $ bshow se
+    | otherwise = report rpt $ bshow se
 
 ----------------------------------------------------------------
 

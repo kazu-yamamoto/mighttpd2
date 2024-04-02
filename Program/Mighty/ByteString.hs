@@ -12,4 +12,3 @@ infixr 5 +++
 -- | Appending two 'ByteString'.
 (+++) :: ByteString -> ByteString -> ByteString
 (+++) = BS.append
-

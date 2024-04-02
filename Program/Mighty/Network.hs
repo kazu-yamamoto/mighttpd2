@@ -1,6 +1,6 @@
 module Program.Mighty.Network (
-    daemonize
-  ) where
+    daemonize,
+) where
 
 import Control.Monad
 import System.Exit
