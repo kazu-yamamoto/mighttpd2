@@ -1,5 +1,3 @@
-{-# LANGUAGE CPP #-}
-
 -- | Parsers for Mighty
 module Program.Mighty.Parser (
     -- * Utilities
@@ -21,8 +19,8 @@ import Text.Parsec.ByteString.Lazy
 import UnliftIO.Exception
 
 -- $setup
+-- >>> :seti -XOverloadedStrings
 -- >>> import Data.Either
--- >>> let isLeft = either (const True) (const False)
 
 -- | Parsing a file.
 --   If parsing fails, an 'IOException' is thrown.
