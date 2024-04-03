@@ -1,5 +1,9 @@
 # ChangeLog for mighttpd2
 
+## 4.0.6
+
+* Fixing the "trailing" parser.
+
 ## 4.0.5
 
 * Using session tickets instead of in-memory session DB.
