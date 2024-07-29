@@ -1,5 +1,9 @@
 # ChangeLog for mighttpd2
 
+## 4.0.7
+
+* Using runQUICSocket. Requiring quic v0.2 implicitly.
+
 ## 4.0.6
 
 * Fixing the "trailing" parser.

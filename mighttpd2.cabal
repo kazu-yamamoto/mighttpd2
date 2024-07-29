@@ -1,6 +1,6 @@
 cabal-version:      >=1.10
 name:               mighttpd2
-version:            4.0.6
+version:            4.0.7
 license:            BSD3
 license-file:       LICENSE
 maintainer:         Kazu Yamamoto <kazu@iij.ad.jp>
@@ -146,7 +146,7 @@ executable mighty
     if flag(quic)
         build-depends:
             quic >= 0.2 && < 0.3,
-            warp-quic
+            warp-quic >= 0.0.1
 
     if impl(ghc >=8)
         default-extensions: Strict StrictData
