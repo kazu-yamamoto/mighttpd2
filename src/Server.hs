@@ -9,7 +9,7 @@ import Control.Exception (try)
 import Control.Monad (unless, when)
 import Data.Either (fromRight)
 import qualified Data.ByteString.Char8 as BS
-import Data.Streaming.Network (bindPortTCP)
+import Data.Streaming.Network (bindPortTCP, bindPortUDP)
 import qualified Network.HTTP.Client as H
 import Network.Socket (Socket, close)
 import Network.Wai.Application.Classic hiding ((</>))
@@ -178,7 +178,7 @@ mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr tmgr
         (runSettingsSocket setting s1 app)
         (runTLSSocket tlsSetting setting s2 app)
 #ifdef HTTP_OVER_QUIC
-    QUIC s1 s2 -> do
+    QUIC s1 s2 s3 -> do
         let quicPort' = BS.pack $ show quicPort
             strver Q.Version1 = ""
             strver Q.Version2 = ""
@@ -189,7 +189,7 @@ mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr tmgr
             settingT = setAltSvc altsvc setting
         mapConcurrently_ id [runSettingsSocket        setting  s1 app
                             ,runTLSSocket  tlsSetting settingT s2 app
-                            ,runQUIC       qconf      setting     app
+                            ,runQUICSocket qconf      setting  s3 app
                             ]
 #else
     _ -> error "never reach"
@@ -272,7 +272,7 @@ fromVersion (Q.Version ver) = fromIntegral (0x000000ff .&. ver)
 data Service = HttpOnly Socket
              | HttpsOnly Socket
              | HttpAndHttps Socket Socket
-             | QUIC Socket Socket
+             | QUIC Socket Socket Socket
 
 instance Show Service where
     show HttpOnly{}     = "HttpOnly"
@@ -297,10 +297,11 @@ openService opt
   | service == 3 = do
       s1 <- bindPortTCP httpPort hostpref
       s2 <- bindPortTCP httpsPort hostpref
+      s3 <- bindPortUDP quicPort hostpref
       debugMessage $ urlForHTTP httpPort
       debugMessage $ urlForHTTPS httpsPort
       debugMessage "QUIC is also available via Alt-Svc"
-      return $ QUIC s1 s2
+      return $ QUIC s1 s2 s3
   | otherwise = do
       s <- bindPortTCP httpPort hostpref
       debugMessage $ urlForHTTP httpPort
@@ -308,6 +309,7 @@ openService opt
   where
     httpPort  = naturalToInt $ opt_port opt
     httpsPort = naturalToInt $ opt_tls_port opt
+    quicPort = naturalToInt $ opt_quic_port opt
     hostpref  = fromString $ opt_host opt
     service = opt_service opt
     debug = opt_debug_mode opt
@@ -326,7 +328,7 @@ closeService :: Service -> IO ()
 closeService (HttpOnly s)         = close s
 closeService (HttpsOnly s)        = close s
 closeService (HttpAndHttps s1 s2) = close s1 >> close s2
-closeService (QUIC s1 s2)         = close s1 >> close s2
+closeService (QUIC s1 s2 s3)      = close s1 >> close s2 >> close s3
 
 ----------------------------------------------------------------
 
