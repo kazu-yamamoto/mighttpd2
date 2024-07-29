@@ -134,10 +134,6 @@ executable mighty
             async,
             base16-bytestring
 
-        if os(linux)
-            cpp-options: -DDROP_EXCEPT_BIND
-            c-sources:   cbits/setcap.c
-
     if flag(dhall)
         cpp-options:   -DDHALL
         build-depends: dhall
@@ -149,7 +145,7 @@ executable mighty
 
     if flag(quic)
         build-depends:
-            quic,
+            quic >= 0.2 && < 0.3,
             warp-quic
 
     if impl(ghc >=8)
