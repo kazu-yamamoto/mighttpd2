@@ -6,8 +6,8 @@ module Program.Mighty.Resource (
     unlimit,
 ) where
 
+import Control.Exception
 import System.Posix
-import UnliftIO.Exception
 
 ----------------------------------------------------------------
 

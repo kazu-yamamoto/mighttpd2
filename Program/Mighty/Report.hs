@@ -14,6 +14,8 @@ module Program.Mighty.Report (
 #if __GLASGOW_HASKELL__ < 709
 import Control.Applicative
 #endif
+import Control.Exception
+import qualified Control.Exception as E (catch)
 import Control.Monad
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
@@ -21,10 +23,10 @@ import Data.UnixTime
 import GHC.IO.Exception (IOErrorType (..))
 import Network.Wai
 import Network.Wai.Handler.Warp (InvalidRequest)
+import Network.Wai.Handler.Warp.Internal (TimeoutThread(..))
 import System.IO
 import System.IO.Error (ioeGetErrorType)
 import System.Posix (getProcessID)
-import UnliftIO.Exception
 
 import Program.Mighty.ByteString
 
@@ -49,12 +51,14 @@ report (Reporter method reportFile) msg = handle (\(SomeException _) -> return (
 ----------------------------------------------------------------
 
 reportDo :: Reporter -> IO () -> IO ()
-reportDo rpt act = act `catchAny` warpHandler rpt Nothing
+reportDo rpt act = act `E.catch` warpHandler rpt Nothing
 
 ----------------------------------------------------------------
 
 warpHandler :: Reporter -> Maybe Request -> SomeException -> IO ()
 warpHandler rpt _ se
+    | Just ThreadKilled <- fromException se = return ()
+    | Just TimeoutThread <- fromException se = return ()
     | Just (_ :: InvalidRequest) <- fromException se = return ()
     | Just (e :: IOException) <- fromException se =
         if ioeGetErrorType e `elem` [ResourceVanished, InvalidArgument]
