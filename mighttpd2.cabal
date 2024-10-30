@@ -166,7 +166,7 @@ executable mightyctl
     main-is:          mightyctl.hs
     hs-source-dirs:   utils src
     default-language: Haskell2010
-    ghc-options:      -Wall
+    ghc-options:      -Wall -threaded
     build-depends:
         base >=4.9 && <5,
         unix,
