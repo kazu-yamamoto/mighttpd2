@@ -38,7 +38,6 @@ import qualified Network.TLS as TLS
 import qualified Network.TLS.SessionTicket as SM
 import Network.Wai.Handler.WarpTLS
 #ifdef HTTP_OVER_QUIC
-import Control.Concurrent.Async (mapConcurrently_)
 import Data.Bits
 import Data.ByteString (ByteString)
 import Data.List (find)
