@@ -145,7 +145,7 @@ executable mighty
     if flag(quic)
         build-depends:
             quic >= 0.2 && < 0.3,
-            warp-quic >= 0.0.1
+            warp-quic >= 0.0.2
 
     if impl(ghc >=8)
         default-extensions: Strict StrictData
