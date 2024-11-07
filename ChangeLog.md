@@ -1,5 +1,12 @@
 # ChangeLog for mighttpd2
 
+## 4.0.8
+
+* `mightyctl inf` now lets `mighty` to display running threads to stdout.
+* Removing `unliftio`.
+* Fixing a bug where multiple addresses cannot be specified to
+  `opt_quic_addr`.
+
 ## 4.0.7
 
 * Using runQUICSocket. Requiring quic v0.2 implicitly.
