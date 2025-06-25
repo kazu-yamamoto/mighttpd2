@@ -80,28 +80,29 @@ server opt rpt route = reportDo rpt $ do
     svc <- openService opt
     unless debug writePidFile
     rdr <- newRouteDBRef route
-    tmgr <- T.initialize (naturalToInt (opt_connection_timeout opt) * 1000000)
-    (mcred, smgr) <- setup opt
-    _changed <- setGroupUser (opt_user opt) (opt_group opt)
-    logCheck logtype
-    -- "Time cacher of FastLogger (AutoUpdate)"
-    (zdater,_) <- clockDateCacher
-    -- Loggerset of FastLogger (Debounce)
-    ap <- initLogger FromSocket logtype zdater
-    let lgr = apacheLogger ap
-        remover = logRemover ap
-        pushlgr = serverpushLogger ap
-    -- HTTP Client Manager
-    mgr <- getManager opt
-    setHandlers opt rpt svc remover rdr
+    let usec = naturalToInt (opt_connection_timeout opt) * 1000000
+    T.withManager usec $ \tmgr -> do
+        (mcred, smgr) <- setup opt
+        _changed <- setGroupUser (opt_user opt) (opt_group opt)
+        logCheck logtype
+        -- "Time cacher of FastLogger (AutoUpdate)"
+        (zdater,_) <- clockDateCacher
+        -- Loggerset of FastLogger (Debounce)
+        ap <- initLogger FromSocket logtype zdater
+        let lgr = apacheLogger ap
+            remover = logRemover ap
+            pushlgr = serverpushLogger ap
+        -- HTTP Client Manager
+        mgr <- getManager opt
+        setHandlers opt rpt svc remover rdr
 
-    report rpt "Mighty started"
-    runInUnboundThread $ do
-        labelMe "Mighty main (bound thread)"
-        mighty opt rpt svc lgr pushlgr mgr rdr mcred smgr tmgr
-    report rpt "Mighty retired"
-    remover
-    exitSuccess
+        report rpt "Mighty started"
+        runInUnboundThread $ do
+            labelMe "Mighty main (bound thread)"
+            mighty opt rpt svc lgr pushlgr mgr rdr mcred smgr tmgr
+        report rpt "Mighty retired"
+        remover
+        exitSuccess
   where
     debug = opt_debug_mode opt
     port = opt_port opt
