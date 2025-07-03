@@ -64,23 +64,25 @@ reportDo rpt act = act `E.catch` warpHandler rpt Nothing
 
 ----------------------------------------------------------------
 
+{- FOURMOLU_DISABLE -}
 warpHandler :: Reporter -> Maybe Request -> SomeException -> IO ()
 warpHandler rpt _ se
-    | Just (_ :: ExitCode) <- fromException se = return ()
-    | Just (e :: IOException) <- fromException se =
+    | Just (_ :: ExitCode)         <- fromException se = return ()
+    | Just (e :: IOException)      <- fromException se =
         if ioeGetErrorType e `elem` [ResourceVanished, InvalidArgument]
             then return ()
             else report rpt $ bshow se
-    | Just (_ :: InvalidRequest) <- fromException se = return () -- Warp
-    | Just (_ :: HTTP2Error) <- fromException se = return ()
+    | Just (_ :: InvalidRequest)   <- fromException se = return () -- Warp
+    | Just (_ :: HTTP2Error)       <- fromException se = return ()
 #ifdef HTTP_OVER_TLS
-    | Just (_ :: TLSException) <- fromException se = return ()
+    | Just (_ :: TLSException)     <- fromException se = return ()
     | Just (_ :: WarpTLSException) <- fromException se = return ()
 #ifdef HTTP_OVER_QUIC
-    | Just (_ :: QUICException) <- fromException se = return ()
+    | Just (_ :: QUICException)    <- fromException se = return ()
 #endif
 #endif
     | otherwise = report rpt $ bshow se
+{- FOURMOLU_ENABLE -}
 
 ----------------------------------------------------------------
 
