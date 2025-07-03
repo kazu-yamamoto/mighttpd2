@@ -23,6 +23,7 @@ data-dir:           conf
 extra-source-files:
     Program/Mighty/Dhall/Option.dhall
     conf/example.dhall
+    utils/restart.sh
 
 source-repository head
     type:     git
