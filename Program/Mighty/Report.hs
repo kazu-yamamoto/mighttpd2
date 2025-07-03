@@ -23,10 +23,19 @@ import Data.UnixTime
 import GHC.IO.Exception (IOErrorType (..))
 import Network.Wai
 import Network.Wai.Handler.Warp (InvalidRequest)
-import Network.Wai.Handler.Warp.Internal (TimeoutThread (..))
+import System.Exit (ExitCode)
 import System.IO
 import System.IO.Error (ioeGetErrorType)
 import System.Posix (getProcessID)
+
+import Network.HTTP2.Client (HTTP2Error)
+#ifdef HTTP_OVER_TLS
+import Network.TLS (TLSException)
+import Network.Wai.Handler.WarpTLS (WarpTLSException)
+#ifdef HTTP_OVER_QUIC
+import Network.QUIC (QUICException)
+#endif
+#endif
 
 import Program.Mighty.ByteString
 
@@ -57,13 +66,20 @@ reportDo rpt act = act `E.catch` warpHandler rpt Nothing
 
 warpHandler :: Reporter -> Maybe Request -> SomeException -> IO ()
 warpHandler rpt _ se
-    | Just ThreadKilled <- fromException se = return ()
-    | Just TimeoutThread <- fromException se = return ()
-    | Just (_ :: InvalidRequest) <- fromException se = return ()
+    | Just (_ :: ExitCode) <- fromException se = return ()
     | Just (e :: IOException) <- fromException se =
         if ioeGetErrorType e `elem` [ResourceVanished, InvalidArgument]
             then return ()
             else report rpt $ bshow se
+    | Just (_ :: InvalidRequest) <- fromException se = return () -- Warp
+    | Just (_ :: HTTP2Error) <- fromException se = return ()
+#ifdef HTTP_OVER_TLS
+    | Just (_ :: TLSException) <- fromException se = return ()
+    | Just (_ :: WarpTLSException) <- fromException se = return ()
+#ifdef HTTP_OVER_QUIC
+    | Just (_ :: QUICException) <- fromException se = return ()
+#endif
+#endif
     | otherwise = report rpt $ bshow se
 
 ----------------------------------------------------------------

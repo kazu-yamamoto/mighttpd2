@@ -72,11 +72,12 @@ library
         filepath,
         http-date,
         http-types,
+        http2,
         network,
         parsec >=3,
         resourcet,
-        streaming-commons,
         split,
+        streaming-commons,
         text,
         unix,
         unix-time,
@@ -91,6 +92,16 @@ library
     if flag(dhall)
         cpp-options:   -DDHALL
         build-depends: dhall
+
+    if flag(tls)
+        build-depends:
+            tls,
+            warp-tls
+
+    if flag(quic)
+        build-depends:
+            quic,
+            http3
 
 executable mighty
     main-is:          Mighty.hs
