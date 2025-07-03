@@ -141,8 +141,8 @@ setHandlers opt rpt svc remover rdr = do
         closeService svc -- this lets warp break
     infoHandler = Catch $ do
         labelMe "Info signale handler"
-        threadSummary >>= mapM_ (putStrLn . showT)
-    showT (i, l, s) = i ++ " " ++ l ++ ": " ++ show s
+        threadSummary >>= mapM_ (report rpt . showT)
+    showT (i, l, s) = BS.pack (i ++ " " ++ l ++ ": " ++ show s)
     reloadHandler = Catch $ do
         ifRouteFileIsValid rpt opt $ \newroute -> do
             writeRouteDBRef rdr newroute
