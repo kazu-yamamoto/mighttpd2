@@ -222,12 +222,10 @@ mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr tmgr
 #endif
   where
     app = fileCgiApp cspec filespec cgispec revproxyspec rdr
-    debug = opt_debug_mode opt
     -- We don't use setInstallShutdownHandler because we may use
     -- two sockets for HTTP and HTTPS.
     setting = setPort            (naturalToInt $ opt_port opt) -- just in case
             $ setHost            (fromString (opt_host opt))  -- just in case
-            $ setOnException     (if debug then printStdout else warpHandler rpt)
             $ setManager         tmgr
             $ setFdCacheDuration (naturalToInt $ opt_fd_cache_duration opt)
             $ setFileInfoCacheDuration 10
