@@ -6,7 +6,7 @@ module Server (server, defaultDomain, defaultPort) where
 
 import Control.Concurrent (runInUnboundThread)
 import Control.Exception (try)
-import Control.Monad (unless, when)
+import Control.Monad (unless)
 import qualified Data.ByteString.Char8 as BS
 import Data.Either (fromRight)
 import Data.List (sort)
@@ -20,7 +20,6 @@ import Network.Wai.Application.Classic hiding ((</>))
 import Network.Wai.Handler.Warp
 import Network.Wai.Logger
 import System.Exit (ExitCode(..), exitSuccess)
-import System.IO
 import System.IO.Error (ioeGetErrorString)
 import System.Posix (exitImmediately, Handler(..), getProcessID, setFileMode)
 import System.Posix.Signals (sigCHLD)
@@ -73,36 +72,37 @@ type LogRemover = IO ()
 
 ----------------------------------------------------------------
 
-server :: Option -> Reporter -> RouteDB -> IO ()
-server opt rpt route = reportDo rpt $ do
+server :: Option -> Reporter -> RouteDB -> (IO () -> IO ()) -> IO ()
+server opt rpt route runMighty = reportDo rpt $ do
     labelMe "Mighty main"
     unlimit openFileNumber
     svc <- openService opt
-    unless debug writePidFile
-    rdr <- newRouteDBRef route
-    let usec = naturalToInt (opt_connection_timeout opt) * 1000000
-    T.withManager usec $ \tmgr -> do
-        (mcred, smgr) <- setup opt
-        _changed <- setGroupUser (opt_user opt) (opt_group opt)
-        logCheck logtype
-        -- "Time cacher of FastLogger (AutoUpdate)"
-        (zdater,_) <- clockDateCacher
-        -- Loggerset of FastLogger (Debounce)
-        ap <- initLogger FromSocket logtype zdater
-        let lgr = apacheLogger ap
-            remover = logRemover ap
-            pushlgr = serverpushLogger ap
-        -- HTTP Client Manager
-        mgr <- getManager opt
-        setHandlers opt rpt svc remover rdr
+    runMighty $ do
+        unless debug writePidFile
+        rdr <- newRouteDBRef route
+        let usec = naturalToInt (opt_connection_timeout opt) * 1000000
+        T.withManager usec $ \tmgr -> do
+            (mcred, smgr) <- setup opt
+            _changed <- setGroupUser (opt_user opt) (opt_group opt)
+            logCheck logtype
+            -- "Time cacher of FastLogger (AutoUpdate)"
+            (zdater,_) <- clockDateCacher
+            -- Loggerset of FastLogger (Debounce)
+            ap <- initLogger FromSocket logtype zdater
+            let lgr = apacheLogger ap
+                remover = logRemover ap
+                pushlgr = serverpushLogger ap
+            -- HTTP Client Manager
+            mgr <- getManager opt
+            setHandlers opt rpt svc remover rdr
 
-        report rpt "Mighty started"
-        runInUnboundThread $ do
-            labelMe "Mighty main (bound thread)"
-            mighty opt rpt svc lgr pushlgr mgr rdr mcred smgr tmgr
-        report rpt "Mighty retired"
-        remover
-        exitSuccess
+            report rpt "Mighty started"
+            runInUnboundThread $ do
+                labelMe "Mighty main (bound thread)"
+                mighty opt rpt svc lgr pushlgr mgr rdr mcred smgr tmgr
+            report rpt "Mighty retired"
+            remover
+            exitSuccess
   where
     debug = opt_debug_mode opt
     port = opt_port opt
@@ -309,25 +309,25 @@ openService :: Option -> IO Service
 openService opt
   | service == 1 = do
       s <- bindPortTCP httpsPort hostpref
-      debugMessage $ urlForHTTPS httpsPort
+      putStrLn $ urlForHTTPS httpsPort
       return $ HttpsOnly s
   | service == 2 = do
       s1 <- bindPortTCP httpPort hostpref
       s2 <- bindPortTCP httpsPort hostpref
-      debugMessage $ urlForHTTP httpPort
-      debugMessage $ urlForHTTPS httpsPort
+      putStrLn $ urlForHTTP httpPort
+      putStrLn $ urlForHTTPS httpsPort
       return $ HttpAndHttps s1 s2
   | service == 3 = do
       s1 <- bindPortTCP httpPort hostpref
       s2 <- bindPortTCP httpsPort hostpref
       ss3 <- mapM (bindPortUDP quicPort) quicAddrs
-      debugMessage $ urlForHTTP httpPort
-      debugMessage $ urlForHTTPS httpsPort
-      debugMessage "QUIC is also available via Alt-Svc"
+      putStrLn $ urlForHTTP httpPort
+      putStrLn $ urlForHTTPS httpsPort
+      putStrLn "QUIC is also available via Alt-Svc"
       return $ QUIC s1 s2 ss3
   | otherwise = do
       s <- bindPortTCP httpPort hostpref
-      debugMessage $ urlForHTTP httpPort
+      putStrLn $ urlForHTTP httpPort
       return $ HttpOnly s
   where
     httpPort  = naturalToInt $ opt_port opt
@@ -336,10 +336,6 @@ openService opt
     quicAddrs = fromString <$> opt_quic_addr opt
     hostpref  = fromString $ opt_host opt
     service = opt_service opt
-    debug = opt_debug_mode opt
-    debugMessage msg = when debug $ do
-        putStrLn msg
-        hFlush stdout
     urlForHTTP  80  =  "http://localhost/"
     urlForHTTP  p   =  "http://localhost:" ++ show p ++ "/"
     urlForHTTPS 443 = "https://localhost/"
