@@ -12,7 +12,9 @@ import Data.Either (fromRight)
 import Data.List (sort)
 import Data.Maybe (fromMaybe)
 import Data.Streaming.Network (bindPortTCP, bindPortUDP)
+#if __GLASGOW_HASKELL__ >= 906
 import GHC.Conc.Sync
+#endif
 import qualified Network.HTTP.Client as H
 import Network.Socket (Socket, close)
 import Network.Wai
@@ -149,6 +151,7 @@ setHandlers opt rpt svc remover rdr = do
             report rpt "Mighty reloaded"
 
 threadSummary :: IO [(String, String, ThreadStatus)]
+#if __GLASGOW_HASKELL__ >= 906
 threadSummary = (sort <$> listThreads) >>= mapM summary
   where
     summary t = do
@@ -156,6 +159,9 @@ threadSummary = (sort <$> listThreads) >>= mapM summary
         l <- fromMaybe "(no name)" <$> threadLabel t
         s <- threadStatus t
         return (idstr, l, s)
+#else
+threadSummary = return []
+#endif
 
 #ifdef HTTP_OVER_TLS
 loadCredentials :: Option -> IO Credentials
