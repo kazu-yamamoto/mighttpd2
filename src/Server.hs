@@ -169,9 +169,9 @@ loadCredentials opt = do
     strip = dropWhileEnd isSpace . dropWhile isSpace
     split "" = []
     split s = case break (',' ==) s of
-      ("",r)  -> split (tail r)
+      ("",r)  -> split $ drop 1 r
       (s',"") -> [s']
-      (s',r)  -> s' : split (tail r)
+      (s',r)  -> s' : split (drop 1 r)
     chain_files = map strip $ split $ opt_tls_chain_files opt
 #endif
 
