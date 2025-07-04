@@ -14,8 +14,11 @@ MIGHTY_PATH=/usr/local/mighty
 # route
 # webroot/
 
+# Assuming that the following entries is included in "route"
+# /.well-known/acme-challenge/ -> /usr/local/mighty/webroot/.well-known/acme-challenge/
+
 # This script can be used with "certbot renew"
-# sudo certbot renew --webroot -w /usr/local/mighty/webroot --deploy-hook /usr/local/mighty/restart.sh
+# % sudo certbot renew --webroot -w /usr/local/mighty/webroot --deploy-hook /usr/local/mighty/restart.sh
 
 ${MIGHTY_PATH}/mightyctl retire
 ${MIGHTY_PATH}/mighty ${MIGHTY_PATH}/conf ${MIGHTY_PATH}/route +RTS -N2
