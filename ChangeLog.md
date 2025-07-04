@@ -1,5 +1,12 @@
 # ChangeLog for mighttpd2
 
+## 4.0.9
+
+* Mighty does not allow hidden files/directories in URL but
+  now "/.well-known/" is allowed for Let's encrypt.
+* Adding utils/restart.sh which can be used with `certbot` (Let's encrypt).
+* Don't write error messages to `mighty_report`.
+
 ## 4.0.8
 
 * `mightyctl inf` now lets `mighty` to display running threads to stdout.
