@@ -41,7 +41,7 @@ main = do
         debug = opt_debug_mode opt
         rpt = initReporter debug reportFile
         run = server opt rpt route
-    if debug then run else background opt run
+    if debug then run id else run (background opt)
   where
     getOptRoute = getArgs >>= eachCase
     svrnm = programName ++ "/" ++ programVersion
@@ -100,12 +100,10 @@ main = do
 
 background :: Option -> IO () -> IO ()
 background opt svr = do
-    putStrLn $ "Serving on port " ++ show port ++ " and detaching this terminal..."
+    putStrLn $ "Detaching this terminal..."
     putStrLn $ "(If errors occur, they will be written in \"" ++ reportFileName opt ++ "\".)"
     hFlush stdout
     daemonize svr
-  where
-    port = opt_port opt
 
 reportFileName :: Option -> FilePath
 reportFileName opt
