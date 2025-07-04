@@ -9,11 +9,11 @@ import Control.Exception (try)
 import Control.Monad (unless)
 import qualified Data.ByteString.Char8 as BS
 import Data.Either (fromRight)
-import Data.List (sort)
-import Data.Maybe (fromMaybe)
 import Data.Streaming.Network (bindPortTCP, bindPortUDP)
 #if __GLASGOW_HASKELL__ >= 906
 import GHC.Conc.Sync
+import Data.List (sort)
+import Data.Maybe (fromMaybe)
 #endif
 import qualified Network.HTTP.Client as H
 import Network.Socket (Socket, close)
@@ -150,8 +150,8 @@ setHandlers opt rpt svc remover rdr = do
             writeRouteDBRef rdr newroute
             report rpt "Mighty reloaded"
 
-threadSummary :: IO [(String, String, ThreadStatus)]
 #if __GLASGOW_HASKELL__ >= 906
+threadSummary :: IO [(String, String, ThreadStatus)]
 threadSummary = (sort <$> listThreads) >>= mapM summary
   where
     summary t = do
@@ -160,6 +160,7 @@ threadSummary = (sort <$> listThreads) >>= mapM summary
         s <- threadStatus t
         return (idstr, l, s)
 #else
+threadSummary :: IO [(String, String, String)]
 threadSummary = return []
 #endif
 
@@ -385,9 +386,13 @@ setup _ = return (Nothing, Nothing)
 #endif
 
 labelMe :: String -> IO ()
+#if __GLASGOW_HASKELL__ >= 906
 labelMe lbl = do
     tid <- myThreadId
     labelThread tid lbl
+#else
+labelMe _ = return ()
+#endif
 
 runHTTP :: Settings -> Socket -> Application -> IO ()
 runHTTP setting s app = do
