@@ -6,7 +6,7 @@ module Server (server, defaultDomain, defaultPort) where
 
 import Control.Concurrent (runInUnboundThread)
 import Control.Exception (try)
-import Control.Monad (unless)
+import Control.Monad (unless, when)
 import qualified Data.ByteString.Char8 as BS
 import Data.Either (fromRight)
 import Data.Streaming.Network (bindPortTCP, bindPortUDP)
@@ -314,27 +314,28 @@ openService :: Option -> IO Service
 openService opt
   | service == 1 = do
       s <- bindPortTCP httpsPort hostpref
-      putStrLn $ urlForHTTPS httpsPort
+      when debug $ putStrLn $ urlForHTTPS httpsPort
       return $ HttpsOnly s
   | service == 2 = do
       s1 <- bindPortTCP httpPort hostpref
       s2 <- bindPortTCP httpsPort hostpref
-      putStrLn $ urlForHTTP httpPort
-      putStrLn $ urlForHTTPS httpsPort
+      when debug $ putStrLn $ urlForHTTP httpPort
+      when debug $ putStrLn $ urlForHTTPS httpsPort
       return $ HttpAndHttps s1 s2
   | service == 3 = do
       s1 <- bindPortTCP httpPort hostpref
       s2 <- bindPortTCP httpsPort hostpref
       ss3 <- mapM (bindPortUDP quicPort) quicAddrs
-      putStrLn $ urlForHTTP httpPort
-      putStrLn $ urlForHTTPS httpsPort
-      putStrLn "QUIC is also available via Alt-Svc"
+      when debug $ putStrLn $ urlForHTTP httpPort
+      when debug $ putStrLn $ urlForHTTPS httpsPort
+      when debug $ putStrLn "QUIC is also available via Alt-Svc"
       return $ QUIC s1 s2 ss3
   | otherwise = do
       s <- bindPortTCP httpPort hostpref
-      putStrLn $ urlForHTTP httpPort
+      when debug $ putStrLn $ urlForHTTP httpPort
       return $ HttpOnly s
   where
+    debug = opt_debug_mode opt
     httpPort  = naturalToInt $ opt_port opt
     httpsPort = naturalToInt $ opt_tls_port opt
     quicPort = naturalToInt $ opt_quic_port opt
