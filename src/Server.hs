@@ -41,7 +41,7 @@ import Network.Wai.Handler.WarpTLS
 #ifdef HTTP_OVER_QUIC
 import Data.Bits
 import Data.ByteString (ByteString)
-import Data.List (find)
+import Data.List (find, nub)
 import Data.Maybe (fromJust)
 import qualified Network.QUIC.Internal as Q
 import Network.Wai.Handler.WarpQUIC
@@ -214,7 +214,7 @@ mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr tmgr
             strver v = BS.append "-" $ BS.pack $ show $ fromVersion v
             quicDrafts = map strver quicVersions
             value v = BS.concat ["h3",v,"=\":",quicPort',"\""]
-            altsvc = BS.intercalate "," $ map value quicDrafts
+            altsvc = BS.intercalate "," $ map value $ nub quicDrafts
             settingT = setAltSvc altsvc setting
             h12  = concurrently_ (runHTTP             setting  s1 app)
                                  (runHTTPS tlsSetting settingT s2 app)
