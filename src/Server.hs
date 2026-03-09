@@ -273,7 +273,7 @@ mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr tmgr
           , Q.scALPN           = Just chooseALPN
           , Q.scRequireRetry   = False
           , Q.scSessionManager = fromJust _msmgr
-          , Q.scUse0RTT        = True
+          , Q.scUse0RTT        = False
           , Q.scDebugLog       = opt_quic_debug_dir opt
           , Q.scQLog           = opt_quic_qlog_dir opt
           , Q.scCredentials    = fromJust _mcreds
