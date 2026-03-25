@@ -137,7 +137,7 @@ executable mighty
         cpp-options:   -DHTTP_OVER_TLS
         build-depends:
             async,
-            tls-session-manager >=0.0.5
+            tls-session-manager >=0.1.0
 
     if flag(quic)
         cpp-options:   -DHTTP_OVER_QUIC
@@ -156,7 +156,7 @@ executable mighty
 
     if flag(quic)
         build-depends:
-            quic >= 0.2 && < 0.3,
+            quic >= 0.3 && < 0.4,
             warp-quic >= 0.0.2
 
     if impl(ghc >=8)
