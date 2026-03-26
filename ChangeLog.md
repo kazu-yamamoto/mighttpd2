@@ -1,5 +1,9 @@
 # ChangeLog for mighttpd2
 
+## 4.0.10
+
+* Allowing latest libraries.
+
 ## 4.0.9
 
 * Mighty does not allow hidden files/directories in URL but
