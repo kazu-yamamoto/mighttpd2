@@ -83,7 +83,7 @@ library
         unix-time,
         unordered-containers,
         wai >=3.2 && <3.3,
-        wai-app-file-cgi >=3.1.9 && <3.2,
+        wai-app-file-cgi >=3.1.9 && <3.3,
         warp >=3.4 && <3.5
 
     if impl(ghc >=8)
@@ -129,7 +129,7 @@ executable mighty
         streaming-commons,
         time-manager,
         wai >=3.2 && <3.3,
-        wai-app-file-cgi >=3.1.9 && <3.2,
+        wai-app-file-cgi >=3.1.9 && <3.3,
         wai-logger >=2.3.0,
         warp >=3.4 && <3.5
 
