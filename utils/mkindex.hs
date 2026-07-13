@@ -6,6 +6,7 @@
 import Control.Applicative
 #endif
 import Data.Bits
+import Data.List (sort)
 import Data.Time (formatTime)
 import Data.Time.Clock.POSIX
 import System.Directory
@@ -31,7 +32,7 @@ main = do
 
 mkContents :: IO String
 mkContents = do
-    fileNames <- filter dotAndIndex <$> getDirectoryContents "."
+    fileNames <- sort . filter dotAndIndex <$> getDirectoryContents "."
     stats <- mapM getFileStatus fileNames
     let fmsls = zipWith pp fileNames stats
         maxLen = maximum $ map (\(_,_,_,x) -> x) fmsls
