@@ -5,7 +5,6 @@
 module Server (server, defaultDomain, defaultPort) where
 
 import Control.Concurrent (runInUnboundThread)
-import qualified Control.Exception as E
 import Control.Monad (unless, when)
 import qualified Data.ByteString.Char8 as BS
 import Data.Either (fromRight)
@@ -23,6 +22,7 @@ import Network.Wai.Handler.Warp
 import Network.Wai.Logger
 import System.Exit (ExitCode(..), exitSuccess)
 import System.IO.Error (ioeGetErrorString)
+import qualified System.IO.Error as E
 import System.Posix (exitImmediately, Handler(..), getProcessID, setFileMode)
 import System.Posix.Signals (sigCHLD)
 import qualified System.TimeManager as T
@@ -187,8 +187,9 @@ loadCredentials opt = do
 ifRouteFileIsValid :: Reporter -> Option -> (RouteDB -> IO ()) -> IO ()
 ifRouteFileIsValid rpt opt act = case opt_routing_file opt of
     Nothing    -> return ()
-    Just rfile -> E.try (parseRoute rfile defaultDomain defaultPort) >>= either reportError_ act
+    Just rfile -> E.tryIOError (parseRoute rfile defaultDomain defaultPort) >>= either reportError_ act
   where
+    reportError_ :: IOError -> IO ()
     reportError_ = report rpt . BS.pack . ioeGetErrorString
 
 ----------------------------------------------------------------
