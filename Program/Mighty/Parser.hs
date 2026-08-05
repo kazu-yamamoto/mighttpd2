@@ -12,7 +12,7 @@ module Program.Mighty.Parser (
     comment,
 ) where
 
-import Control.Exception
+import qualified Control.Exception as E
 import qualified Data.ByteString.Lazy.Char8 as BL
 import System.IO
 import Text.Parsec
@@ -31,7 +31,7 @@ parseFile p file = do
     bs <- BL.hGetContents hdl
     case parse p "parseFile" bs of
         Right x -> return x
-        Left e -> throwIO . userError . show $ e
+        Left e -> E.throwIO . userError . show $ e
 
 -- | 'Parser' to consume zero or more white spaces
 --

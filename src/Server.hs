@@ -5,7 +5,7 @@
 module Server (server, defaultDomain, defaultPort) where
 
 import Control.Concurrent (runInUnboundThread)
-import Control.Exception (try)
+import qualified Control.Exception as E
 import Control.Monad (unless, when)
 import qualified Data.ByteString.Char8 as BS
 import Data.Either (fromRight)
@@ -187,7 +187,7 @@ loadCredentials opt = do
 ifRouteFileIsValid :: Reporter -> Option -> (RouteDB -> IO ()) -> IO ()
 ifRouteFileIsValid rpt opt act = case opt_routing_file opt of
     Nothing    -> return ()
-    Just rfile -> try (parseRoute rfile defaultDomain defaultPort) >>= either reportError_ act
+    Just rfile -> E.try (parseRoute rfile defaultDomain defaultPort) >>= either reportError_ act
   where
     reportError_ = report rpt . BS.pack . ioeGetErrorString
 

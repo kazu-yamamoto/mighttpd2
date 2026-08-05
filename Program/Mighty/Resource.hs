@@ -6,7 +6,7 @@ module Program.Mighty.Resource (
     unlimit,
 ) where
 
-import Control.Exception
+import qualified Control.Exception as E
 import System.Posix
 
 ----------------------------------------------------------------
@@ -38,7 +38,7 @@ setGroupUser user group = do
 
 -- | Set the limit of open files.
 unlimit :: Integer -> IO ()
-unlimit limit = handle (\(SomeException _) -> return ()) $ do
+unlimit limit = E.handle (\(E.SomeException _) -> return ()) $ do
     hard <- hardLimit <$> getResourceLimit ResourceOpenFiles
     let lim =
             if hard == ResourceLimitInfinity
