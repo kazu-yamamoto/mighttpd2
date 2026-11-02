@@ -57,7 +57,8 @@ fileCgiApp cspec filespec cgispec revproxyspec rdr req respond
     (host, _) = hostPort req
     rawpath = rawPathInfo req
     path = urlDecode False rawpath
-    dotFile = not (BS.isPrefixOf "/.well-known/" rawpath) && (BS.isPrefixOf "." rawpath || BS.isInfixOf "/." rawpath)
+    -- Checking the decoded path so that "%2e" cannot bypass this.
+    dotFile = not (BS.isPrefixOf "/.well-known/" path) && (BS.isPrefixOf "." path || BS.isInfixOf "/." path)
     mmp um = case getBlock host um of
         Nothing -> Fail
         Just blk -> getRoute path blk
