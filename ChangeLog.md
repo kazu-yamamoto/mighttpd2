@@ -1,5 +1,31 @@
 # ChangeLog for mighttpd2
 
+## 4.0.11
+
+* Requiring wai-app-file-cgi 3.3, which decodes paths by itself.
+  The original request is passed to it so that paths containing
+  `%` are not decoded twice.
+* Security:
+  * Hidden files/directories are checked on the decoded path
+    split by both `/` and `\`. Previously, `/%2egit/config` was
+    served.
+  * The supplementary groups of root are dropped when switching
+    the user.
+  * The report file is not written through a symbolic link.
+  * `mighty-mkindex` escapes file names.
+* SIGCHLD is not ignored anymore since wai-app-file-cgi reaps CGI
+  processes.
+* `Index_Cgi:` is used instead of the fixed `index.cgi`.
+* Domains in routing files are matched case-insensitively ignoring
+  a trailing dot.
+* Mighty exits with failure if it cannot bind ports.
+  `utils/restart.sh` retries starting a new Mighty.
+* Values of wrong types in configuration files are rejected and
+  unknown keys are reported.
+* `mightyctl` finds Mighty by its exact process name.
+* Showing why TLS credentials cannot be loaded.
+* Flushing stdout after reporting in the debug mode.
+
 ## 4.0.10
 
 * Allowing latest libraries.
