@@ -38,14 +38,14 @@ fileCgiApp cspec filespec cgispec revproxyspec rdr req respond
                 fastResponse respond st defaultHeader "Precondition Failed\r\n"
             Redirect -> do
                 let st = movedPermanently301
-                    hdr = defaultHeader ++ redirectHeader req'
+                    hdr = defaultHeader ++ redirectHeader req
                 fastResponse respond st hdr "Moved Permanently\r\n"
             Found (RouteFile src dst) ->
-                fileApp cspec filespec (FileRoute src dst) req' respond
+                fileApp cspec filespec (FileRoute src dst) req respond
             Found (RouteRedirect src dst) ->
-                redirectApp cspec (RedirectRoute src dst) req' respond
+                redirectApp cspec (RedirectRoute src dst) req respond
             Found (RouteCGI src dst) ->
-                cgiApp cspec cgispec (CgiRoute src dst) req' respond
+                cgiApp cspec cgispec (CgiRoute src dst) req respond
             Found (RouteRevProxy src dst dom prt) ->
                 revProxyApp
                     cspec
@@ -63,7 +63,6 @@ fileCgiApp cspec filespec cgispec revproxyspec rdr req respond
         Just blk -> getRoute path blk
     fastResponse resp st hdr body = resp $ responseLBS st hdr body
     defaultHeader = [("Content-Type", "text/plain")]
-    req' = req{rawPathInfo = path} -- FIXME
 
 getBlock :: ByteString -> RouteDB -> Maybe [Route]
 getBlock _ [] = Nothing
