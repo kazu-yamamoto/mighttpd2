@@ -1,7 +1,15 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module WaiApp (fileCgiApp) where
+module WaiApp (
+    fileCgiApp,
+
+    -- * For testing
+    Perhaps (..),
+    isHiddenPath,
+    getBlock,
+    getRoute,
+) where
 
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
@@ -17,7 +25,7 @@ import Network.Wai.Internal
 
 import Program.Mighty
 
-data Perhaps a = Found a | Redirect | Fail
+data Perhaps a = Found a | Redirect | Fail deriving (Eq, Show)
 
 fileCgiApp
     :: ClassicAppSpec
@@ -57,18 +65,23 @@ fileCgiApp cspec filespec cgispec revproxyspec rdr req respond
     host = normalizeDomain $ fst $ hostPort req
     rawpath = rawPathInfo req
     path = urlDecode False rawpath
-    -- Checking segments of the decoded path so that "%2e" and "\\"
-    -- cannot bypass this. "/.well-known/" is allowed for ACME.
-    dotFile = any ("." `BS.isPrefixOf`) segs'
-    segs = BS.splitWith (\c -> c == '/' || c == '\\') path
-    segs' = case segs of
-        "" : ".well-known" : rest -> rest
-        _ -> segs
+    dotFile = isHiddenPath path
     mmp um = case getBlock host um of
         Nothing -> Fail
         Just blk -> getRoute path blk
     fastResponse resp st hdr body = resp $ responseLBS st hdr body
     defaultHeader = [("Content-Type", "text/plain")]
+
+-- | Whether the decoded path contains a segment starting with a dot.
+--   Segments are split by both slash and backslash so that a backslash
+--   cannot bypass this. "/.well-known/" is allowed for ACME.
+isHiddenPath :: ByteString -> Bool
+isHiddenPath path = any ("." `BS.isPrefixOf`) segs'
+  where
+    segs = BS.splitWith (\c -> c == '/' || c == '\\') path
+    segs' = case segs of
+        "" : ".well-known" : rest -> rest
+        _ -> segs
 
 getBlock :: ByteString -> RouteDB -> Maybe [Route]
 getBlock _ [] = Nothing
