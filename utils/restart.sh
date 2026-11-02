@@ -21,4 +21,11 @@ MIGHTY_PATH=/usr/local/mighty
 # % sudo certbot renew --webroot -w /usr/local/mighty/webroot --deploy-hook /usr/local/mighty/restart.sh
 
 ${MIGHTY_PATH}/mightyctl retire
-${MIGHTY_PATH}/mighty ${MIGHTY_PATH}/conf ${MIGHTY_PATH}/route +RTS -N2
+
+# The retiring mighty may hold the port for a while.
+# mighty exits with failure if it cannot bind the port.
+for i in 1 2 3 4 5 6 7 8 9 10; do
+    ${MIGHTY_PATH}/mighty ${MIGHTY_PATH}/conf ${MIGHTY_PATH}/route +RTS -N2 && exit 0
+    sleep 1
+done
+exit 1

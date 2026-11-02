@@ -21,6 +21,7 @@ import Network.Wai.Application.Classic hiding ((</>))
 import Network.Wai.Handler.Warp
 import Network.Wai.Logger
 import System.Exit (ExitCode(..), exitSuccess)
+import System.IO (hFlush, stdout)
 import System.IO.Error (ioeGetErrorString)
 import qualified System.IO.Error as E
 import System.Posix (exitImmediately, Handler(..), getProcessID, setFileMode)
@@ -77,7 +78,12 @@ server :: Option -> Reporter -> RouteDB -> (IO () -> IO ()) -> IO ()
 server opt rpt route runMighty = reportDo rpt $ do
     labelMe "Mighty main"
     unlimit openFileNumber
-    svc <- openService opt
+    -- Exiting immediately since reportDo swallows ExitCode.
+    -- A script can retry while a retiring Mighty holds the port.
+    svc <- openService opt `E.catchIOError` \e -> do
+        report rpt $ bshow e
+        hFlush stdout
+        exitImmediately $ ExitFailure 1
     runMighty $ do
         unless debug writePidFile
         rdr <- newRouteDBRef route
