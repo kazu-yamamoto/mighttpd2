@@ -174,8 +174,9 @@ loadCredentials opt = do
     cert   <- BS.readFile $ opt_tls_cert_file opt
     chains <- mapM BS.readFile chain_files
     key    <- BS.readFile $ opt_tls_key_file opt
-    let cred = fromRight (error "loadCredentials") $ TLS.credentialLoadX509ChainFromMemory cert chains key
-    return $ Credentials [cred]
+    case TLS.credentialLoadX509ChainFromMemory cert chains key of
+        Left err   -> ioError $ userError $ "loadCredentials: " ++ err
+        Right cred -> return $ Credentials [cred]
   where
     strip = dropWhileEnd isSpace . dropWhile isSpace
     split "" = []
