@@ -199,6 +199,8 @@ test-suite spec
     default-language: Haskell2010
     build-depends:
         base >=4.9 && <5,
+        directory,
+        filepath,
         hspec >=1.3,
         mighttpd2,
         http-client >=0.5

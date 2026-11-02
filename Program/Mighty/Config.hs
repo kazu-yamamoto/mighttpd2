@@ -17,7 +17,9 @@ module Program.Mighty.Config (
   , Option(..)
   ) where
 
+import Control.Monad (forM_, unless)
 import Data.List.Split (splitOn)
+import System.IO (hPutStrLn, stderr)
 import Text.Parsec
 import Text.Parsec.ByteString.Lazy
 #ifdef DHALL
@@ -108,8 +110,43 @@ defaultOption = Option {
 
 ----------------------------------------------------------------
 -- | Parsing a configuration file to get an 'Option'.
+--   An 'IOException' is thrown if a value has a wrong type.
+--   Unknown keys are reported to stderr.
 parseOption :: FilePath -> IO Option
-parseOption file = makeOpt defaultOption <$> parseConfig file
+parseOption file = do
+    conf <- parseConfig file
+    forM_ conf $ \(k, v) -> case lookup k keyTypes of
+        Nothing -> hPutStrLn stderr $ file ++ ": unknown key: " ++ k
+        Just ty -> unless (ty v) $
+            ioError $ userError $ file ++ ": wrong value for " ++ k ++ ": " ++ showCV v
+    return $ makeOpt defaultOption conf
+  where
+    showCV (CV_Natural n) = show n
+    showCV (CV_Bool b) = if b then "Yes" else "No"
+    showCV (CV_String s) = s
+
+-- | Keys and their types. Strings accept any values.
+keyTypes :: [(String, ConfValue -> Bool)]
+keyTypes =
+    [ ("Port", natural), ("Host", anyValue), ("Debug_Mode", bool)
+    , ("User", anyValue), ("Group", anyValue)
+    , ("Pid_File", anyValue), ("Report_File", anyValue), ("Logging", bool)
+    , ("Log_File", anyValue), ("Log_File_Size", natural)
+    , ("Log_Backup_Number", natural)
+    , ("Index_File", anyValue), ("Index_Cgi", anyValue)
+    , ("Status_File_Dir", anyValue), ("Connection_Timeout", natural)
+    , ("Proxy_Timeout", natural), ("Fd_Cache_Duration", natural)
+    , ("Service", natural), ("Tls_Port", natural)
+    , ("Tls_Cert_File", anyValue), ("Tls_Chain_Files", anyValue)
+    , ("Tls_Key_File", anyValue), ("Quic_Addr", anyValue), ("Quic_Port", natural)
+    , ("Quic_Debug_Dir", anyValue), ("Quic_Qlog_Dir", anyValue)
+    ]
+  where
+    natural CV_Natural{} = True
+    natural _ = False
+    bool CV_Bool{} = True
+    bool _ = False
+    anyValue _ = True
 
 #ifdef DHALL
 parseOptionDhall :: FilePath -> IO Option
@@ -201,18 +238,19 @@ instance FromConf Bool where
     fromConf (CV_Bool b) = b
     fromConf _ = error "fromConf bool"
 
+-- Numbers and booleans are also accepted as strings, e.g. "User: 1000".
 instance FromConf String where
     fromConf (CV_String s) = s
-    fromConf _ = error "fromConf string"
+    fromConf (CV_Natural n) = show n
+    fromConf (CV_Bool b) = if b then "Yes" else "No"
 
 instance FromConf (Maybe String) where
-    fromConf (CV_String "") = Nothing
-    fromConf (CV_String s)  = Just s
-    fromConf _ = error "fromConf string"
+    fromConf v = case fromConf v of
+        "" -> Nothing
+        s  -> Just s
 
 instance FromConf [String] where
-    fromConf (CV_String s)  = splitOn "," s
-    fromConf _ = error "fromConf string"
+    fromConf v = filter (not . null) $ splitOn "," $ fromConf v
 
 ----------------------------------------------------------------
 
