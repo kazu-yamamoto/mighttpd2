@@ -48,11 +48,8 @@ runPS = snd <$> runResourceT (sourceCmdWithConsumer "ps -ef" consumer)
             .| CL.filter mighty
             .| CL.consume
     commandName = last . split '/' . command
-    mighty ps =
-        "mighty" `BS.isInfixOf` name
-            && not ("mightyctl" `BS.isInfixOf` name)
-      where
-        name = commandName ps
+    -- Not "mightyctl", "mighty-mkindex", etc.
+    mighty ps = commandName ps == "mighty"
 
 ----------------------------------------------------------------
 
@@ -63,7 +60,7 @@ findParent ps = deleteAloneChild $ masters ++ candidates
     masters = filter iAmMaster ps
     rest = filter (not . iAmMaster) ps
     candidates =
-        map head $
+        concat $
             filter (\xs -> length xs == 1) $ -- master is alone
                 groupBy ((==) `on` ppid) $
                     sortOn ppid rest
