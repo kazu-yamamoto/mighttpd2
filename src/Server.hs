@@ -24,7 +24,6 @@ import System.Exit (ExitCode(..), exitSuccess)
 import System.IO.Error (ioeGetErrorString)
 import qualified System.IO.Error as E
 import System.Posix (exitImmediately, Handler(..), getProcessID, setFileMode)
-import System.Posix.Signals (sigCHLD)
 import qualified System.TimeManager as T
 
 import Program.Mighty
@@ -131,7 +130,6 @@ setHandlers opt rpt svc remover rdr = do
     setHandler sigRetire retireHandler
     setHandler sigInfo   infoHandler
     setHandler sigReload reloadHandler
-    setHandler sigCHLD   Ignore        -- for CGI
   where
     stopHandler = Catch $ do
         report rpt "Mighty finished"
