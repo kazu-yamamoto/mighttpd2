@@ -7,7 +7,6 @@ module Server (server, defaultDomain, defaultPort) where
 import Control.Concurrent (runInUnboundThread)
 import Control.Monad (unless, when)
 import qualified Data.ByteString.Char8 as BS
-import Data.Either (fromRight)
 import Data.Streaming.Network (bindPortTCP, bindPortUDP)
 #if __GLASGOW_HASKELL__ >= 906
 import GHC.Conc.Sync
@@ -83,8 +82,9 @@ server opt rpt route runMighty = reportDo rpt $ do
     svc <- openService opt `E.catchIOError` \e -> do
         report rpt $ bshow e
         hFlush stdout
-        exitImmediately $ ExitFailure 1
-        E.ioError e -- for unix < 2.8, whose exitImmediately returns ()
+        -- exitImmediately returns () if unix < 2.8.
+        _ <- exitImmediately $ ExitFailure 1
+        E.ioError e
     runMighty $ do
         unless debug writePidFile
         rdr <- newRouteDBRef route
