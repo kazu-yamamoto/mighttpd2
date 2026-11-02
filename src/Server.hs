@@ -256,7 +256,7 @@ mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr tmgr
       , isHTML = \x -> ".html" `isSuffixOf` x || ".htm" `isSuffixOf` x
       }
     cgispec = CgiAppSpec {
-        indexCgi = "index.cgi"
+        indexCgi = fromString $ opt_index_cgi opt
       }
     revproxyspec = RevProxyAppSpec {
         revProxyManager = mgr
