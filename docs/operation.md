@@ -106,7 +106,7 @@ You can see what happened in `/tmp/mighty_report`:
 
 ### Upgrading
 
-Use `mightclt retire` to let the current processes to enter the retiring mode.
+Use `mightyctl retire` to let the current processes to enter the retiring mode.
 In this mode, Mighttpd 2 stops accepting new connections but keeps serving the existing connections. After all existing connections are completed, Mighttpd 2 disappears.
 
 ```shell
@@ -118,6 +118,9 @@ or
 ```shell
 mightyctl retire; <new-mighty> conf route
 ```
+
+The new Mighttpd 2 exits with failure if the retiring one still holds
+the port. In this case, run it again. `utils/restart.sh` retries it.
 
 You can see what happened in `/tmp/mighty_report`:
 

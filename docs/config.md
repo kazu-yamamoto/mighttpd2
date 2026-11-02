@@ -129,6 +129,7 @@ Here is the contents of [`example.route`](https://github.com/kazu-yamamoto/might
 - Characters after `#` are ignored.
 
 If `*` is specified as a domain, any `Host:` values are accepted. 
+Domains are compared case-insensitively and a trailing dot is ignored.
 
 There are three operators to map PATHINFOs (URL parts after `http://domain`) to resources:
 
