@@ -57,8 +57,13 @@ fileCgiApp cspec filespec cgispec revproxyspec rdr req respond
     host = normalizeDomain $ fst $ hostPort req
     rawpath = rawPathInfo req
     path = urlDecode False rawpath
-    -- Checking the decoded path so that "%2e" cannot bypass this.
-    dotFile = not (BS.isPrefixOf "/.well-known/" path) && (BS.isPrefixOf "." path || BS.isInfixOf "/." path)
+    -- Checking segments of the decoded path so that "%2e" and "\\"
+    -- cannot bypass this. "/.well-known/" is allowed for ACME.
+    dotFile = any ("." `BS.isPrefixOf`) segs'
+    segs = BS.splitWith (\c -> c == '/' || c == '\\') path
+    segs' = case segs of
+        "" : ".well-known" : rest -> rest
+        _ -> segs
     mmp um = case getBlock host um of
         Nothing -> Fail
         Just blk -> getRoute path blk
