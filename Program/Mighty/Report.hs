@@ -26,6 +26,16 @@ import System.Exit (ExitCode)
 import System.IO
 import System.IO.Error (ioeGetErrorType)
 import System.Posix (getProcessID)
+import System.Posix.IO (
+    OpenFileFlags (..),
+    OpenMode (WriteOnly),
+    defaultFileFlags,
+    fdToHandle,
+    openFd,
+ )
+#if !MIN_VERSION_unix(2,8,0)
+import System.Posix.Files (getSymbolicLinkStatus, isSymbolicLink)
+#endif
 
 import Network.HTTP2.Client (HTTP2Error)
 #ifdef HTTP_OVER_TLS
@@ -53,8 +63,25 @@ report (Reporter method reportFile) msg = E.handle (\(E.SomeException _) -> retu
     pid <- BS.pack . show <$> getProcessID
     tm <- getUnixTime >>= formatUnixTime "%d %b %Y %H:%M:%S"
     let logmsg = BS.concat [tm, ": pid = ", pid, ": ", msg, "\n"]
-    BS.appendFile reportFile logmsg
     when (method == FileAndStdout) $ BS.putStr logmsg
+    appendNoFollow reportFile logmsg
+
+-- | Appending without following a symbolic link since the report
+--   file may be in a world-writable directory such as /tmp.
+appendNoFollow :: FilePath -> ByteString -> IO ()
+appendNoFollow file msg = E.bracket open hClose (`BS.hPut` msg)
+  where
+#if MIN_VERSION_unix(2,8,0)
+    open = openFd file WriteOnly flags >>= fdToHandle
+    flags = defaultFileFlags{append = True, nofollow = True, creat = Just 0o644}
+#else
+    open = do
+        isLink <- (isSymbolicLink <$> getSymbolicLinkStatus file)
+            `E.catch` \(_ :: E.IOException) -> return False
+        when isLink $ E.throwIO $ userError "symbolic link"
+        openFd file WriteOnly (Just 0o644) flags >>= fdToHandle
+    flags = defaultFileFlags{append = True}
+#endif
 
 ----------------------------------------------------------------
 
