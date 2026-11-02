@@ -7,6 +7,7 @@ module Server (server, defaultDomain, defaultPort) where
 import Control.Concurrent (runInUnboundThread)
 import Control.Monad (unless, when)
 import qualified Data.ByteString.Char8 as BS
+import Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef)
 import Data.Streaming.Network (bindPortTCP, bindPortUDP)
 #if __GLASGOW_HASKELL__ >= 906
 import GHC.Conc.Sync
@@ -102,12 +103,13 @@ server opt rpt route runMighty = reportDo rpt $ do
                 pushlgr = serverpushLogger ap
             -- HTTP Client Manager
             mgr <- getManager opt
-            setHandlers opt rpt svc remover rdr
+            stoppers <- newStoppers
+            setHandlers opt rpt svc stoppers remover rdr
 
             report rpt "Mighty started"
             runInUnboundThread $ do
                 labelMe "Mighty main (bound thread)"
-                mighty opt rpt svc lgr pushlgr mgr rdr mcred smgr tmgr
+                mighty opt rpt svc stoppers lgr pushlgr mgr rdr mcred smgr tmgr
             report rpt "Mighty retired"
             remover
             exitSuccess
@@ -131,8 +133,32 @@ server opt rpt route runMighty = reportDo rpt $ do
       | debug                 = LogStdout $ naturalToInt logBufferSize
       | otherwise             = LogFile logspec $ naturalToInt logBufferSize
 
-setHandlers :: Option -> Reporter -> Service -> LogRemover -> RouteDBRef -> IO ()
-setHandlers opt rpt svc remover rdr = do
+-- | The actions that stop the servers, as warp, warp-tls and warp-quic
+--   hand them over.
+--
+-- Each of them stops its own server where it waits for work -- no socket is
+-- closed under it and nothing is raised -- and leaves whatever it was
+-- serving to finish.  A QUIC server also tells the peer of every live
+-- connection that it is going, which closing its socket could not.
+--
+-- There is one shutdown handler in warp's settings and up to three servers
+-- sharing it, so what the handler does is keep what it is given, and
+-- retiring runs all of it.
+newtype Stoppers = Stoppers (IORef [IO ()])
+
+newStoppers :: IO Stoppers
+newStoppers = Stoppers <$> newIORef []
+
+keepStopper :: Stoppers -> IO () -> IO ()
+keepStopper (Stoppers ref) stop = atomicModifyIORef' ref $ \stops -> (stop : stops, ())
+
+stopServers :: Stoppers -> IO ()
+stopServers (Stoppers ref) = readIORef ref >>= sequence_
+
+----------------------------------------------------------------
+
+setHandlers :: Option -> Reporter -> Service -> Stoppers -> LogRemover -> RouteDBRef -> IO ()
+setHandlers opt rpt svc stoppers remover rdr = do
     setHandler sigStop   stopHandler
     setHandler sigRetire retireHandler
     setHandler sigInfo   infoHandler
@@ -145,7 +171,9 @@ setHandlers opt rpt svc remover rdr = do
         exitImmediately ExitSuccess
     retireHandler = Catch $ do
         report rpt "Mighty retiring"
-        closeService svc -- this lets warp break
+        -- Each server stops accepting where it waits, closes its own
+        -- listening socket, and finishes what it is serving.
+        stopServers stoppers
     infoHandler = Catch $ do
         labelMe "Info signale handler"
         threadSummary >>= mapM_ (report rpt . showT)
@@ -200,12 +228,12 @@ ifRouteFileIsValid rpt opt act = case opt_routing_file opt of
 
 ----------------------------------------------------------------
 
-mighty :: Option -> Reporter -> Service
+mighty :: Option -> Reporter -> Service -> Stoppers
        -> ApacheLogger -> ServerPushLogger
        -> ConnPool -> RouteDBRef
        -> Maybe Credentials -> Maybe SessionManager -> T.Manager
        -> IO ()
-mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr tmgr
+mighty opt rpt svc stoppers lgr pushlgr mgr rdr _mcreds _msmgr tmgr
   = reportDo rpt $ case svc of
     HttpOnly s  -> runHTTP setting s app
 #ifdef HTTP_OVER_TLS
@@ -236,9 +264,8 @@ mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr tmgr
 #endif
   where
     app = fileCgiApp cspec filespec cgispec revproxyspec rdr
-    -- We don't use setInstallShutdownHandler because we may use
-    -- two sockets for HTTP and HTTPS.
-    setting = setPort            (naturalToInt $ opt_port opt) -- just in case
+    setting = setInstallShutdownHandler (keepStopper stoppers)
+            $ setPort            (naturalToInt $ opt_port opt) -- just in case
             $ setHost            (fromString (opt_host opt))  -- just in case
             $ setManager         tmgr
             $ setFdCacheDuration (naturalToInt $ opt_fd_cache_duration opt)
