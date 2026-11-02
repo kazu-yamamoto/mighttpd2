@@ -54,7 +54,7 @@ fileCgiApp cspec filespec cgispec revproxyspec rdr req respond
                     req
                     respond
   where
-    (host, _) = hostPort req
+    host = normalizeDomain $ fst $ hostPort req
     rawpath = rawPathInfo req
     path = urlDecode False rawpath
     -- Checking the decoded path so that "%2e" cannot bypass this.
