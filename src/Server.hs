@@ -84,6 +84,7 @@ server opt rpt route runMighty = reportDo rpt $ do
         report rpt $ bshow e
         hFlush stdout
         exitImmediately $ ExitFailure 1
+        E.ioError e -- for unix < 2.8, whose exitImmediately returns ()
     runMighty $ do
         unless debug writePidFile
         rdr <- newRouteDBRef route
