@@ -6,7 +6,12 @@
 import Control.Applicative
 #endif
 import Data.Bits
+import Data.Char (chr, isAsciiLower, isAsciiUpper, isDigit)
 import Data.List (sort)
+import Data.Word (Word8)
+import Foreign.Storable (peekByteOff)
+import qualified GHC.Foreign as GHC
+import GHC.IO.Encoding (getFileSystemEncoding)
 import Data.Time (formatTime)
 import Data.Time.Clock.POSIX
 import System.Directory
@@ -34,15 +39,41 @@ mkContents :: IO String
 mkContents = do
     fileNames <- sort . filter dotAndIndex <$> getDirectoryContents "."
     stats <- mapM getFileStatus fileNames
-    let fmsls = zipWith pp fileNames stats
-        maxLen = maximum $ map (\(_,_,_,x) -> x) fmsls
+    hrefs <- mapM toHref fileNames
+    let fmsls = zipWith3 pp fileNames hrefs stats
+        maxLen = maximum $ map (\(_,_,_,_,x) -> x) fmsls
         contents = concatMap (content maxLen) fmsls
     return contents
   where
-    dotAndIndex x = head x /= '.' && x /= indexFile
+    dotAndIndex x = take 1 x /= "." && x /= indexFile
 
-pp :: String -> FileStatus -> (String,String,String,Int)
-pp f st = (file,mtime,size,flen)
+-- | Percent-encoding the bytes of a file name for href.
+toHref :: String -> IO String
+toHref f = do
+    enc <- getFileSystemEncoding
+    GHC.withCStringLen enc f $ \(p, n) -> do
+        bytes <- mapM (\i -> peekByteOff p i) [0 .. n - 1]
+        return $ concatMap escape (bytes :: [Word8])
+  where
+    escape w
+      | unreserved c = [c]
+      | otherwise    = printf "%%%02X" w
+      where
+        c = chr $ fromIntegral w
+    unreserved c = isAsciiLower c || isAsciiUpper c || isDigit c || c `elem` "-._~"
+
+htmlEscape :: String -> String
+htmlEscape = concatMap esc
+  where
+    esc '&'  = "&amp;"
+    esc '<'  = "&lt;"
+    esc '>'  = "&gt;"
+    esc '"'  = "&quot;"
+    esc '\'' = "&#39;"
+    esc c    = [c]
+
+pp :: String -> String -> FileStatus -> (String,String,String,String,Int)
+pp f href st = (htmlEscape file,ppFile href st,mtime,size,flen)
   where
     file = ppFile f st
     flen = length file
@@ -93,8 +124,8 @@ hr { text-align: left; margin-left: 0px; width: 80% }\n\
 <hr>\n\
 <pre>\n"
 
-content :: Int -> (String,String,String,Int) -> String
-content lim (f,m,s,len) = "<a href=\"" ++ f ++ "\">" ++ f ++ "</a>  " ++ replicate (lim - len) ' ' ++ m ++ "  " ++ s ++ "\n"
+content :: Int -> (String,String,String,String,Int) -> String
+content lim (f,h,m,s,len) = "<a href=\"./" ++ h ++ "\">" ++ f ++ "</a>  " ++ replicate (lim - len) ' ' ++ m ++ "  " ++ s ++ "\n"
 
 tailer :: String
 tailer = "\

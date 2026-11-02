@@ -5,6 +5,7 @@
 module Program.Mighty.Route (
     -- * Paring a routing file
     parseRoute,
+    normalizeDomain,
 
     -- * Types
     RouteDB,
@@ -25,6 +26,7 @@ module Program.Mighty.Route (
 import Control.Monad
 import Data.ByteString
 import qualified Data.ByteString.Char8 as BS
+import Data.Char (toLower)
 import Data.IORef
 #ifdef DHALL
 import GHC.Natural (Natural)
@@ -34,6 +36,9 @@ import Text.Parsec
 import Text.Parsec.ByteString.Lazy
 
 import Program.Mighty.Parser
+
+-- $setup
+-- >>> :seti -XOverloadedStrings
 
 ----------------------------------------------------------------
 
@@ -86,8 +91,21 @@ domains = open *> doms <* close <* trailing
     open = () <$ char '[' *> spcs
     close = () <$ char ']' *> spcs
     doms = (domain `sepBy1` sep) <* spcs
-    domain = BS.pack <$> many1 (noneOf "[], \t\n")
+    domain = normalizeDomain . BS.pack <$> many1 (noneOf "[], \t\n")
     sep = () <$ spcs1
+
+-- | Domain names are case-insensitive and may end with a dot.
+--
+-- >>> normalizeDomain "WWW.Example.COM."
+-- "www.example.com"
+-- >>> normalizeDomain "*"
+-- "*"
+normalizeDomain :: Domain -> Domain
+normalizeDomain dom = BS.map toLower dom'
+  where
+    dom' = case BS.unsnoc dom of
+        Just (d, '.') -> d
+        _ -> dom
 
 data Op = OpFile | OpCGI | OpRevProxy | OpRedirect
 

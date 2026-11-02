@@ -21,10 +21,10 @@ import Network.Wai.Application.Classic hiding ((</>))
 import Network.Wai.Handler.Warp
 import Network.Wai.Logger
 import System.Exit (ExitCode(..), exitSuccess)
+import System.IO (hFlush, stdout)
 import System.IO.Error (ioeGetErrorString)
 import qualified System.IO.Error as E
 import System.Posix (exitImmediately, Handler(..), getProcessID, setFileMode)
-import System.Posix.Signals (sigCHLD)
 import qualified System.TimeManager as T
 
 import Program.Mighty
@@ -78,7 +78,12 @@ server :: Option -> Reporter -> RouteDB -> (IO () -> IO ()) -> IO ()
 server opt rpt route runMighty = reportDo rpt $ do
     labelMe "Mighty main"
     unlimit openFileNumber
-    svc <- openService opt
+    -- Exiting immediately since reportDo swallows ExitCode.
+    -- A script can retry while a retiring Mighty holds the port.
+    svc <- openService opt `E.catchIOError` \e -> do
+        report rpt $ bshow e
+        hFlush stdout
+        exitImmediately $ ExitFailure 1
     runMighty $ do
         unless debug writePidFile
         rdr <- newRouteDBRef route
@@ -131,7 +136,6 @@ setHandlers opt rpt svc remover rdr = do
     setHandler sigRetire retireHandler
     setHandler sigInfo   infoHandler
     setHandler sigReload reloadHandler
-    setHandler sigCHLD   Ignore        -- for CGI
   where
     stopHandler = Catch $ do
         report rpt "Mighty finished"
@@ -170,8 +174,9 @@ loadCredentials opt = do
     cert   <- BS.readFile $ opt_tls_cert_file opt
     chains <- mapM BS.readFile chain_files
     key    <- BS.readFile $ opt_tls_key_file opt
-    let cred = fromRight (error "loadCredentials") $ TLS.credentialLoadX509ChainFromMemory cert chains key
-    return $ Credentials [cred]
+    case TLS.credentialLoadX509ChainFromMemory cert chains key of
+        Left err   -> ioError $ userError $ "loadCredentials: " ++ err
+        Right cred -> return $ Credentials [cred]
   where
     strip = dropWhileEnd isSpace . dropWhile isSpace
     split "" = []
@@ -258,7 +263,7 @@ mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr tmgr
       , isHTML = \x -> ".html" `isSuffixOf` x || ".htm" `isSuffixOf` x
       }
     cgispec = CgiAppSpec {
-        indexCgi = "index.cgi"
+        indexCgi = fromString $ opt_index_cgi opt
       }
     revproxyspec = RevProxyAppSpec {
         revProxyManager = mgr

@@ -28,8 +28,12 @@ setGroupUser user group = do
     root <- amIrootUser
     if root
         then do
-            getGroupEntryForName group >>= setGroupID . groupID
-            getUserEntryForName user >>= setUserID . userID
+            gid <- groupID <$> getGroupEntryForName group
+            uid <- userID <$> getUserEntryForName user
+            -- Otherwise, the supplementary groups of root are kept.
+            setGroups [gid]
+            setGroupID gid
+            setUserID uid
             return True
         else
             return False
