@@ -63,7 +63,8 @@ report (Reporter method reportFile) msg = E.handle (\(E.SomeException _) -> retu
     pid <- BS.pack . show <$> getProcessID
     tm <- getUnixTime >>= formatUnixTime "%d %b %Y %H:%M:%S"
     let logmsg = BS.concat [tm, ": pid = ", pid, ": ", msg, "\n"]
-    when (method == FileAndStdout) $ BS.putStr logmsg
+    -- Flushing since stdout may be a file and Mighty may exit immediately.
+    when (method == FileAndStdout) $ BS.putStr logmsg >> hFlush stdout
     appendNoFollow reportFile logmsg
 
 -- | Appending without following a symbolic link since the report
