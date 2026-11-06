@@ -1,5 +1,14 @@
 # ChangeLog for mighttpd2
 
+## 4.0.12
+
+* Retiring stops the servers through warp's shutdown handler instead of
+  closing their sockets: each stops accepting and finishes what it is
+  serving, and HTTP/3 connections are sent GOAWAY and finish too.
+* Requiring warp 3.4.21, warp-tls 3.4.17, quic 0.3.20 and warp-quic
+  0.0.5.
+* Building with unix < 2.8 again.
+
 ## 4.0.11
 
 * Requiring wai-app-file-cgi 3.3, which decodes paths by itself.
