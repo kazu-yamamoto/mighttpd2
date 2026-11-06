@@ -84,7 +84,7 @@ library
         unordered-containers,
         wai >=3.2 && <3.3,
         wai-app-file-cgi >=3.3 && <3.4,
-        warp >=3.4 && <3.5
+        warp >=3.4.21 && <3.5
 
     if impl(ghc >=8)
         default-extensions: Strict StrictData
@@ -131,7 +131,7 @@ executable mighty
         wai >=3.2 && <3.3,
         wai-app-file-cgi >=3.3 && <3.4,
         wai-logger >=2.3.0,
-        warp >=3.4 && <3.5
+        warp >=3.4.21 && <3.5
 
     if flag(tls)
         cpp-options:   -DHTTP_OVER_TLS
@@ -152,11 +152,11 @@ executable mighty
     if flag(tls)
         build-depends:
             tls,
-            warp-tls >=3.2.12 && <3.5
+            warp-tls >=3.4.17 && <3.5
 
     if flag(quic)
         build-depends:
-            quic >= 0.3 && < 0.4,
+            quic >= 0.3.20 && < 0.4,
             warp-quic >= 0.0.2
 
     if impl(ghc >=8)
@@ -213,12 +213,12 @@ test-suite spec
         unix,
         wai,
         wai-app-file-cgi >=3.3 && <3.4,
-        warp >=3.4 && <3.5
+        warp >=3.4.21 && <3.5
 
     if flag(tls)
         build-depends:
             tls,
-            warp-tls >=3.2.12 && <3.5
+            warp-tls >=3.4.17 && <3.5
 
     if impl(ghc >=8)
         default-extensions: Strict StrictData
